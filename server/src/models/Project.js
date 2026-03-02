@@ -1,0 +1,119 @@
+const mongoose = require('mongoose');
+
+const projectSchema = new mongoose.Schema(
+  {
+    title: {
+      type: String,
+      required: [true, 'Project title is required'],
+      trim: true,
+      maxlength: [150, 'Title cannot exceed 150 characters'],
+    },
+    description: {
+      type: String,
+      required: [true, 'Description is required'],
+      maxlength: [2000, 'Description cannot exceed 2000 characters'],
+    },
+    projectType: {
+      type: String,
+      required: true,
+      enum: [
+        'short-film',
+        'feature-film',
+        'youtube',
+        'music-video',
+        'podcast',
+        'web-series',
+        'documentary',
+        'commercial',
+        'photography',
+        'music',
+        'other',
+      ],
+    },
+    requiredRoles: {
+      type: [String],
+      required: [true, 'At least one required role is needed'],
+      validate: {
+        validator: (v) => v.length > 0,
+        message: 'At least one role must be specified',
+      },
+    },
+    isPaid: {
+      type: Boolean,
+      default: false,
+    },
+    budget: {
+      type: String,
+      default: '',
+    },
+    location: {
+      city: { type: String, default: '' },
+      country: { type: String, default: '' },
+      isRemote: { type: Boolean, default: false },
+    },
+    deadline: {
+      type: Date,
+    },
+    status: {
+      type: String,
+      enum: ['open', 'in-progress', 'completed', 'cancelled'],
+      default: 'open',
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    teamMembers: [
+      {
+        user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        role: { type: String },
+        joinedAt: { type: Date, default: Date.now },
+      },
+    ],
+    filledRoles: [
+      {
+        role:     { type: String, required: true },
+        filledAt: { type: Date, default: Date.now },
+        note:     { type: String, default: '' },
+      },
+    ],
+    experienceLevel: {
+      type: String,
+      enum: ['any', 'beginner', 'intermediate', 'advanced'],
+      default: 'any',
+    },
+    projectTags: {
+      type: [String],
+      enum: ['learning-project', 'practice-collaboration', 'portfolio-building', 'mentorship-available', 'paid-opportunity'],
+      default: [],
+    },
+    timelineStage: {
+      type: String,
+      enum: ['planning', 'pre-production', 'production', 'post-production', 'released'],
+      default: 'planning',
+    },
+    teamFiles: [
+      {
+        name:        { type: String, required: true },
+        url:         { type: String, required: true },
+        type:        { type: String, enum: ['link', 'google-drive', 'dropbox', 'notion', 'figma', 'image', 'video', 'doc', 'other'], default: 'link' },
+        description: { type: String, default: '' },
+        uploadedBy:  { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        createdAt:   { type: Date, default: Date.now },
+      },
+    ],
+    waitlist: [{
+      user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      role: { type: String, default: '' },
+      joinedAt: { type: Date, default: Date.now },
+    }],
+  },
+  { timestamps: true }
+);
+
+// Index for search/filter
+projectSchema.index({ status: 1, projectType: 1, createdAt: -1 });
+projectSchema.index({ 'location.country': 1 });
+
+module.exports = mongoose.model('Project', projectSchema);
