@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CrewUpFilms — Find Your Film Crew. Build Your Film.</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+  :root {
+    --bg: #000;
+    --accent: #6055de;
+    --accent2: #8b82ff;
+    --white: #fff;
+    --gray: rgba(255,255,255,0.5);
+    --gray2: rgba(255,255,255,0.08);
+    --border: rgba(255,255,255,0.1);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--white);
+    font-family: 'Inter', sans-serif;
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* ── CUSTOM CURSOR ── */
+  #cursor {
+    position: fixed; top:0; left:0; width:12px; height:12px;
+    background: var(--accent); border-radius:50%;
+    pointer-events:none; z-index:9999;
+    transform: translate(-50%,-50%);
+    transition: transform 0.08s ease, width 0.2s, height 0.2s, background 0.2s;
+    mix-blend-mode: screen;
+  }
+  #cursor-glow {
+    position: fixed; top:0; left:0; width:300px; height:300px;
+    border-radius:50%; pointer-events:none; z-index:9998;
+    transform: translate(-50%,-50%);
+    background: radial-gradient(circle, rgba(96,85,222,0.08) 0%, transparent 70%);
+    transition: transform 0.25s ease;
+  }
+
+  /* ── NOISE GRAIN ── */
+  body::before {
+    content:''; position:fixed; inset:0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events:none; z-index:9990; opacity:.35;
+    animation: grain 0.4s steps(1) infinite;
+  }
+  @keyframes grain {
+    0%,100%{transform:translate(0,0)}10%{transform:translate(-2%,-3%)}20%{transform:translate(2%,1%)}30%{transform:translate(-1%,2%)}40%{transform:translate(3%,-1%)}50%{transform:translate(-2%,3%)}60%{transform:translate(1%,-2%)}70%{transform:translate(-3%,1%)}80%{transform:translate(2%,2%)}90%{transform:translate(-1%,-1%)}
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed; top:0; left:0; right:0; z-index:1000;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 60px;
+    background: rgba(0,0,0,0.3);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    transition: padding 0.3s ease, background 0.3s;
+  }
+  nav.scrolled { padding:14px 60px; background: rgba(0,0,0,0.85); }
+  .nav-logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem; font-weight:900; letter-spacing:-0.02em;
+    background: linear-gradient(135deg, #fff 40%, var(--accent2));
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  }
+  .nav-links { display:flex; gap:32px; }
+  .nav-links a {
+    font-size:.85rem; font-weight:500; color:rgba(255,255,255,0.6);
+    text-decoration:none; letter-spacing:0.02em;
+    transition: color .2s;
+  }
+  .nav-links a:hover { color:#fff; }
+  .nav-cta {
+    background: var(--accent); color:#fff;
+    border:none; padding:10px 22px; border-radius:8px;
+    font-size:.85rem; font-weight:600; cursor:pointer;
+    transition: background .2s, transform .2s, box-shadow .2s;
+  }
+  .nav-cta:hover { background:#7068e8; transform:translateY(-1px); box-shadow:0 8px 30px rgba(96,85,222,0.4); }
+
+  /* ── SCROLL REVEAL ── */
+  .reveal {
+    opacity:0; transform:translateY(40px);
+    transition: opacity 0.8s cubic-bezier(0.16,1,0.3,1), transform 0.8s cubic-bezier(0.16,1,0.3,1);
+  }
+  .reveal.visible { opacity:1; transform:translateY(0); }
+  .reveal-left { opacity:0; transform:translateX(-50px); transition: opacity 0.8s cubic-bezier(0.16,1,0.3,1), transform 0.8s cubic-bezier(0.16,1,0.3,1); }
+  .reveal-left.visible { opacity:1; transform:translateX(0); }
+  .reveal-right { opacity:0; transform:translateX(50px); transition: opacity 0.8s cubic-bezier(0.16,1,0.3,1), transform 0.8s cubic-bezier(0.16,1,0.3,1); }
+  .reveal-right.visible { opacity:1; transform:translateX(0); }
+  .delay-1 { transition-delay:.1s!important; }
+  .delay-2 { transition-delay:.2s!important; }
+  .delay-3 { transition-delay:.3s!important; }
+  .delay-4 { transition-delay:.4s!important; }
+  .delay-5 { transition-delay:.5s!important; }
+
+  /* ── SECTION BASE ── */
+  section { position:relative; overflow:hidden; }
+  .container { max-width:1200px; margin:0 auto; padding:0 60px; }
+  .section-label {
+    display:inline-block;
+    font-size:.7rem; font-weight:700; letter-spacing:.2em; text-transform:uppercase;
+    color: var(--accent2); margin-bottom:16px;
+  }
+  .section-title {
+    font-family:'Playfair Display',serif;
+    font-size:clamp(2.5rem,5vw,4rem);
+    font-weight:900; line-height:1.05; letter-spacing:-.03em;
+  }
+  .section-sub {
+    color:rgba(255,255,255,0.5); font-size:1.05rem; line-height:1.75;
+    max-width:560px; margin-top:16px;
+  }
+
+  /* ════════════════════════════════════════
+     1. HERO
+  ════════════════════════════════════════ */
+  #hero {
+    height:100vh; min-height:700px;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    text-align:center;
+    background: radial-gradient(ellipse 80% 60% at 50% 40%, rgba(96,85,222,0.18) 0%, transparent 70%),
+                linear-gradient(180deg, #050505 0%, #000 100%);
+  }
+  /* Cinematic grid lines */
+  #hero::after {
+    content:''; position:absolute; inset:0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size:80px 80px;
+    pointer-events:none;
+  }
+  /* Letterbox */
+  .letterbox-top, .letterbox-bottom {
+    position:absolute; left:0; right:0; height:80px;
+    background:#000; z-index:2;
+    transition: height 1.2s cubic-bezier(0.16,1,0.3,1);
+  }
+  .letterbox-top { top:0; }
+  .letterbox-bottom { bottom:0; }
+  body.loaded .letterbox-top, body.loaded .letterbox-bottom { height:0; }
+
+  .hero-content { position:relative; z-index:3; }
+
+  .hero-eyebrow {
+    display:inline-flex; align-items:center; gap:8px;
+    border:1px solid var(--border); background:rgba(255,255,255,0.04);
+    padding:7px 18px; border-radius:100px; margin-bottom:32px;
+    font-size:.75rem; font-weight:600; letter-spacing:.15em; text-transform:uppercase;
+    color:rgba(255,255,255,0.5);
+    animation: fadeInDown 1s 0.5s both;
+  }
+  .hero-eyebrow span { width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.4)} }
+
+  .hero-title {
+    font-family:'Playfair Display',serif;
+    font-size: clamp(3.5rem, 8vw, 7rem);
+    font-weight:900; line-height:1.0; letter-spacing:-.04em;
+    margin-bottom:24px;
+  }
+  .hero-title .line { overflow:hidden; display:block; }
+  .hero-title .line span {
+    display:block;
+    animation: lineUp 1s cubic-bezier(0.16,1,0.3,1) both;
+  }
+  .hero-title .line:nth-child(1) span { animation-delay: 0.7s; }
+  .hero-title .line:nth-child(2) span { animation-delay: 0.9s; }
+  @keyframes lineUp { from{transform:translateY(110%)} to{transform:translateY(0)} }
+
+  .hero-title .accent-word {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 50%, #c4bfff 100%);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  }
+  .hero-sub {
+    font-size:1.1rem; color:rgba(255,255,255,0.45); max-width:540px;
+    margin:0 auto 40px; line-height:1.75; font-weight:400;
+    animation: fadeInUp 1s 1.1s both;
+  }
+  .hero-btns {
+    display:flex; gap:14px; justify-content:center; flex-wrap:wrap;
+    animation: fadeInUp 1s 1.3s both;
+  }
+  .btn-primary {
+    background:var(--accent); color:#fff;
+    padding:14px 30px; border-radius:10px;
+    font-size:.9rem; font-weight:700; border:none; cursor:pointer;
+    transition: all .25s; letter-spacing:.01em;
+    box-shadow:0 0 40px rgba(96,85,222,0.3);
+  }
+  .btn-primary:hover { background:#7068e8; transform:translateY(-2px); box-shadow:0 0 60px rgba(96,85,222,0.5); }
+  .btn-ghost {
+    background:transparent; color:rgba(255,255,255,0.75);
+    padding:14px 30px; border-radius:10px;
+    font-size:.9rem; font-weight:600; cursor:pointer;
+    border:1px solid rgba(255,255,255,0.15);
+    transition: all .25s;
+  }
+  .btn-ghost:hover { border-color:rgba(255,255,255,.4); color:#fff; transform:translateY(-2px); }
+
+  @keyframes fadeInUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes fadeInDown { from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
+
+  /* Floating role cards */
+  .role-cards {
+    position:absolute; inset:0; pointer-events:none; z-index:3;
+    animation: fadeInUp 1s 1.5s both;
+  }
+  .role-card {
+    position:absolute;
+    background:rgba(255,255,255,0.04);
+    border:1px solid rgba(255,255,255,0.1);
+    backdrop-filter:blur(20px);
+    border-radius:14px; padding:12px 18px;
+    display:flex; align-items:center; gap:10px;
+    pointer-events:all; cursor:default;
+    transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.3s, border-color 0.3s;
+    animation: floatCard 6s ease-in-out infinite;
+  }
+  .role-card:hover {
+    transform:translateY(-6px) scale(1.06)!important;
+    box-shadow:0 0 30px rgba(96,85,222,0.4), 0 0 60px rgba(96,85,222,0.15);
+    border-color:var(--accent2);
+  }
+  .role-card .icon { font-size:1.3rem; }
+  .role-card .label { font-size:.8rem; font-weight:600; color:#fff; white-space:nowrap; }
+  .role-card .sub { font-size:.68rem; color:rgba(255,255,255,0.4); }
+  @keyframes floatCard {
+    0%,100%{transform:translateY(0px)}
+    50%{transform:translateY(-12px)}
+  }
+  .rc-1 { top:22%; left:7%; animation-delay:0s; }
+  .rc-2 { top:32%; right:8%; animation-delay:1s; }
+  .rc-3 { bottom:28%; left:9%; animation-delay:2s; }
+  .rc-4 { bottom:22%; right:7%; animation-delay:0.5s; }
+  .rc-5 { top:18%; left:32%; animation-delay:1.5s; }
+  .rc-6 { top:18%; right:30%; animation-delay:2.5s; }
+
+  /* Scroll indicator */
+  .scroll-hint {
+    position:absolute; bottom:36px; left:50%; transform:translateX(-50%);
+    display:flex; flex-direction:column; align-items:center; gap:8px; z-index:3;
+    opacity:.4; animation: fadeInUp 1s 2s both;
+  }
+  .scroll-hint span { font-size:.65rem; letter-spacing:.2em; text-transform:uppercase; }
+  .scroll-dot {
+    width:1px; height:50px;
+    background:linear-gradient(180deg,rgba(255,255,255,0.6),transparent);
+    position:relative; overflow:hidden;
+  }
+  .scroll-dot::after {
+    content:''; position:absolute;top:-100%;left:0;right:0;height:100%;
+    background:linear-gradient(180deg,transparent,rgba(255,255,255,0.8),transparent);
+    animation:scrollDot 1.8s ease-in-out infinite;
+  }
+  @keyframes scrollDot { 0%{top:-100%} 100%{top:200%} }
+
+  /* ════════════════════════════════════════
+     2. PROBLEM
+  ════════════════════════════════════════ */
+  #problem {
+    padding:140px 0;
+    background:linear-gradient(180deg,#000 0%,#06040f 100%);
+  }
+  .problem-grid {
+    display:grid; grid-template-columns:1fr 1fr; gap:80px; align-items:center;
+  }
+  .problem-roles {
+    display:grid; grid-template-columns:1fr 1fr; gap:16px;
+  }
+  .prob-card {
+    background:var(--gray2); border:1px solid var(--border);
+    border-radius:16px; padding:24px 20px;
+    transition: background .3s, border-color .3s, transform .3s;
+    cursor:default;
+  }
+  .prob-card:hover {
+    background:rgba(96,85,222,0.1);
+    border-color:rgba(96,85,222,0.4);
+    transform:translateY(-4px);
+  }
+  .prob-card .p-icon { font-size:2rem; margin-bottom:12px; display:block; }
+  .prob-card .p-title { font-size:.9rem; font-weight:700; margin-bottom:4px; }
+  .prob-card .p-desc { font-size:.78rem; color:rgba(255,255,255,0.4); line-height:1.6; }
+
+  /* ════════════════════════════════════════
+     3. HOW IT WORKS
+  ════════════════════════════════════════ */
+  #howitworks {
+    padding:140px 0;
+    background:#000;
+  }
+  #howitworks .section-header { text-align:center; margin-bottom:80px; }
+  .steps-grid {
+    display:grid; grid-template-columns:repeat(3,1fr); gap:24px;
+    position:relative;
+  }
+  .steps-grid::before {
+    content:'';
+    position:absolute; top:52px; left:calc(16.66% + 20px); right:calc(16.66% + 20px);
+    height:1px; background:linear-gradient(90deg, var(--accent), var(--accent2), var(--accent));
+    opacity:.3;
+  }
+  .step-card {
+    background:var(--gray2); border:1px solid var(--border);
+    border-radius:24px; padding:40px 32px;
+    text-align:center; position:relative;
+    transition: all .35s cubic-bezier(0.34,1.56,0.64,1);
+    overflow:hidden;
+  }
+  .step-card::before {
+    content:''; position:absolute; inset:0;
+    background:linear-gradient(135deg, rgba(96,85,222,0.08) 0%, transparent 60%);
+    opacity:0; transition:.3s;
+  }
+  .step-card:hover { transform:translateY(-10px); border-color:rgba(96,85,222,0.5); box-shadow:0 30px 80px rgba(96,85,222,0.2); }
+  .step-card:hover::before { opacity:1; }
+  .step-num {
+    font-family:'Playfair Display',serif;
+    font-size:5rem; font-weight:900; line-height:1;
+    color:rgba(96,85,222,0.15); margin-bottom:20px;
+    transition:.3s;
+  }
+  .step-card:hover .step-num { color:rgba(96,85,222,0.4); }
+  .step-icon { font-size:2.5rem; margin-bottom:16px; }
+  .step-title { font-size:1.1rem; font-weight:700; margin-bottom:10px; }
+  .step-desc { font-size:.85rem; color:rgba(255,255,255,0.45); line-height:1.7; }
+  .step-badge {
+    display:inline-block; margin-top:20px;
+    font-size:.7rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--accent2); border:1px solid rgba(96,85,222,0.3);
+    padding:4px 12px; border-radius:100px;
+  }
+
+  /* ════════════════════════════════════════
+     4. FEATURES
+  ════════════════════════════════════════ */
+  #features {
+    padding:140px 0;
+    background:linear-gradient(180deg,#000 0%,#03010a 100%);
+  }
+  #features .section-header { text-align:center; margin-bottom:80px; }
+  .features-grid {
+    display:grid; grid-template-columns:repeat(3,1fr); gap:20px;
+  }
+  .feat-card {
+    background:rgba(255,255,255,0.03);
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:20px; padding:36px 28px;
+    position:relative; overflow:hidden;
+    transition: all .3s ease;
+    cursor:default;
+  }
+  .feat-card::after {
+    content:''; position:absolute;
+    top:-100px; left:-100px; width:200px; height:200px;
+    background:radial-gradient(circle, rgba(96,85,222,0.3) 0%, transparent 70%);
+    opacity:0; transition:.4s; border-radius:50%;
+  }
+  .feat-card:hover { background:rgba(96,85,222,0.06); border-color:rgba(96,85,222,0.35); transform:translateY(-6px); box-shadow:0 20px 60px rgba(96,85,222,0.15); }
+  .feat-card:hover::after { opacity:1; }
+  .feat-icon-wrap {
+    width:52px; height:52px; border-radius:14px;
+    background:rgba(96,85,222,0.15); border:1px solid rgba(96,85,222,0.3);
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.4rem; margin-bottom:20px;
+    transition:.3s;
+  }
+  .feat-card:hover .feat-icon-wrap { background:rgba(96,85,222,0.25); transform:scale(1.1); }
+  .feat-title { font-size:1rem; font-weight:700; margin-bottom:8px; }
+  .feat-desc { font-size:.82rem; color:rgba(255,255,255,0.4); line-height:1.7; }
+  .feat-tag {
+    display:inline-block; margin-top:16px;
+    font-size:.65rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--accent2); opacity:.7;
+  }
+
+  /* ════════════════════════════════════════
+     5. COMMUNITY
+  ════════════════════════════════════════ */
+  #community {
+    padding:140px 0;
+    background:#000;
+    text-align:center;
+  }
+  .community-visual {
+    position:relative; margin:70px auto 0; max-width:700px; height:400px;
+  }
+  /* Orbiting rings */
+  .orbit {
+    position:absolute; border-radius:50%;
+    border:1px solid rgba(96,85,222,0.15);
+    top:50%; left:50%;
+  }
+  .orbit-1 { width:160px;height:160px;margin:-80px 0 0 -80px; animation:spin 25s linear infinite; }
+  .orbit-2 { width:300px;height:300px;margin:-150px 0 0 -150px; animation:spin 40s linear infinite reverse; }
+  .orbit-3 { width:440px;height:440px;margin:-220px 0 0 -220px; animation:spin 60s linear infinite; }
+  @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+  .center-dot {
+    position:absolute; top:50%; left:50%;
+    width:80px; height:80px;
+    transform:translate(-50%,-50%);
+    background:radial-gradient(circle, rgba(96,85,222,0.8) 0%, rgba(96,85,222,0.2) 50%, transparent 70%);
+    border-radius:50%;
+    box-shadow:0 0 60px rgba(96,85,222,0.4);
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.8rem;
+    animation:breathe 3s ease-in-out infinite;
+  }
+  @keyframes breathe { 0%,100%{transform:translate(-50%,-50%) scale(1)} 50%{transform:translate(-50%,-50%) scale(1.1)} }
+
+  .orbit-node {
+    position:absolute;
+    width:52px; height:52px; border-radius:50%;
+    background:rgba(10,8,20,0.9); border:1px solid rgba(96,85,222,0.5);
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.2rem;
+    box-shadow:0 0 20px rgba(96,85,222,0.2);
+    transition:.3s;
+    cursor:default;
+  }
+  .orbit-node:hover { box-shadow:0 0 40px rgba(96,85,222,0.6); transform:scale(1.2); }
+  .orbit-node-label {
+    position:absolute; font-size:.6rem; font-weight:700;
+    letter-spacing:.08em; text-transform:uppercase;
+    color:rgba(255,255,255,0.5); white-space:nowrap;
+    top:calc(100% + 6px); left:50%; transform:translateX(-50%);
+  }
+  /* Place nodes on orbits */
+  .n1 { top:-26px; left:50%; transform:translateX(-50%); }
+  .n2 { top:50%; right:-26px; transform:translateY(-50%); }
+  .n3 { bottom:-26px; left:50%; transform:translateX(-50%); }
+  .n4 { top:50%; left:-26px; transform:translateY(-50%); }
+
+  .comm-stats {
+    display:flex; gap:60px; justify-content:center; margin-top:60px;
+  }
+  .comm-stat .num {
+    font-family:'Playfair Display',serif;
+    font-size:3rem; font-weight:900;
+    background:linear-gradient(135deg,#fff,var(--accent2));
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  }
+  .comm-stat .lbl { font-size:.8rem; color:rgba(255,255,255,0.4); margin-top:4px; letter-spacing:.05em; }
+
+  /* ════════════════════════════════════════
+     6. CONTEST
+  ════════════════════════════════════════ */
+  #contest {
+    padding:100px 0;
+    background: linear-gradient(180deg,#03010a 0%,#000 100%);
+  }
+  .contest-box {
+    max-width:900px; margin:0 auto;
+    background:rgba(255,255,255,0.02);
+    border:1px solid rgba(255,255,255,0.1);
+    border-radius:32px; padding:70px 80px;
+    position:relative; overflow:hidden;
+    text-align:center;
+  }
+  .contest-box::before {
+    content:''; position:absolute;
+    top:-200px; left:50%; transform:translateX(-50%);
+    width:600px; height:400px;
+    background:radial-gradient(ellipse, rgba(96,85,222,0.25) 0%, transparent 70%);
+    pointer-events:none;
+  }
+  .contest-spotlight {
+    position:absolute; top:0; left:50%; transform:translateX(-50%);
+    width:2px; height:80px;
+    background:linear-gradient(180deg,var(--accent),transparent);
+  }
+  .contest-badge {
+    display:inline-flex; align-items:center; gap:8px;
+    background:rgba(96,85,222,0.15); border:1px solid rgba(96,85,222,0.3);
+    padding:6px 16px; border-radius:100px; margin-bottom:28px;
+    font-size:.72rem; font-weight:700; letter-spacing:.15em; text-transform:uppercase;
+    color:var(--accent2);
+  }
+  .contest-title {
+    font-family:'Playfair Display',serif;
+    font-size:clamp(2rem,4vw,3.2rem);
+    font-weight:900; line-height:1.1; margin-bottom:16px;
+  }
+  .contest-sub { font-size:1rem; color:rgba(255,255,255,0.45); margin-bottom:36px; line-height:1.7; }
+  .prize-box {
+    display:inline-flex; align-items:center; gap:12px;
+    background:rgba(96,85,222,0.1); border:1px solid rgba(96,85,222,0.3);
+    border-radius:14px; padding:16px 32px; margin-bottom:40px;
+  }
+  .prize-box .p-label { font-size:.75rem; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:.1em; }
+  .prize-box .p-amount {
+    font-family:'Playfair Display',serif;
+    font-size:2.4rem; font-weight:900;
+    background:linear-gradient(135deg,#fff,var(--accent2));
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  }
+  .contest-meta {
+    display:flex; gap:40px; justify-content:center; margin-bottom:40px;
+    flex-wrap:wrap;
+  }
+  .contest-meta-item { text-align:center; }
+  .contest-meta-item .m-val { font-size:1.1rem; font-weight:700; }
+  .contest-meta-item .m-key { font-size:.72rem; color:rgba(255,255,255,.35); margin-top:2px; letter-spacing:.08em; text-transform:uppercase; }
+
+  /* ════════════════════════════════════════
+     7. WAITLIST
+  ════════════════════════════════════════ */
+  #waitlist {
+    padding:160px 0;
+    background:#000;
+    text-align:center;
+    position:relative;
+  }
+  #waitlist::before {
+    content:''; position:absolute; inset:0;
+    background:radial-gradient(ellipse 70% 50% at 50% 50%, rgba(96,85,222,0.12) 0%, transparent 70%);
+    pointer-events:none;
+  }
+  .waitlist-title {
+    font-family:'Playfair Display',serif;
+    font-size:clamp(2.8rem,6vw,5rem);
+    font-weight:900; line-height:1.05; letter-spacing:-.04em; margin-bottom:20px;
+  }
+  .waitlist-sub { font-size:1.05rem; color:rgba(255,255,255,.45); max-width:500px; margin:0 auto 50px; line-height:1.75; }
+  .waitlist-form {
+    display:flex; gap:12px; justify-content:center; max-width:480px; margin:0 auto;
+    flex-wrap:wrap;
+  }
+  .waitlist-input {
+    flex:1; min-width:220px;
+    background:rgba(255,255,255,0.05);
+    border:1px solid rgba(255,255,255,0.12);
+    color:#fff; padding:14px 20px; border-radius:10px;
+    font-size:.9rem; outline:none;
+    transition: border-color .2s, background .2s;
+  }
+  .waitlist-input::placeholder { color:rgba(255,255,255,.3); }
+  .waitlist-input:focus { border-color:rgba(96,85,222,0.6); background:rgba(96,85,222,0.06); }
+  .waitlist-trust {
+    display:flex; align-items:center; gap:8px; justify-content:center;
+    margin-top:20px; color:rgba(255,255,255,.3); font-size:.78rem;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top:1px solid rgba(255,255,255,0.06);
+    padding:40px 60px;
+    display:flex; align-items:center; justify-content:space-between;
+    flex-wrap:wrap; gap:16px;
+  }
+  footer .foot-logo {
+    font-family:'Playfair Display',serif; font-size:1.1rem; font-weight:900;
+    background:linear-gradient(135deg,#fff,var(--accent2));
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  }
+  footer p { font-size:.78rem; color:rgba(255,255,255,.25); }
+  .foot-links { display:flex; gap:24px; }
+  .foot-links a { font-size:.78rem; color:rgba(255,255,255,.3); text-decoration:none; transition:.2s; }
+  .foot-links a:hover { color:rgba(255,255,255,.7); }
+
+  /* ── MOBILE ── */
+  @media(max-width:768px){
+    nav { padding:16px 24px; }
+    nav.scrolled { padding:12px 24px; }
+    .nav-links { display:none; }
+    .container { padding:0 24px; }
+    .problem-grid { grid-template-columns:1fr; gap:50px; }
+    .steps-grid { grid-template-columns:1fr; }
+    .steps-grid::before { display:none; }
+    .features-grid { grid-template-columns:1fr; }
+    .comm-stats { gap:30px; flex-wrap:wrap; }
+    .contest-box { padding:40px 28px; }
+    footer { flex-direction:column; text-align:center; padding:32px 24px; }
+    .rc-5, .rc-6 { display:none; }
+  }
+  @media(max-width:1024px){
+    .features-grid { grid-template-columns:repeat(2,1fr); }
+    .problem-roles { grid-template-columns:repeat(2,1fr); }
+  }
+</style>
+</head>
+<body>
+
+<!-- Custom cursor -->
+<div id="cursor"></div>
+<div id="cursor-glow"></div>
+
+<!-- ══ NAV ══ -->
+<nav id="nav">
+  <div class="nav-logo">CrewUpFilms</div>
+  <div class="nav-links">
+    <a href="#howitworks">How It Works</a>
+    <a href="#features">Features</a>
+    <a href="#community">Community</a>
+    <a href="#contest">Contest</a>
+  </div>
+  <button class="nav-cta" onclick="document.getElementById('waitlist').scrollIntoView({behavior:'smooth'})">Join Waitlist</button>
+</nav>
+
+<!-- ══ 1. HERO ══ -->
+<section id="hero">
+  <div class="letterbox-top"></div>
+  <div class="letterbox-bottom"></div>
+
+  <!-- Floating role cards -->
+  <div class="role-cards">
+    <div class="role-card rc-1">
+      <span class="icon">🎬</span>
+      <div><div class="label">Director</div><div class="sub">Vision Leader</div></div>
+    </div>
+    <div class="role-card rc-2">
+      <span class="icon">🎭</span>
+      <div><div class="label">Actor</div><div class="sub">Performer</div></div>
+    </div>
+    <div class="role-card rc-3">
+      <span class="icon">📽️</span>
+      <div><div class="label">Cinematographer</div><div class="sub">Visual Artist</div></div>
+    </div>
+    <div class="role-card rc-4">
+      <span class="icon">🎞️</span>
+      <div><div class="label">Editor</div><div class="sub">Story Shaper</div></div>
+    </div>
+    <div class="role-card rc-5">
+      <span class="icon">🎵</span>
+      <div><div class="label">Composer</div><div class="sub">Soundscape</div></div>
+    </div>
+    <div class="role-card rc-6">
+      <span class="icon">✍️</span>
+      <div><div class="label">Writer</div><div class="sub">Scriptwriter</div></div>
+    </div>
+  </div>
+
+  <div class="hero-content">
+    <div class="hero-eyebrow"><span></span> The Filmmaker's Network</div>
+    <h1 class="hero-title">
+      <span class="line"><span>Find Your</span></span>
+      <span class="line"><span><em class="accent-word">Film Crew.</em></span></span>
+      <span class="line"><span>Build Your Film.</span></span>
+    </h1>
+    <p class="hero-sub">
+      CrewUpFilms connects filmmakers, actors, cinematographers, editors and creators to collaborate and bring films to life.
+    </p>
+    <div class="hero-btns">
+      <button class="btn-primary" onclick="document.getElementById('waitlist').scrollIntoView({behavior:'smooth'})">Join Waitlist →</button>
+      <button class="btn-ghost" onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})">Explore Projects</button>
+    </div>
+  </div>
+
+  <div class="scroll-hint">
+    <span>Scroll</span>
+    <div class="scroll-dot"></div>
+  </div>
+</section>
+
+<!-- ══ 2. PROBLEM ══ -->
+<section id="problem">
+  <div class="container">
+    <div class="problem-grid">
+      <div class="reveal-left">
+        <span class="section-label">The Problem</span>
+        <h2 class="section-title">Filmmakers Have Ideas.<br/>But No Crew.</h2>
+        <p class="section-sub">Many filmmakers struggle to find the right actors, cinematographers, editors or collaborators for their projects. CrewUpFilms solves this by bringing the entire filmmaking community together in one place.</p>
+        <br/><br/>
+        <button class="btn-primary" onclick="document.getElementById('waitlist').scrollIntoView({behavior:'smooth'})">Solve It Now →</button>
+      </div>
+      <div class="problem-roles reveal-right">
+        <div class="prob-card delay-1">
+          <span class="p-icon">🎬</span>
+          <div class="p-title">No Director Found</div>
+          <div class="p-desc">Great scripts sit unproduced because the right visionary can't be found.</div>
+        </div>
+        <div class="prob-card delay-2">
+          <span class="p-icon">🎭</span>
+          <div class="p-title">Casting is Hard</div>
+          <div class="p-desc">Actors struggle to find indie projects. Projects struggle to find actors.</div>
+        </div>
+        <div class="prob-card delay-3">
+          <span class="p-icon">📽️</span>
+          <div class="p-title">No Cinematographer</div>
+          <div class="p-desc">The visual story goes untold without the right eye behind the lens.</div>
+        </div>
+        <div class="prob-card delay-4">
+          <span class="p-icon">🎞️</span>
+          <div class="p-title">Post is Lonely</div>
+          <div class="p-desc">Editors and composers work in isolation without a connected community.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ 3. HOW IT WORKS ══ -->
+<section id="howitworks">
+  <div class="container">
+    <div class="section-header">
+      <div class="reveal"><span class="section-label">The Process</span></div>
+      <h2 class="section-title reveal delay-1">How CrewUp Works</h2>
+      <p class="section-sub reveal delay-2" style="margin:16px auto 0;">Three simple steps from idea to film crew.</p>
+    </div>
+    <div class="steps-grid">
+      <div class="step-card reveal delay-1">
+        <div class="step-num">01</div>
+        <div class="step-icon">🎬</div>
+        <h3 class="step-title">Post Your Film Project</h3>
+        <p class="step-desc">Describe your vision, required crew roles, timeline and what kind of film you're making — short film, music video, documentary.</p>
+        <span class="step-badge">5 min setup</span>
+      </div>
+      <div class="step-card reveal delay-2">
+        <div class="step-num">02</div>
+        <div class="step-icon">🔍</div>
+        <h3 class="step-title">Find Actors & Crew</h3>
+        <p class="step-desc">Browse verified filmmaker profiles filtered by role, location, experience level and portfolio quality. Apply or invite directly.</p>
+        <span class="step-badge">Smart matching</span>
+      </div>
+      <div class="step-card reveal delay-3">
+        <div class="step-num">03</div>
+        <div class="step-icon">🚀</div>
+        <h3 class="step-title">Collaborate & Create</h3>
+        <p class="step-desc">Use built-in messaging, project dashboards, and production timelines to manage your team and bring the film to life.</p>
+        <span class="step-badge">All in one place</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ 4. FEATURES ══ -->
+<section id="features">
+  <div class="container">
+    <div class="section-header" style="text-align:center;">
+      <div class="reveal"><span class="section-label">Platform Features</span></div>
+      <h2 class="section-title reveal delay-1">Everything You Need<br/>to Make a Film</h2>
+    </div>
+    <div class="features-grid">
+      <div class="feat-card reveal delay-1">
+        <div class="feat-icon-wrap">📣</div>
+        <h3 class="feat-title">Open Crew Calls</h3>
+        <p class="feat-desc">Post open calls for any crew role. Receive applications from verified filmmakers and crew members across India.</p>
+        <span class="feat-tag">Core Feature</span>
+      </div>
+      <div class="feat-card reveal delay-2">
+        <div class="feat-icon-wrap">👤</div>
+        <h3 class="feat-title">Filmmaker Profiles</h3>
+        <p class="feat-desc">Showcase your portfolio, credits, skills and showreel. Let your work speak for itself to the right collaborators.</p>
+        <span class="feat-tag">Identity</span>
+      </div>
+      <div class="feat-card reveal delay-3">
+        <div class="feat-icon-wrap">📋</div>
+        <h3 class="feat-title">Project Dashboard</h3>
+        <p class="feat-desc">Manage your entire film project in one place — timeline, roles, tasks, files and team communication.</p>
+        <span class="feat-tag">Productivity</span>
+      </div>
+      <div class="feat-card reveal delay-1">
+        <div class="feat-icon-wrap">💬</div>
+        <h3 class="feat-title">Collaboration Tools</h3>
+        <p class="feat-desc">Real-time messaging, shared file spaces and production scheduling built specifically for indie filmmakers.</p>
+        <span class="feat-tag">Teamwork</span>
+      </div>
+      <div class="feat-card reveal delay-2">
+        <div class="feat-icon-wrap">🏆</div>
+        <h3 class="feat-title">Short Film Contests</h3>
+        <p class="feat-desc">Enter monthly contests, get community votes and win prizes. Your short film could be the next festival hit.</p>
+        <span class="feat-tag">Competitions</span>
+      </div>
+      <div class="feat-card reveal delay-3">
+        <div class="feat-icon-wrap">🎓</div>
+        <h3 class="feat-title">Mentorship System</h3>
+        <p class="feat-desc">Connect with experienced filmmakers willing to guide new talent. Grow faster with the right mentor by your side.</p>
+        <span class="feat-tag">Growth</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ 5. COMMUNITY ══ -->
+<section id="community">
+  <div class="container">
+    <div class="reveal"><span class="section-label">The Network</span></div>
+    <h2 class="section-title reveal delay-1">A Community Built<br/>for Filmmakers</h2>
+    <p class="section-sub reveal delay-2" style="margin:16px auto 0;text-align:center;">Directors meet actors. Cinematographers meet editors. Ideas become films.</p>
+
+    <div class="community-visual reveal delay-2">
+      <div class="orbit orbit-1">
+        <div class="orbit-node n1">🎬<span class="orbit-node-label">Director</span></div>
+        <div class="orbit-node n3">✍️<span class="orbit-node-label">Writer</span></div>
+      </div>
+      <div class="orbit orbit-2">
+        <div class="orbit-node n1">🎭<span class="orbit-node-label">Actor</span></div>
+        <div class="orbit-node n2">📽️<span class="orbit-node-label">Cinematographer</span></div>
+        <div class="orbit-node n3">🎵<span class="orbit-node-label">Composer</span></div>
+        <div class="orbit-node n4">🎞️<span class="orbit-node-label">Editor</span></div>
+      </div>
+      <div class="center-dot">🎥</div>
+    </div>
+
+    <div class="comm-stats reveal delay-3">
+      <div class="comm-stat"><div class="num">2K+</div><div class="lbl">Filmmakers Waiting</div></div>
+      <div class="comm-stat"><div class="num">8</div><div class="lbl">Crew Roles Covered</div></div>
+      <div class="comm-stat"><div class="num">∞</div><div class="lbl">Films to be Made</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ 6. CONTEST ══ -->
+<section id="contest">
+  <div class="container">
+    <div class="contest-box reveal">
+      <div class="contest-spotlight"></div>
+      <div class="contest-badge">🏆 Live Contest</div>
+      <h2 class="contest-title">CrewUp Short Film Contest</h2>
+      <p class="contest-sub">Submit your short film, get community votes, win recognition and real prize money. Open to all indie filmmakers.</p>
+      <div class="prize-box">
+        <div><div class="p-label">Prize Pool</div><div class="p-amount">₹10,000</div></div>
+        <div style="width:1px;height:50px;background:rgba(255,255,255,0.1)"></div>
+        <div style="font-size:2rem">🎬</div>
+      </div>
+      <div class="contest-meta">
+        <div class="contest-meta-item">
+          <div class="m-val">5 min</div>
+          <div class="m-key">Max Duration</div>
+        </div>
+        <div class="contest-meta-item">
+          <div class="m-val">Open</div>
+          <div class="m-key">Submissions</div>
+        </div>
+        <div class="contest-meta-item">
+          <div class="m-val">Community</div>
+          <div class="m-key">Voting</div>
+        </div>
+        <div class="contest-meta-item">
+          <div class="m-val">Monthly</div>
+          <div class="m-key">Frequency</div>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="document.getElementById('waitlist').scrollIntoView({behavior:'smooth'})">Submit Your Film →</button>
+    </div>
+  </div>
+</section>
+
+<!-- ══ 7. WAITLIST ══ -->
+<section id="waitlist">
+  <div class="container" style="position:relative;z-index:1;">
+    <div class="reveal"><span class="section-label">Early Access</span></div>
+    <h2 class="waitlist-title reveal delay-1">Join the First Wave<br/>of Filmmakers</h2>
+    <p class="waitlist-sub reveal delay-2">Be among the first creators shaping the future of collaborative filmmaking in India.</p>
+    <div class="waitlist-form reveal delay-3">
+      <input class="waitlist-input" type="email" placeholder="your@email.com" id="waitlistEmail"/>
+      <button class="btn-primary" id="joinBtn">Join Waitlist →</button>
+    </div>
+    <div class="waitlist-trust reveal delay-4">
+      <span>🔒</span> No spam. Unsubscribe anytime.
+    </div>
+  </div>
+</section>
+
+<!-- ══ FOOTER ══ -->
+<footer>
+  <div class="foot-logo">CrewUpFilms</div>
+  <p>© 2026 CrewUpFilms. All rights reserved.</p>
+  <div class="foot-links">
+    <a href="#">Privacy</a>
+    <a href="#">Terms</a>
+    <a href="#">Contact</a>
+    <a href="#">Instagram</a>
+  </div>
+</footer>
+
+<script>
+  // ── Cursor
+  const cur = document.getElementById('cursor');
+  const glow = document.getElementById('cursor-glow');
+  let mx=0,my=0,cx=0,cy=0;
+  document.addEventListener('mousemove',e=>{ mx=e.clientX; my=e.clientY; });
+  function animCursor(){
+    cx += (mx-cx)*0.12; cy += (my-cy)*0.12;
+    cur.style.left = mx+'px'; cur.style.top = my+'px';
+    glow.style.left = cx+'px'; glow.style.top = cy+'px';
+    requestAnimationFrame(animCursor);
+  }
+  animCursor();
+  document.querySelectorAll('button,a,.feat-card,.step-card,.prob-card,.role-card').forEach(el=>{
+    el.addEventListener('mouseenter',()=>{ cur.style.width='28px'; cur.style.height='28px'; cur.style.background='rgba(96,85,222,0.6)'; });
+    el.addEventListener('mouseleave',()=>{ cur.style.width='12px'; cur.style.height='12px'; cur.style.background='#6055de'; });
+  });
+
+  // ── Letterbox
+  window.addEventListener('load',()=>{ setTimeout(()=>document.body.classList.add('loaded'),100); });
+
+  // ── Nav scroll
+  const nav = document.getElementById('nav');
+  window.addEventListener('scroll',()=>{
+    nav.classList.toggle('scrolled', window.scrollY > 60);
+  });
+
+  // ── Scroll reveal
+  const reveals = document.querySelectorAll('.reveal,.reveal-left,.reveal-right');
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('visible'); io.unobserve(e.target); } });
+  },{ threshold:0.12 });
+  reveals.forEach(el=>io.observe(el));
+
+  // ── Waitlist
+  document.getElementById('joinBtn').addEventListener('click',()=>{
+    const email = document.getElementById('waitlistEmail').value;
+    if(!email || !email.includes('@')){ alert('Please enter a valid email.'); return; }
+    document.getElementById('joinBtn').textContent='✓ You\'re on the list!';
+    document.getElementById('joinBtn').style.background='#22c55e';
+    document.getElementById('waitlistEmail').value='';
+  });
+
+  // ── Marquee pause
+  document.querySelectorAll('.marquee-track').forEach(t=>{
+    t.style.animation='marquee 20s linear infinite';
+    t.addEventListener('mouseenter',()=>t.style.animationPlayState='paused');
+    t.addEventListener('mouseleave',()=>t.style.animationPlayState='running');
+  });
+
+  // ── Parallax hero cards subtle mouse
+  const hero = document.getElementById('hero');
+  hero.addEventListener('mousemove',e=>{
+    const {left,top,width,height} = hero.getBoundingClientRect();
+    const xPct = (e.clientX-left)/width - 0.5;
+    const yPct = (e.clientY-top)/height - 0.5;
+    document.querySelectorAll('.role-card').forEach((c,i)=>{
+      const depth = 0.5 + i*0.1;
+      c.style.transform = `translate(${xPct*18*depth}px,${yPct*12*depth}px)`;
+    });
+  });
+  hero.addEventListener('mouseleave',()=>{
+    document.querySelectorAll('.role-card').forEach(c=>c.style.transform='');
+  });
+</script>
+</body>
+</html>

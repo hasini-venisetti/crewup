@@ -20,7 +20,7 @@ export default function GlobalLoading() {
             height: '40px',
             borderRadius: '50%',
             border: '2px solid rgba(255,255,255,0.08)',
-            borderTopColor: '#f59e0b',
+            borderTopColor: '#7C75FF',
             animation: 'spin 0.7s linear infinite',
             margin: '0 auto 1rem',
           }}

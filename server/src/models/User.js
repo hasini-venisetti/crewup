@@ -1,79 +1,93 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+const bcrypt    = require('bcryptjs');
+const crypto    = require('crypto');
 
 const userSchema = new mongoose.Schema(
   {
+    // Friendly public ID e.g. CUF-2026-A3F7B2
+    uid: {
+      type:   String,
+      unique: true,
+      index:  true,
+    },
     name: {
-      type: String,
-      required: [true, 'Name is required'],
-      trim: true,
+      type:      String,
+      required:  [true, 'Name is required'],
+      trim:      true,
       maxlength: [100, 'Name cannot exceed 100 characters'],
     },
     username: {
-      type: String,
-      required: [true, 'Username is required'],
-      unique: true,
-      trim: true,
+      type:      String,
+      required:  [true, 'Username is required'],
+      unique:    true,
+      trim:      true,
       lowercase: true,
-      minlength: [3, 'Username must be at least 3 characters'],
+      minlength: [3,  'Username must be at least 3 characters'],
       maxlength: [30, 'Username cannot exceed 30 characters'],
-      match: [/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores'],
+      match:     [/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores'],
     },
     email: {
-      type: String,
-      required: [true, 'Email is required'],
-      unique: true,
+      type:      String,
+      required:  [true, 'Email is required'],
+      unique:    true,
       lowercase: true,
-      trim: true,
-      match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email'],
+      trim:      true,
+      match:     [/^\S+@\S+\.\S+$/, 'Please enter a valid email'],
     },
+    // Optional — Google-OAuth users have no password
     password: {
-      type: String,
-      required: [true, 'Password is required'],
+      type:      String,
       minlength: [8, 'Password must be at least 8 characters'],
-      select: false,
+      select:    false,
+    },
+    // Google OAuth
+    googleId: {
+      type:   String,
+      unique: true,
+      sparse: true,   // allows multiple nulls
+    },
+    authProvider: {
+      type:    String,
+      enum:    ['local', 'google'],
+      default: 'local',
     },
     role: {
       type: String,
       enum: [
-        'filmmaker',
-        'actor',
-        'editor',
-        'writer',
-        'musician',
-        'designer',
-        'photographer',
-        'content-creator',
-        'other',
+        'filmmaker', 'actor', 'editor', 'writer',
+        'musician',  'designer', 'photographer',
+        'content-creator', 'other',
       ],
       default: 'other',
     },
-    profileImage: {
-      type: String,
-      default: '',
-    },
-    isActive: {
-      type: Boolean,
-      default: true,
-    },
+    profileImage: { type: String, default: '' },
+    isActive:     { type: Boolean, default: true },
+    isSuspended:  { type: Boolean, default: false },
+    isAdmin:      { type: Boolean, default: false },
+    // Saved / bookmarked films (project refs with youtubeLink)
+    bookmarks:    [{ type: mongoose.Schema.Types.ObjectId, ref: 'Project' }],
   },
   { timestamps: true }
 );
 
-// Hash password before saving
+// Auto-generate uid before first save
 userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
-  const salt = await bcrypt.genSalt(12);
-  this.password = await bcrypt.hash(this.password, salt);
+  if (!this.uid) {
+    const year = new Date().getFullYear();
+    const hex  = crypto.randomBytes(3).toString('hex').toUpperCase();
+    this.uid   = `CUF-${year}-${hex}`;
+  }
+  if (this.isModified('password') && this.password) {
+    const salt   = await bcrypt.genSalt(12);
+    this.password = await bcrypt.hash(this.password, salt);
+  }
   next();
 });
 
-// Compare password method
 userSchema.methods.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-// Remove sensitive fields from JSON output
 userSchema.methods.toJSON = function () {
   const obj = this.toObject();
   delete obj.password;

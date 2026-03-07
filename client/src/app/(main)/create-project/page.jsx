@@ -98,7 +98,7 @@ export default function CreateProjectPage() {
         />
         <div className="relative z-10 max-w-4xl mx-auto px-4 w-full">
           <div className="flex items-center gap-3 mb-3">
-            <span className="bg-amber-500 text-white text-xs font-semibold px-3 py-1 rounded-full">
+            <span className="bg-[#6C63FF] text-white text-xs font-semibold px-3 py-1 rounded-full">
               New Project
             </span>
           </div>
@@ -123,7 +123,7 @@ export default function CreateProjectPage() {
               <label className="text-sm text-[#6b6b66] block mb-2 font-medium">Project Title *</label>
               <input
                 type="text"
-                className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF]"
                 placeholder="e.g. Indie Short Film - Urban Stories"
                 value={form.title}
                 onChange={(e) => set('title', e.target.value)}
@@ -134,7 +134,7 @@ export default function CreateProjectPage() {
             <div>
               <label className="text-sm text-[#6b6b66] block mb-2 font-medium">Description *</label>
               <textarea
-                className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 min-h-[120px] resize-none"
+                className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] min-h-[120px] resize-none"
                 placeholder="Tell potential collaborators what this project is about, the vision, timeline, and what kind of commitment you're expecting..."
                 value={form.description}
                 onChange={(e) => set('description', e.target.value)}
@@ -147,7 +147,7 @@ export default function CreateProjectPage() {
             <div>
               <label className="text-sm text-[#6b6b66] block mb-2 font-medium">Project Type *</label>
               <select
-                className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm text-[#111110] focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm text-[#111110] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF]"
                 value={form.projectType}
                 onChange={(e) => set('projectType', e.target.value)}
                 required
@@ -192,7 +192,7 @@ export default function CreateProjectPage() {
             <div className="flex gap-2">
               <input
                 type="text"
-                className="flex-1 rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                className="flex-1 rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF]"
                 placeholder="Custom role..."
                 value={roleInput}
                 onChange={(e) => setRoleInput(e.target.value)}
@@ -285,7 +285,7 @@ export default function CreateProjectPage() {
                     onClick={() => toggleTag(t.value)}
                     className={`flex items-center justify-between p-3 border rounded-xl text-left transition-all ${
                       form.projectTags.includes(t.value)
-                        ? 'border-amber-500 bg-amber-50/30'
+                        ? 'border-[#6C63FF] bg-[#f0eeff]/30'
                         : 'border-[#e0e0dd] bg-white hover:border-[#0e0e0d]'
                     }`}
                   >
@@ -296,7 +296,7 @@ export default function CreateProjectPage() {
                     <div
                       className={`w-5 h-5 border flex items-center justify-center flex-shrink-0 rounded transition-colors ${
                         form.projectTags.includes(t.value)
-                          ? 'bg-amber-500 border-amber-500'
+                          ? 'bg-[#6C63FF] border-[#6C63FF]'
                           : 'border-[#e0e0dd]'
                       }`}
                     >
@@ -324,7 +324,7 @@ export default function CreateProjectPage() {
                 type="button"
                 onClick={() => set('isPaid', !form.isPaid)}
                 className={`w-12 h-7 rounded-full transition-colors ${
-                  form.isPaid ? 'bg-amber-500' : 'bg-[#f0f0ee]'
+                  form.isPaid ? 'bg-[#6C63FF]' : 'bg-[#f0f0ee]'
                 }`}
               >
                 <div
@@ -340,7 +340,7 @@ export default function CreateProjectPage() {
                 <label className="text-sm text-[#6b6b66] block mb-2 font-medium">Budget / Compensation</label>
                 <input
                   type="text"
-                  className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                  className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF]"
                   placeholder="e.g. ₹5,000 per day, Revenue share, Negotiable"
                   value={form.budget}
                   onChange={(e) => set('budget', e.target.value)}
@@ -357,7 +357,7 @@ export default function CreateProjectPage() {
                     type="checkbox"
                     checked={form.location.isRemote}
                     onChange={(e) => setLoc('isRemote', e.target.checked)}
-                    className="w-4 h-4 accent-amber-500"
+                    className="w-4 h-4 accent-bg-[#f0eeff]0"
                   />
                   <span className="text-sm text-[#111110]">Remote</span>
                 </label>
@@ -366,14 +366,14 @@ export default function CreateProjectPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <input
                     type="text"
-                    className="rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                    className="rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF]"
                     placeholder="City"
                     value={form.location.city}
                     onChange={(e) => setLoc('city', e.target.value)}
                   />
                   <input
                     type="text"
-                    className="rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                    className="rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF]"
                     placeholder="Country"
                     value={form.location.country}
                     onChange={(e) => setLoc('country', e.target.value)}
@@ -389,7 +389,7 @@ export default function CreateProjectPage() {
               </label>
               <input
                 type="date"
-                className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm text-[#111110] focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm text-[#111110] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF]"
                 value={form.deadline}
                 onChange={(e) => set('deadline', e.target.value)}
                 min={new Date().toISOString().split('T')[0]}
@@ -401,7 +401,7 @@ export default function CreateProjectPage() {
           <button
             type="submit"
             disabled={loading}
-            className="bg-amber-500 text-white rounded-xl py-4 text-base font-bold w-full hover:bg-amber-600 disabled:opacity-50 transition-colors"
+            className="bg-[#6C63FF] text-white rounded-xl py-4 text-base font-bold w-full hover:bg-[#5750D4] disabled:opacity-50 transition-colors"
           >
             {loading ? 'Posting...' : 'Post Project →'}
           </button>

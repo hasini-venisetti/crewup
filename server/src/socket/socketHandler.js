@@ -1,8 +1,9 @@
 const jwt     = require('jsonwebtoken');
 const User    = require('../models/User');
 const Message = require('../models/Message');
-const Conversation = require('../models/Conversation');
-const ProjectChat  = require('../models/ProjectChat');
+const Conversation    = require('../models/Conversation');
+const ProjectChat     = require('../models/ProjectChat');
+const Notification    = require('../models/Notification');
 
 /**
  * socketHandler — attaches all Socket.io event handlers to the server.
@@ -79,13 +80,31 @@ const socketHandler = (io) => {
           lastMessageAt: new Date(),
         });
 
-        // Emit to all members of the conversation
+        // Emit to all members + create notifications for recipients
+        const messageObj = { ...message.toObject(), conversationId };
+        const notifPromises = [];
+
         conversation.members.forEach((memberId) => {
-          io.to(`user:${memberId.toString()}`).emit('newMessage', {
-            ...message.toObject(),
-            conversationId,
-          });
+          const midStr = memberId.toString();
+          io.to(`user:${midStr}`).emit('newMessage', messageObj);
+
+          // Create a notification for everyone except the sender
+          if (midStr !== socket.user._id.toString()) {
+            notifPromises.push(
+              Notification.create({
+                recipient: memberId,
+                sender:    socket.user._id,
+                type:      'new_message',
+                title:     `New message from ${socket.user.name}`,
+                message:   text.trim().length > 80 ? text.trim().slice(0, 80) + '…' : text.trim(),
+                link:      '/messages',
+              })
+            );
+          }
         });
+
+        // Fire notifications in background (don't block message emit)
+        Promise.all(notifPromises).catch(() => {});
       } catch (err) {
         socket.emit('error', { message: 'Failed to send message' });
       }

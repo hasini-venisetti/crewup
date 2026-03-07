@@ -47,9 +47,9 @@ export default function NotificationsPage() {
 
   const handleMarkRead = async (notifId) => {
     try {
-      await notificationAPI.markAsRead(notifId);
+      await notificationAPI.markRead(notifId);
       setNotifications((prev) =>
-        prev.map((n) => (n.id === notifId ? { ...n, isRead: true } : n))
+        prev.map((n) => ((n._id || n.id) === notifId ? { ...n, read: true } : n))
       );
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
@@ -58,8 +58,8 @@ export default function NotificationsPage() {
 
   const handleMarkAllRead = async () => {
     try {
-      await notificationAPI.markAllAsRead();
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      await notificationAPI.markAllRead();
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     } catch (error) {
       console.error('Failed to mark all as read:', error);
     }
@@ -68,14 +68,14 @@ export default function NotificationsPage() {
   const handleDelete = async (notifId) => {
     try {
       await notificationAPI.delete(notifId);
-      setNotifications((prev) => prev.filter((n) => n.id !== notifId));
+      setNotifications((prev) => prev.filter((n) => (n._id || n.id) !== notifId));
     } catch (error) {
       console.error('Failed to delete notification:', error);
     }
   };
 
   const groupedNotifications = groupByDate(notifications);
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
     <div className="min-h-screen bg-white">
@@ -93,7 +93,7 @@ export default function NotificationsPage() {
               Notifications
             </h1>
             {unreadCount > 0 && (
-              <span className="inline-flex items-center justify-center rounded-full bg-amber-500 px-3 py-1 text-sm font-semibold text-white">
+              <span className="inline-flex items-center justify-center rounded-full bg-[#6C63FF] px-3 py-1 text-sm font-semibold text-white">
                 {unreadCount}
               </span>
             )}
@@ -139,13 +139,13 @@ export default function NotificationsPage() {
           <div className="space-y-6">
             {Object.entries(groupedNotifications).map(([date, notifs]) => (
               <div key={date}>
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-widest text-amber-500/70">
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-widest text-[#6C63FF]/70">
                   {date}
                 </h3>
                 <div className="space-y-2">
                   {notifs.map((notif) => (
                     <NotificationRow
-                      key={notif.id}
+                      key={notif._id || notif.id}
                       notif={notif}
                       timeAgo={timeAgo}
                       onMarkRead={handleMarkRead}
@@ -158,7 +158,7 @@ export default function NotificationsPage() {
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center rounded-2xl border border-[#efefed] bg-white py-20 text-center">
-            <div className="mb-4 text-4xl text-amber-500">✦</div>
+            <div className="mb-4 text-4xl text-[#6C63FF]">✦</div>
             <h3 className="font-['Playfair_Display'] mb-2 text-2xl font-bold text-[#111110]">
               All Caught Up!
             </h3>
@@ -175,46 +175,53 @@ export default function NotificationsPage() {
 function NotificationRow({ notif, timeAgo, onMarkRead, onDelete }) {
   const getNotificationIcon = (type) => {
     const icons = {
-      message: '💬',
-      application: '📝',
-      hire: '⭐',
-      comment: '💭',
-      like: '❤️',
-      follow: '👤',
+      new_message: '💬',
+      application_received: '📝',
+      application_accepted: '✅',
+      application_declined: '❌',
+      role_filled: '⭐',
+      follow_request: '👤',
+      follow_accepted: '🤝',
+      project_invite: '🎬',
+      contest_announcement: '🏆',
+      platform_update: '📢',
     };
-    return icons[type] || '📢';
+    return icons[type] || '🔔';
   };
+
+  const nid = notif._id || notif.id;
+  const isRead = notif.read;
 
   return (
     <div
-      className={`rounded-xl border transition-all hover:shadow-md hover:-translate-y-0.5 ${
-        notif.isRead
-          ? 'border-[#efefed] bg-white p-4'
-          : 'border-l-4 border-l-amber-500 border-r-[#efefed] border-t-[#efefed] border-b-[#efefed] bg-white p-4'
+      className={`rounded-xl border transition-all hover:shadow-md hover:-translate-y-0.5 p-4 ${
+        isRead
+          ? 'border-[#efefed] bg-white'
+          : 'border-l-4 border-l-[#6C63FF] border-r-[#efefed] border-t-[#efefed] border-b-[#efefed] bg-[#fdfcff]'
       }`}
     >
       <div className="flex items-start gap-4">
-        <div className="mt-1 flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50 text-lg">
+        <div className="mt-1 flex h-10 w-10 items-center justify-center rounded-lg bg-[#f0eeff] text-lg flex-shrink-0">
           {getNotificationIcon(notif.type)}
         </div>
-        <div className="flex-1">
-          <p className={`text-sm ${notif.isRead ? 'text-gray-600' : 'font-semibold text-[#111110]'}`}>
+        <div className="flex-1 min-w-0">
+          <p className={`text-sm ${isRead ? 'text-gray-600' : 'font-semibold text-[#111110]'}`}>
             {notif.title}
           </p>
-          <p className="mt-1 text-xs text-gray-500">{notif.description}</p>
+          <p className="mt-1 text-xs text-gray-500">{notif.message}</p>
           <p className="mt-2 text-xs text-gray-400">{timeAgo(notif.createdAt)}</p>
         </div>
-        <div className="flex gap-2">
-          {!notif.isRead && (
+        <div className="flex gap-2 flex-shrink-0">
+          {!isRead && (
             <button
-              onClick={() => onMarkRead(notif.id)}
-              className="rounded-lg bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-600 transition-colors hover:bg-amber-100"
+              onClick={() => onMarkRead(nid)}
+              className="rounded-lg bg-[#f0eeff] px-3 py-1.5 text-xs font-medium text-[#5750D4] transition-colors hover:bg-[#e4e1ff]"
             >
               Mark Read
             </button>
           )}
           <button
-            onClick={() => onDelete(notif.id)}
+            onClick={() => onDelete(nid)}
             className="rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-red-50 hover:text-red-600"
           >
             Delete

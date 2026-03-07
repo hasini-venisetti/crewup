@@ -74,7 +74,7 @@ const getMessages = async (req, res, next) => {
     }
 
     // Ensure the requesting user is a member
-    if (!conversation.members.includes(req.user._id)) {
+    if (!conversation.members.some((m) => m.toString() === req.user._id.toString())) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
@@ -101,7 +101,7 @@ const sendMessage = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Conversation not found' });
     }
 
-    if (!conversation.members.includes(req.user._id)) {
+    if (!conversation.members.some((m) => m.toString() === req.user._id.toString())) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
@@ -183,7 +183,7 @@ const getProjectChatMessages = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Chat not found' });
     }
 
-    if (!chat.members.includes(req.user._id)) {
+    if (!chat.members.some((m) => m.toString() === req.user._id.toString())) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 

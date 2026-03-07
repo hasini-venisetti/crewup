@@ -4,7 +4,7 @@ const EMAIL_HOST = process.env.EMAIL_HOST;
 const EMAIL_PORT = process.env.EMAIL_PORT;
 const EMAIL_USER = process.env.EMAIL_USER;
 const EMAIL_PASS = process.env.EMAIL_PASS;
-const EMAIL_FROM = process.env.EMAIL_FROM || 'noreply@crewup.com';
+const EMAIL_FROM = process.env.EMAIL_FROM || 'CREWUPFILMS <crewupfilms@gmail.com>';
 
 let transporter = null;
 
@@ -272,9 +272,108 @@ const sendRoleFilled = async (memberEmail, memberName, projectTitle, role, note,
   }
 };
 
+const sendLaunchNotification = async (email, name) => {
+  if (!transporter) {
+    console.log('[EMAIL SKIPPED] sendLaunchNotification to', email);
+    return;
+  }
+
+  const displayName = name || 'Filmmaker';
+  const siteUrl = process.env.CLIENT_URL || 'https://crewupfilms.com';
+
+  try {
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0a0a09; margin: 0; padding: 0; }
+            .wrapper { padding: 40px 20px; }
+            .container { max-width: 580px; margin: 0 auto; background-color: #111110; border-radius: 16px; overflow: hidden; border: 1px solid #1e1e1c; }
+            .hero { background: linear-gradient(135deg, #6C63FF 0%, #4f46e5 100%); padding: 48px 40px; text-align: center; }
+            .logo { font-size: 13px; font-weight: 800; letter-spacing: 0.2em; color: rgba(255,255,255,0.6); text-transform: uppercase; margin-bottom: 20px; }
+            .hero-title { font-size: 32px; font-weight: 900; color: #ffffff; line-height: 1.2; margin: 0 0 12px; }
+            .hero-sub { font-size: 16px; color: rgba(255,255,255,0.75); margin: 0; }
+            .body { padding: 40px; }
+            .greeting { font-size: 18px; color: #ffffff; font-weight: 600; margin: 0 0 16px; }
+            .text { font-size: 15px; color: #a3a39e; line-height: 1.7; margin: 0 0 20px; }
+            .features { background: #1a1a18; border-radius: 12px; padding: 24px; margin: 28px 0; }
+            .feature { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
+            .feature:last-child { margin-bottom: 0; }
+            .feat-icon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
+            .feat-text { font-size: 14px; color: #d0d0cc; line-height: 1.5; }
+            .feat-title { font-weight: 700; color: #ffffff; display: block; margin-bottom: 2px; }
+            .cta-wrap { text-align: center; margin: 32px 0 8px; }
+            .cta { display: inline-block; background: linear-gradient(135deg, #6C63FF, #4f46e5); color: #ffffff; padding: 16px 40px; text-decoration: none; border-radius: 50px; font-size: 16px; font-weight: 700; letter-spacing: 0.02em; }
+            .footer { text-align: center; border-top: 1px solid #1e1e1c; padding: 24px 40px; font-size: 12px; color: #4a4a46; }
+          </style>
+        </head>
+        <body>
+          <div class="wrapper">
+            <div class="container">
+              <div class="hero">
+                <div class="logo">CREWUPFILMS</div>
+                <h1 class="hero-title">🎬 We're Live!</h1>
+                <p class="hero-sub">The wait is over. Your platform is ready.</p>
+              </div>
+              <div class="body">
+                <p class="greeting">Hey ${displayName},</p>
+                <p class="text">
+                  You signed up early and we didn't forget you. CREWUPFILMS is officially live — the platform where Indian filmmakers find their crew, showcase their films, and grow together.
+                </p>
+                <div class="features">
+                  <div class="feature">
+                    <span class="feat-icon">🎥</span>
+                    <span class="feat-text"><span class="feat-title">Post Projects & Find Crew</span>Directors, writers, DPs, editors — build your dream team here.</span>
+                  </div>
+                  <div class="feature">
+                    <span class="feat-icon">🏆</span>
+                    <span class="feat-text"><span class="feat-title">Enter Film Contests</span>Submit your short films, earn community votes, and win prizes in INR.</span>
+                  </div>
+                  <div class="feature">
+                    <span class="feat-icon">🎞️</span>
+                    <span class="feat-text"><span class="feat-title">Showcase Your Films</span>Your finished films get a permanent home — share them with the world.</span>
+                  </div>
+                  <div class="feature">
+                    <span class="feat-icon">🤝</span>
+                    <span class="feat-text"><span class="feat-title">Connect with Mentors</span>Learn from experienced filmmakers and grow your craft.</span>
+                  </div>
+                </div>
+                <p class="text">You were one of the first to believe in this. Now it's your turn to be first on the platform.</p>
+                <div class="cta-wrap">
+                  <a href="${siteUrl}" class="cta">Enter CREWUPFILMS →</a>
+                </div>
+              </div>
+              <div class="footer">
+                <p>You're receiving this because you joined our early access waitlist.</p>
+                <p>© 2026 CREWUPFILMS. Made with ❤️ for Indian filmmakers.</p>
+              </div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    await transporter.sendMail({
+      from: EMAIL_FROM,
+      to: email,
+      subject: `🎬 CREWUPFILMS is Live — You're In, ${displayName}!`,
+      html,
+    });
+
+    console.log(`[EMAIL SENT] sendLaunchNotification to ${email}`);
+  } catch (error) {
+    console.error('[EMAIL ERROR] sendLaunchNotification:', error.message);
+    throw error;
+  }
+};
+
 module.exports = {
   sendApplicationReceived,
   sendApplicationAccepted,
   sendApplicationDeclined,
   sendRoleFilled,
+  sendLaunchNotification,
 };

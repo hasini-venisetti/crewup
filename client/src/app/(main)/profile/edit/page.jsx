@@ -19,7 +19,7 @@ const PORTFOLIO_TYPES = ['video','image','audio','link','other'];
 const COMMON_SKILLS = ['Premiere Pro','After Effects','DaVinci Resolve','Final Cut Pro','Lightroom','Photoshop','Illustrator','Blender','Cinema 4D','Audacity','Logic Pro','Ableton','Avid','CapCut','Canva','Photography','Videography','Color Grading','Sound Mixing','Motion Graphics','3D Modeling','Scriptwriting','Storyboarding','Directing','Acting','Voice Acting','Narration'];
 const MENTOR_FIELDS = ['Film', 'Music', 'Photography', 'Writing', 'Design', 'Editing', 'Acting', 'Animation'];
 
-const inputCls = 'w-full rounded-lg border border-[#e0e0dd] bg-white px-4 py-2.5 text-sm text-[#111110] focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition';
+const inputCls = 'w-full rounded-lg border border-[#e0e0dd] bg-white px-4 py-2.5 text-sm text-[#111110] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] transition';
 const labelCls = 'block text-xs font-semibold text-[#6b6b66] uppercase tracking-[0.12em] mb-2';
 
 export default function EditProfilePage() {
@@ -153,11 +153,11 @@ export default function EditProfilePage() {
               ← View Profile
             </Link>
             <button onClick={handleSave} disabled={saving}
-              className="text-sm font-semibold px-6 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-white shadow-lg shadow-amber-500/20 transition-all active:scale-[0.98] disabled:opacity-50">
+              className="text-sm font-semibold px-6 py-2.5 rounded-lg bg-[#6C63FF] hover:bg-[#7C75FF] text-white shadow-lg shadow-[#6C63FF]/20 transition-all active:scale-[0.98] disabled:opacity-50">
               {saving ? 'Saving…' : 'Save Changes'}
             </button>
           </div>
-          <p className="text-xs uppercase tracking-[0.2em] text-amber-500 font-bold mb-2">Profile</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-[#6C63FF] font-bold mb-2">Profile</p>
           <h1 className="text-4xl font-[Playfair_Display] text-white">Edit Profile</h1>
         </div>
       </div>
@@ -217,14 +217,14 @@ export default function EditProfilePage() {
                 {AVAIL_OPTIONS.map((opt) => (
                   <button key={opt.value} type="button" onClick={() => set('availability', opt.value)}
                     className={`flex items-center justify-between p-4 border rounded-xl text-left transition-all ${
-                      form.availability === opt.value ? 'border-amber-500 bg-amber-50/50' : 'border-[#e0e0dd] bg-white hover:border-[#0e0e0d]'
+                      form.availability === opt.value ? 'border-[#6C63FF] bg-[#f0eeff]/50' : 'border-[#e0e0dd] bg-white hover:border-[#0e0e0d]'
                     }`}>
                     <div>
                       <p className="text-sm font-medium text-[#111110]">{opt.label}</p>
                       <p className="text-xs text-[#a3a39e]">{opt.desc}</p>
                     </div>
                     <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                      form.availability === opt.value ? 'border-amber-500 bg-amber-500' : 'border-[#e0e0dd]'
+                      form.availability === opt.value ? 'border-[#6C63FF] bg-[#6C63FF]' : 'border-[#e0e0dd]'
                     }`}>
                       {form.availability === opt.value && <div className="w-2 h-2 bg-white rounded-full" />}
                     </div>
@@ -302,7 +302,7 @@ export default function EditProfilePage() {
                 </button>
               </div>
               {addingItem && (
-                <div className="border border-amber-500/30 bg-amber-50/20 rounded-xl p-6 mb-6 flex flex-col gap-4">
+                <div className="border border-[#6C63FF]/30 bg-[#f0eeff]/20 rounded-xl p-6 mb-6 flex flex-col gap-4">
                   <h3 className="font-semibold text-[#111110] text-sm">New Portfolio Item</h3>
                   <div>
                     <label className={labelCls}>Title *</label>
@@ -334,7 +334,7 @@ export default function EditProfilePage() {
                   </div>
                   <div className="flex gap-3">
                     <button onClick={handleAddPortfolioItem}
-                      className="text-sm font-semibold px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-white transition-all">
+                      className="text-sm font-semibold px-4 py-2 rounded-lg bg-[#6C63FF] hover:bg-[#7C75FF] text-white transition-all">
                       Add to Portfolio
                     </button>
                     <button onClick={() => setAddingItem(false)}
@@ -352,7 +352,7 @@ export default function EditProfilePage() {
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-sm text-[#111110]">{item.title}</p>
                         {item.description && <p className="text-xs text-[#6b6b66] mt-0.5 line-clamp-1">{item.description}</p>}
-                        {item.link && <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-xs text-amber-600 hover:text-amber-700 mt-1 block truncate">{item.link}</a>}
+                        {item.link && <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-xs text-[#5750D4] hover:text-[#4740CC] mt-1 block truncate">{item.link}</a>}
                         {item.tags?.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-1.5">
                             {item.tags.map((t) => <span key={t} className="text-[11px] bg-[#f7f7f6] text-[#a3a39e] px-2 py-0.5 rounded-full">{t}</span>)}
@@ -430,7 +430,7 @@ export default function EditProfilePage() {
               <div>
                 <p className="text-sm font-semibold text-white mb-1">How earnings work</p>
                 <p className="text-xs leading-relaxed text-white/60">
-                  You set your rate, you keep most of it. CREWUPFILMS takes a small platform commission on each paid session. Payments go live soon.
+                  You set your own rate — free or paid. Every rupee goes directly to you. CREWUPFILMS takes no commission.
                 </p>
               </div>
             </div>
@@ -440,7 +440,7 @@ export default function EditProfilePage() {
                 <p className="text-sm text-[#6b6b66]">Show up in the Mentor Directory</p>
               </div>
               <button onClick={() => setForm(f => ({ ...f, isMentor: !f.isMentor }))}
-                className={`w-12 h-6 rounded-full transition-colors relative ${form.isMentor ? 'bg-amber-500' : 'bg-[#efefed]'}`}>
+                className={`w-12 h-6 rounded-full transition-colors relative ${form.isMentor ? 'bg-[#6C63FF]' : 'bg-[#efefed]'}`}>
                 <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${form.isMentor ? 'translate-x-6' : 'translate-x-0.5'}`} />
               </button>
             </div>
@@ -471,27 +471,30 @@ export default function EditProfilePage() {
             <div>
               <div className="flex items-center gap-2 mb-1.5">
                 <label className={`${labelCls} mb-0`}>Hourly Rate</label>
-                {form.isMentor && (
-                  <span className="text-xs bg-red-50 text-red-600 border border-red-200 px-2 py-0.5 rounded-full font-medium">Required</span>
-                )}
+                <span className="text-xs bg-[#f0f0ee] text-[#6b6b66] border border-[#e0e0dd] px-2 py-0.5 rounded-full font-medium">Optional — set 0 for free</span>
               </div>
-              <p className="text-xs text-[#6b6b66] mb-3">Set your rate per 1-hour session.</p>
-              <div className={`flex gap-2 ${form.isMentor && (!form.mentorRate || Number(form.mentorRate) <= 0) ? 'ring-2 ring-red-400/30 rounded-lg' : ''}`}>
+              <p className="text-xs text-[#6b6b66] mb-3">Set your rate per 1-hour session. Enter 0 to offer free mentorship.</p>
+              <div className="flex gap-2">
                 <select value={form.mentorCurrency} onChange={e => setForm(f => ({ ...f, mentorCurrency: e.target.value }))}
-                  className="rounded-lg border border-[#e0e0dd] text-sm text-[#111110] px-3 py-2.5 focus:outline-none focus:border-amber-500 bg-white w-24">
+                  className="rounded-lg border border-[#e0e0dd] text-sm text-[#111110] px-3 py-2.5 focus:outline-none focus:border-[#6C63FF] bg-white w-24">
                   {['INR','USD','EUR','GBP','AED','SGD','AUD','CAD'].map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
-                <input type="number" min="1" step="1" placeholder="e.g. 500" value={form.mentorRate}
+                <input type="number" min="0" step="1" placeholder="e.g. 500 or 0 for free" value={form.mentorRate}
                   onChange={e => setForm(f => ({ ...f, mentorRate: e.target.value }))}
                   className={`${inputCls} flex-1`} />
               </div>
-              {form.mentorRate && Number(form.mentorRate) > 0 ? (
-                <p className="text-xs text-[#6b6b66] mt-2">
-                  Mentees will see: <strong className="text-[#111110]">{form.mentorCurrency} {Number(form.mentorRate).toLocaleString()} / hr</strong>
-                  <span className="text-[#a3a39e] ml-1">(CREWUPFILMS commission deducted at payout)</span>
-                </p>
-              ) : form.isMentor ? (
-                <p className="text-xs text-red-500 mt-2">⚠ A rate is required to list yourself as a mentor.</p>
+              {form.mentorRate !== '' && form.mentorRate !== undefined && form.mentorRate !== null ? (
+                Number(form.mentorRate) === 0 ? (
+                  <p className="text-xs text-[#6b6b66] mt-2">
+                    Mentees will see: <strong className="text-green-700">Free</strong>
+                    <span className="text-green-600 ml-1">— you keep 100%</span>
+                  </p>
+                ) : Number(form.mentorRate) > 0 ? (
+                  <p className="text-xs text-[#6b6b66] mt-2">
+                    Mentees will see: <strong className="text-[#111110]">{form.mentorCurrency} {Number(form.mentorRate).toLocaleString()} / hr</strong>
+                    <span className="text-green-600 ml-1">— you keep 100%</span>
+                  </p>
+                ) : null
               ) : null}
             </div>
           </div>
@@ -501,7 +504,7 @@ export default function EditProfilePage() {
         {tab !== 'portfolio' && (
           <div className="mt-6">
             <button onClick={handleSave} disabled={saving}
-              className="w-full py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-white font-semibold text-sm shadow-lg shadow-amber-500/20 transition-all active:scale-[0.98] disabled:opacity-50">
+              className="w-full py-3.5 rounded-xl bg-[#6C63FF] hover:bg-[#7C75FF] text-white font-semibold text-sm shadow-lg shadow-[#6C63FF]/20 transition-all active:scale-[0.98] disabled:opacity-50">
               {saving ? 'Saving…' : 'Save Changes'}
             </button>
           </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import searchAPI from '@/api/searchAPI';
+import { searchAPI } from '@/lib/api';
 import { debounce } from '@/utils/debounce';
 import Image from 'next/image';
 
@@ -92,7 +92,7 @@ export default function SearchPage() {
                   className="flex-1 ml-3 bg-transparent focus:outline-none text-[#0e0e0d] placeholder-[#9a9a96]"
                 />
                 {loading && (
-                  <div className="w-5 h-5 border-2 border-amber-200 border-t-amber-500 rounded-full animate-spin" />
+                  <div className="w-5 h-5 border-2 border-[#c9c4ff] border-t-bg-[#f0eeff]0 rounded-full animate-spin" />
                 )}
               </div>
             </div>
@@ -125,7 +125,7 @@ export default function SearchPage() {
           <>
             {results.length > 0 && (
               <div className="mb-6">
-                <span className="text-amber-500 font-semibold">
+                <span className="text-[#6C63FF] font-semibold">
                   {results.length} result{results.length !== 1 ? 's' : ''} found
                 </span>
               </div>
@@ -207,7 +207,7 @@ export default function SearchPage() {
                 <button
                   onClick={handleLoadMore}
                   disabled={loading}
-                  className="bg-white border border-[#e0e0dd] rounded-xl px-8 py-3 font-semibold hover:border-amber-500 hover:text-amber-600 transition disabled:opacity-50"
+                  className="bg-white border border-[#e0e0dd] rounded-xl px-8 py-3 font-semibold hover:border-[#6C63FF] hover:text-[#5750D4] transition disabled:opacity-50"
                 >
                   {loading ? 'Loading...' : 'Load More'}
                 </button>
@@ -230,7 +230,7 @@ function CreatorCard({ creator }) {
   return (
     <div className="rounded-2xl border border-[#efefed] p-6 hover:shadow-lg hover:-translate-y-1 transition bg-white">
       <div className="flex items-center gap-4 mb-4">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-100 to-amber-50 flex items-center justify-center text-amber-800 font-bold text-lg">
+        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#e4e1ff] to-[#f0eeff] flex items-center justify-center text-[#3730A3] font-bold text-lg">
           {creator.name?.charAt(0) || 'C'}
         </div>
         <div className="flex-1">
@@ -241,7 +241,7 @@ function CreatorCard({ creator }) {
       <p className="text-sm text-[#6b6b66] mb-4 line-clamp-2">{creator.bio}</p>
       <a
         href={`/creators/${creator.id}`}
-        className="text-amber-600 font-semibold text-sm hover:text-amber-700 transition"
+        className="text-[#5750D4] font-semibold text-sm hover:text-[#4740CC] transition"
       >
         View Profile →
       </a>
@@ -253,10 +253,10 @@ function CreatorMiniCard({ creator }) {
   return (
     <a
       href={`/creators/${creator.id}`}
-      className="rounded-xl border border-[#efefed] p-4 hover:bg-amber-50 transition bg-white"
+      className="rounded-xl border border-[#efefed] p-4 hover:bg-[#f0eeff] transition bg-white"
     >
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-100 to-amber-50 flex items-center justify-center text-amber-800 font-bold text-sm flex-shrink-0">
+        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#e4e1ff] to-[#f0eeff] flex items-center justify-center text-[#3730A3] font-bold text-sm flex-shrink-0">
           {creator.name?.charAt(0) || 'C'}
         </div>
         <div className="flex-1">
@@ -287,7 +287,7 @@ function ProjectCard({ project }) {
         <span className="text-xs text-[#9a9a96] font-medium">{project.category}</span>
         <a
           href={`/projects/${project.id}`}
-          className="text-amber-600 font-semibold text-sm hover:text-amber-700 transition"
+          className="text-[#5750D4] font-semibold text-sm hover:text-[#4740CC] transition"
         >
           View →
         </a>

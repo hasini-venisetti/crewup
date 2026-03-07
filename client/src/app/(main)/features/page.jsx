@@ -29,11 +29,11 @@ export default function Features() {
         }}
       >
         {/* Amber glow */}
-        <div className="absolute top-0 right-1/4 w-72 h-72 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 right-1/4 w-72 h-72 bg-[#6C63FF]/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative max-w-6xl mx-auto px-6">
-          <div className="inline-flex items-center gap-2 bg-amber-500/20 border border-amber-500/30 rounded-full px-4 py-1.5 mb-6">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-            <p className="text-xs uppercase tracking-[0.2em] text-amber-500 font-bold">Platform Capabilities</p>
+          <div className="inline-flex items-center gap-2 bg-[#6C63FF]/20 border border-[#6C63FF]/30 rounded-full px-4 py-1.5 mb-6">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#6C63FF]" />
+            <p className="text-xs uppercase tracking-[0.2em] text-[#6C63FF] font-bold">Platform Capabilities</p>
           </div>
           <h1 className="text-6xl font-[Playfair_Display] text-white mb-4 leading-tight max-w-2xl">
             Features Built for Creators
@@ -52,7 +52,7 @@ export default function Features() {
               key={index}
               className="bg-white rounded-xl border border-[#efefed] p-8 hover:shadow-[0_8px_32px_rgba(0,0,0,0.08)] hover:border-[#d0d0ce] transition-all duration-300 group"
             >
-              <div className="w-12 h-12 rounded-xl bg-[#f7f7f6] border border-[#e0e0dd] flex items-center justify-center text-2xl mb-5 group-hover:bg-amber-50 group-hover:border-amber-200 transition-colors duration-300">
+              <div className="w-12 h-12 rounded-xl bg-[#f7f7f6] border border-[#e0e0dd] flex items-center justify-center text-2xl mb-5 group-hover:bg-[#f0eeff] group-hover:border-[#c9c4ff] transition-colors duration-300">
                 {feature.icon}
               </div>
               <h3 className="text-lg font-semibold text-[#0e0e0d] mb-3">{feature.title}</h3>
@@ -66,9 +66,9 @@ export default function Features() {
           className="mt-20 rounded-2xl p-12 md:p-16 text-center relative overflow-hidden"
           style={{ background: '#0e0e0d', backgroundImage: 'radial-gradient(circle, #1a1a18 1px, transparent 1px)', backgroundSize: '24px 24px' }}
         >
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-32 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-32 bg-[#6C63FF]/10 rounded-full blur-3xl pointer-events-none" />
           <div className="relative">
-            <p className="text-xs uppercase tracking-[0.2em] text-amber-500 font-bold mb-4">Get Started Today</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-[#6C63FF] font-bold mb-4">Get Started Today</p>
             <h2 className="text-4xl font-[Playfair_Display] text-white mb-4">
               Ready to explore all features?
             </h2>
@@ -77,7 +77,7 @@ export default function Features() {
             </p>
             <Link
               href="/signup"
-              className="inline-block bg-amber-500 hover:bg-amber-400 text-white font-semibold text-sm px-8 py-3.5 rounded-lg shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 transition-all duration-200 active:scale-[0.98]"
+              className="inline-block bg-[#6C63FF] hover:bg-[#7C75FF] text-white font-semibold text-sm px-8 py-3.5 rounded-lg shadow-lg shadow-[#6C63FF]/25 hover:shadow-[#6C63FF]/40 transition-all duration-200 active:scale-[0.98]"
             >
               Get Started for Free
             </Link>

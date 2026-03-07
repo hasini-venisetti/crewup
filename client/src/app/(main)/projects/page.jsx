@@ -47,7 +47,7 @@ export default function ProjectsPage() {
       >
         <div className="relative z-10 mx-auto max-w-6xl">
           <h1 className="font-['Playfair_Display'] text-4xl font-bold text-white sm:text-5xl">
-            Discover <span className="text-amber-500">Projects</span>
+            Discover <span className="text-[#6C63FF]">Projects</span>
           </h1>
           <p className="mt-3 text-base text-gray-400">Find amazing film, music, and creative projects looking for talented crew members.</p>
         </div>
@@ -85,7 +85,7 @@ export default function ProjectsPage() {
                   <button
                     onClick={() => setIsPaid(!isPaid)}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      isPaid ? 'bg-amber-500' : 'bg-gray-300'
+                      isPaid ? 'bg-[#6C63FF]' : 'bg-gray-300'
                     }`}
                   >
                     <span
@@ -104,7 +104,7 @@ export default function ProjectsPage() {
                   <button
                     onClick={() => setIsRemote(!isRemote)}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      isRemote ? 'bg-amber-500' : 'bg-gray-300'
+                      isRemote ? 'bg-[#6C63FF]' : 'bg-gray-300'
                     }`}
                   >
                     <span
@@ -134,15 +134,15 @@ export default function ProjectsPage() {
               </div>
 
               {/* Top Roles */}
-              <div className="rounded-xl border border-amber-200 bg-white p-4 shadow-sm">
-                <h4 className="mb-3 text-xs font-semibold uppercase tracking-widest text-amber-600">
+              <div className="rounded-xl border border-[#c9c4ff] bg-white p-4 shadow-sm">
+                <h4 className="mb-3 text-xs font-semibold uppercase tracking-widest text-[#5750D4]">
                   ✦ Top Roles
                 </h4>
                 <div className="space-y-2">
                   {topRoles.map((role) => (
                     <button
                       key={role}
-                      className="block w-full text-left rounded-lg px-3 py-2 text-sm text-[#111110] transition-colors hover:bg-amber-50"
+                      className="block w-full text-left rounded-lg px-3 py-2 text-sm text-[#111110] transition-colors hover:bg-[#f0eeff]"
                     >
                       {role}
                     </button>
@@ -176,7 +176,7 @@ export default function ProjectsPage() {
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 bg-white py-20 text-center">
-                <div className="mb-4 text-4xl text-amber-500">✦</div>
+                <div className="mb-4 text-4xl text-[#6C63FF]">✦</div>
                 <h3 className="font-['Playfair_Display'] mb-2 text-2xl font-bold text-[#111110]">
                   No Projects Found
                 </h3>

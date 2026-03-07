@@ -11,7 +11,7 @@ const AVAILABILITIES = ['all', 'available', 'busy', 'open-to-offers'];
 
 const AVAIL_CONFIG = {
   'available':      { label: 'Available',      dot: 'bg-green-500', badge: 'bg-green-50 text-green-700 border border-green-200' },
-  'open-to-offers': { label: 'Open to Offers', dot: 'bg-amber-500', badge: 'bg-amber-50 text-amber-700 border border-amber-200' },
+  'open-to-offers': { label: 'Open to Offers', dot: 'bg-[#6C63FF]', badge: 'bg-[#f0eeff] text-[#4740CC] border border-[#c9c4ff]' },
   'busy':           { label: 'Busy',           dot: 'bg-red-500',   badge: 'bg-red-50 text-red-700 border border-red-200' },
 };
 
@@ -22,7 +22,7 @@ const ROLE_ICONS = {
 };
 
 const ROLE_COLORS = {
-  director:        'bg-amber-500',
+  director:        'bg-[#6C63FF]',
   cinematographer: 'bg-violet-500',
   editor:          'bg-blue-500',
   actor:           'bg-pink-500',
@@ -38,7 +38,7 @@ const ROLE_COLORS = {
 function Avatar({ name, image }) {
   if (image) return <img src={image} alt={name} className="w-14 h-14 rounded-full object-cover flex-shrink-0" />;
   return (
-    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-amber-100 to-amber-50 flex items-center justify-center text-lg font-semibold text-amber-800 flex-shrink-0">
+    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#e4e1ff] to-[#f0eeff] flex items-center justify-center text-lg font-semibold text-[#3730A3] flex-shrink-0">
       {name?.[0]?.toUpperCase() || '?'}
     </div>
   );
@@ -191,11 +191,11 @@ export default function ExplorePage() {
         className="bg-[#0e0e0d] relative overflow-hidden"
         style={{ backgroundImage: 'radial-gradient(circle, #252523 1px, transparent 1px)', backgroundSize: '28px 28px' }}
       >
-        <div className="absolute top-0 right-1/4 w-72 h-72 bg-amber-500/8 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 right-1/4 w-72 h-72 bg-[#6C63FF]/8 rounded-full blur-3xl pointer-events-none" />
         <div className="relative max-w-7xl mx-auto px-6 py-16">
-          <div className="inline-flex items-center gap-2 bg-amber-500/20 border border-amber-500/30 rounded-full px-4 py-1.5 mb-4">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-            <span className="text-xs font-semibold text-amber-500 uppercase tracking-widest">Creator Directory</span>
+          <div className="inline-flex items-center gap-2 bg-[#6C63FF]/20 border border-[#6C63FF]/30 rounded-full px-4 py-1.5 mb-4">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#6C63FF]" />
+            <span className="text-xs font-semibold text-[#6C63FF] uppercase tracking-widest">Creator Directory</span>
           </div>
           <h1 className="text-5xl font-[Playfair_Display] text-white mb-3 leading-tight">
             Find Your Crew
@@ -210,7 +210,7 @@ export default function ExplorePage() {
               placeholder="Search by name or username..."
               value={filters.q}
               onChange={(e) => handleFilterChange('q', e.target.value)}
-              className="w-full pl-10 pr-10 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500/50 transition text-sm"
+              className="w-full pl-10 pr-10 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/30 focus:border-[#6C63FF]/50 transition text-sm"
             />
             {filters.q && (
               <button
@@ -233,7 +233,7 @@ export default function ExplorePage() {
               <select
                 value={filters.role}
                 onChange={(e) => handleFilterChange('role', e.target.value)}
-                className="w-full rounded-lg border border-[#e0e0dd] bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition"
+                className="w-full rounded-lg border border-[#e0e0dd] bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] transition"
               >
                 <option value="all">All Roles</option>
                 {ROLES.map((role) => (
@@ -250,7 +250,7 @@ export default function ExplorePage() {
                 placeholder="e.g. Premiere Pro"
                 value={filters.skill}
                 onChange={(e) => handleFilterChange('skill', e.target.value)}
-                className="w-full rounded-lg border border-[#e0e0dd] bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition"
+                className="w-full rounded-lg border border-[#e0e0dd] bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] transition"
               />
             </div>
             <div>
@@ -260,7 +260,7 @@ export default function ExplorePage() {
                 placeholder="e.g. Los Angeles"
                 value={filters.location}
                 onChange={(e) => handleFilterChange('location', e.target.value)}
-                className="w-full rounded-lg border border-[#e0e0dd] bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition"
+                className="w-full rounded-lg border border-[#e0e0dd] bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] transition"
               />
             </div>
             <div>
@@ -268,7 +268,7 @@ export default function ExplorePage() {
               <select
                 value={filters.availability}
                 onChange={(e) => handleFilterChange('availability', e.target.value)}
-                className="w-full rounded-lg border border-[#e0e0dd] bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition"
+                className="w-full rounded-lg border border-[#e0e0dd] bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] transition"
               >
                 {AVAILABILITIES.map((avail) => (
                   <option key={avail} value={avail}>

@@ -9,14 +9,24 @@ module.exports = {
     extend: {
       colors: {
         brand: {
-          amber: '#f59e0b',
-          dark:  '#080808',
-          card:  '#111111',
-          border: 'rgba(255,255,255,0.07)',
+          // Primary indigo/violet accent — from CREWUPFILMS mockup
+          accent:   '#6C63FF',
+          'accent-dark': '#5750D4',
+          'accent-light': '#f0eeff',
+          dark:     '#0a0a0a',
+          surface:  '#111111',
+          border:   'rgba(255,255,255,0.08)',
+          // Light mode
+          'off-white': '#f5f4f7',
+          card:     '#ffffff',
         },
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
+        display: ['Playfair Display', 'serif'],
+      },
+      backgroundImage: {
+        'grain': "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E\")",
       },
     },
   },

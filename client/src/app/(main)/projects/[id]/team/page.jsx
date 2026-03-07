@@ -12,12 +12,12 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 /* ─────────────── constants ─────────────── */
 const PRIORITY_CONFIG = {
   high:   { label: 'High',   dot: 'bg-red-500',    text: 'text-red-600',    bg: 'bg-red-50 border-red-200' },
-  medium: { label: 'Medium', dot: 'bg-amber-500',  text: 'text-amber-600',  bg: 'bg-amber-50 border-amber-200' },
+  medium: { label: 'Medium', dot: 'bg-[#6C63FF]',  text: 'text-[#5750D4]',  bg: 'bg-[#f0eeff] border-[#c9c4ff]' },
   low:    { label: 'Low',    dot: 'bg-green-500',  text: 'text-green-600',  bg: 'bg-green-50 border-green-200' },
 };
 const STATUS_COLS = [
   { key: 'todo',        label: 'To Do',       icon: '📋', count_class: 'bg-gray-100 text-gray-600' },
-  { key: 'in-progress', label: 'In Progress', icon: '⚡', count_class: 'bg-amber-100 text-amber-700' },
+  { key: 'in-progress', label: 'In Progress', icon: '⚡', count_class: 'bg-[#e4e1ff] text-[#4740CC]' },
   { key: 'done',        label: 'Done',        icon: '✅', count_class: 'bg-green-100 text-green-700' },
 ];
 const TIMELINE_STAGES = ['planning','pre-production','production','post-production','released'];
@@ -436,7 +436,7 @@ function TasksTab({ project, user }) {
       <div className="flex gap-4 mb-6 text-sm text-[#6b6b66]">
         <span>{tasks.length} total</span>
         <span>·</span>
-        <span className="text-amber-600">{tasks.filter((t) => t.status !== 'done').length} open</span>
+        <span className="text-[#5750D4]">{tasks.filter((t) => t.status !== 'done').length} open</span>
         <span>·</span>
         <span className="text-green-600">{tasks.filter((t) => t.status === 'done').length} done</span>
       </div>

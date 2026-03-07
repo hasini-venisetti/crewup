@@ -51,7 +51,7 @@ export default function NotFound() {
           style={{
             display: 'inline-block',
             backgroundColor: 'rgba(245,158,11,0.12)',
-            color: '#f59e0b',
+            color: '#7C75FF',
             fontSize: '0.7rem',
             fontWeight: 700,
             letterSpacing: '0.12em',
@@ -93,7 +93,7 @@ export default function NotFound() {
           <Link
             href="/"
             style={{
-              backgroundColor: '#f59e0b',
+              backgroundColor: '#7C75FF',
               color: '#000',
               fontWeight: 700,
               fontSize: '0.9rem',

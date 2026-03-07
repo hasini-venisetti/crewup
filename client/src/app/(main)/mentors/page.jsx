@@ -1,14 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import mentorAPI from '@/api/mentorAPI';
-import useAuth from '@/hooks/useAuth';
+import { mentorAPI } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth';
 import Image from 'next/image';
 
 const FIELDS = ['Film', 'Photography', 'Animation', 'VFX', 'Sound Design', 'Directing'];
 const AVAIL_CONFIG = {
   'Available': { color: 'bg-green-500', label: 'Available' },
-  'Open to Offers': { color: 'bg-amber-500', label: 'Open to Offers' },
+  'Open to Offers': { color: 'bg-[#6C63FF]', label: 'Open to Offers' },
   'Busy': { color: 'bg-red-400', label: 'Busy' }
 };
 
@@ -23,8 +23,9 @@ export default function MentorsPage() {
     const fetchMentors = async () => {
       try {
         setLoading(true);
-        const data = await mentorAPI.getMentors({ field, availability });
-        setMentors(data);
+        const res = await mentorAPI.getAll({ field, availability });
+        const data = res.data?.data || res.data?.mentors || [];
+        setMentors(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error('Error fetching mentors:', error);
       } finally {
@@ -46,7 +47,7 @@ export default function MentorsPage() {
           }}
         />
         <div className="relative h-full flex flex-col items-center justify-center text-center px-4">
-          <div className="inline-block bg-amber-500 text-white px-3 py-1 rounded-full text-xs font-semibold mb-4">
+          <div className="inline-block bg-[#6C63FF] text-white px-3 py-1 rounded-full text-xs font-semibold mb-4">
             Mentorship
           </div>
           <h1 className="font-[Playfair_Display] text-5xl font-bold text-white mb-3">
@@ -56,7 +57,7 @@ export default function MentorsPage() {
             Connect with industry experts to elevate your craft
           </p>
           {!user && (
-            <button className="bg-amber-500 text-white rounded-xl px-6 py-3 font-semibold hover:bg-amber-600 transition">
+            <button className="bg-[#6C63FF] text-white rounded-xl px-6 py-3 font-semibold hover:bg-[#5750D4] transition">
               Become a Mentor
             </button>
           )}
@@ -75,7 +76,7 @@ export default function MentorsPage() {
               <select
                 value={field}
                 onChange={(e) => setField(e.target.value)}
-                className="w-full rounded-lg border border-[#e0e0dd] bg-white px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition"
+                className="w-full rounded-lg border border-[#e0e0dd] bg-white px-4 py-2.5 text-sm focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] transition"
               >
                 <option value="">All Fields</option>
                 {FIELDS.map((f) => (
@@ -94,7 +95,7 @@ export default function MentorsPage() {
               <select
                 value={availability}
                 onChange={(e) => setAvailability(e.target.value)}
-                className="w-full rounded-lg border border-[#e0e0dd] bg-white px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition"
+                className="w-full rounded-lg border border-[#e0e0dd] bg-white px-4 py-2.5 text-sm focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] transition"
               >
                 <option value="">All Statuses</option>
                 {Object.entries(AVAIL_CONFIG).map(([key, val]) => (
@@ -122,7 +123,7 @@ export default function MentorsPage() {
                 {/* Header with Avatar and Availability */}
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-100 to-amber-50 flex items-center justify-center text-amber-800 font-bold text-lg">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#e4e1ff] to-[#f0eeff] flex items-center justify-center text-[#3730A3] font-bold text-lg">
                       {mentor.name?.charAt(0) || 'M'}
                     </div>
                     <div>
@@ -152,7 +153,7 @@ export default function MentorsPage() {
                   {mentor.fields?.slice(0, 3).map((f) => (
                     <span
                       key={f}
-                      className="bg-amber-50 text-amber-700 border border-amber-200 rounded-full text-xs px-2.5 py-1 font-medium"
+                      className="bg-[#f0eeff] text-[#4740CC] border border-[#c9c4ff] rounded-full text-xs px-2.5 py-1 font-medium"
                     >
                       {f}
                     </span>
@@ -161,16 +162,16 @@ export default function MentorsPage() {
 
                 {/* Rate and CTA */}
                 <div className="flex items-center justify-between border-t border-[#efefed] pt-4">
-                  {mentor.rate ? (
+                  {mentor.rate && Number(mentor.rate) > 0 ? (
                     <span className="text-sm font-semibold text-[#0e0e0d]">
-                      ${mentor.rate}/hr
+                      {mentor.currency || ''} {Number(mentor.rate).toLocaleString()}/hr
                     </span>
                   ) : (
                     <span className="text-sm font-semibold text-green-600">Free</span>
                   )}
                   <a
                     href={`/mentors/${mentor.id}`}
-                    className="text-amber-600 font-semibold text-sm hover:text-amber-700 transition"
+                    className="text-[#5750D4] font-semibold text-sm hover:text-[#4740CC] transition"
                   >
                     View Profile →
                   </a>
@@ -186,7 +187,7 @@ export default function MentorsPage() {
                 setField('');
                 setAvailability('');
               }}
-              className="bg-amber-500 text-white rounded-xl px-6 py-2.5 font-semibold hover:bg-amber-600 transition"
+              className="bg-[#6C63FF] text-white rounded-xl px-6 py-2.5 font-semibold hover:bg-[#5750D4] transition"
             >
               Clear Filters
             </button>

@@ -14,16 +14,10 @@ export function AuthProvider({ children }) {
     const stored = getStoredUser();
     if (stored) {
       setUser(stored);
-      // Verify token is still valid with the server
       authAPI.me()
         .then(({ data }) => setUser(data.user))
         .catch((err) => {
-          // Only clear auth on a real 401 — not on network errors or server hiccups
-          if (err.response?.status === 401) {
-            clearAuth();
-            setUser(null);
-          }
-          // Otherwise keep the stored user so a brief server outage doesn't log people out
+          if (err.response?.status === 401) { clearAuth(); setUser(null); }
         })
         .finally(() => setLoading(false));
     } else {
@@ -45,6 +39,12 @@ export function AuthProvider({ children }) {
     return data;
   };
 
+  // For OAuth flows — token + user already resolved by the API
+  const loginWithToken = (token, userData) => {
+    saveAuth(token, userData);
+    setUser(userData);
+  };
+
   const logout = () => {
     clearAuth();
     setUser(null);
@@ -52,7 +52,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, loginWithToken, logout }}>
       {children}
     </AuthContext.Provider>
   );

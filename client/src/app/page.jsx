@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import Logo from '@/components/ui/Logo';
 import Navbar from '@/components/layout/Navbar';
 import { useScrollAnimation } from '@/hooks/useScrollAnimation';
-import { projectAPI } from '@/lib/api';
+import { projectAPI, adminAPI } from '@/lib/api';
 
 const TICKER_ROLES = [
   'Director', 'Cinematographer', 'Editor', 'Musician',
@@ -49,12 +49,48 @@ function timeAgo(date) {
   return `${d}d ago`;
 }
 
+// Helper — split a string into word-reveal spans
+function WordReveal({ text, baseDelay = 0, wordStyle = {} }) {
+  const words = text.split(' ');
+  return (
+    <>
+      {words.map((word, i) => (
+        <span key={i} className="word-clip-wrap">
+          <span
+            className="word-reveal"
+            style={{ animationDelay: `${baseDelay + i * 0.1}s`, ...wordStyle }}
+          >
+            {word}
+          </span>
+          {i < words.length - 1 && '\u00A0'}
+        </span>
+      ))}
+    </>
+  );
+}
+
 export default function Home() {
   const { user } = useAuth();
   useScrollAnimation();
 
   const [projects, setProjects] = useState([]);
   const [projectsLoading, setProjectsLoading] = useState(true);
+  const [trendingFilms, setTrendingFilms] = useState([]);
+
+  // Cursor spotlight state
+  const [cursor, setCursor] = useState({ x: 50, y: 50 });
+  const heroRef = useRef(null);
+  const handleMouseMove = useCallback((e) => {
+    const rect = heroRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setCursor({ x, y });
+  }, []);
+
+  useEffect(() => {
+    adminAPI.getTrending().then(({ data }) => setTrendingFilms(data.data || [])).catch(() => {});
+  }, []);
 
   useEffect(() => {
     projectAPI.getAll({ limit: 3, sort: '-createdAt' })
@@ -71,46 +107,89 @@ export default function Home() {
       <Navbar />
 
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
-      <section className="relative min-h-[92vh] flex flex-col justify-center bg-[#0e0e0d] overflow-hidden">
-        {/* Subtle dot grid */}
-        <div className="absolute inset-0 pointer-events-none"
-          style={{
-            backgroundImage: 'radial-gradient(circle, #252523 1px, transparent 1px)',
-            backgroundSize: '32px 32px',
-          }} />
-        {/* Amber glow */}
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] rounded-full bg-amber-500/5 blur-[100px] pointer-events-none" />
+      <section
+        ref={heroRef}
+        onMouseMove={handleMouseMove}
+        className="relative min-h-[92vh] flex flex-col justify-center bg-[#0e0e0d] overflow-hidden"
+      >
+        {/* Letterbox bars — slide away on load */}
+        <div className="letterbox-bar-top" />
+        <div className="letterbox-bar-bottom" />
 
-        <div className="relative max-w-6xl mx-auto px-6 py-24 text-center">
-          {/* Label */}
-          <div data-scroll className="inline-flex items-center gap-2 border border-white/10 bg-white/5 text-white/60 text-xs font-semibold tracking-widest uppercase px-4 py-2 rounded-full mb-10">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+        {/* Background Image with Ken Burns */}
+        <div className="absolute inset-0">
+          <div
+            className="absolute inset-0 bg-cover bg-center bg-no-repeat hero-bg-kenburns"
+            style={{
+              backgroundImage: 'url("https://images.unsplash.com/photo-1478720568477-152d9b164e26?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80")'
+            }}
+          />
+          {/* Dark overlay for text readability */}
+          <div className="absolute inset-0 bg-black/60" />
+          {/* Vignette — darkens edges like a film lens */}
+          <div className="absolute inset-0 hero-vignette" />
+        </div>
+
+        {/* Animated film grain */}
+        <div className="film-grain-anim" />
+
+        {/* Horizontal scan line */}
+        <div className="hero-scanline" />
+
+        {/* Cursor spotlight */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: `radial-gradient(circle 480px at ${cursor.x}% ${cursor.y}%, rgba(108,99,255,0.07) 0%, transparent 70%)`,
+            transition: 'background 0.1s ease',
+          }}
+        />
+
+        <div className="relative max-w-6xl mx-auto px-6 py-24 text-center" style={{ zIndex: 10 }}>
+          {/* Badge */}
+          <div
+            className="cinematic-fade inline-flex items-center gap-2 border border-white/10 bg-white/5 text-white/60 text-xs font-semibold tracking-widest uppercase px-4 py-2 rounded-full mb-10"
+            style={{ animationDelay: '0.8s' }}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-[#8b82ff] animate-pulse" />
             Independent Creator Platform
           </div>
 
-          {/* Heading */}
-          <h1 data-scroll data-delay="1"
-            className="font-[Playfair_Display] text-5xl md:text-7xl lg:text-8xl text-white leading-[1.05] tracking-[-0.02em] mb-8">
-            Where Creators<br />
-            <em className="not-italic" style={{
-              background: 'linear-gradient(135deg, #d97706, #f59e0b, #fcd34d)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-            }}>Find Their Team.</em>
+          {/* Heading — word-by-word reveal */}
+          <h1 className="font-[Playfair_Display] text-5xl md:text-7xl lg:text-8xl text-white leading-[1.15] tracking-[-0.02em] mb-8">
+            <span className="block">
+              <WordReveal text="Where Creators" baseDelay={0.9} />
+            </span>
+            <span className="block">
+              <WordReveal
+                text="Find Their Team."
+                baseDelay={1.2}
+                wordStyle={{
+                  background: 'linear-gradient(135deg, #6055de, #8b82ff, #a5b4fc)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}
+              />
+            </span>
           </h1>
 
           {/* Subheadline */}
-          <p data-scroll data-delay="2"
-            className="text-lg md:text-xl text-white/50 max-w-2xl mx-auto mb-12 font-light leading-relaxed">
+          <p
+            className="cinematic-fade text-lg md:text-xl text-white/50 max-w-2xl mx-auto mb-12 font-light leading-relaxed"
+            style={{ animationDelay: '1.55s' }}
+          >
             CREWUPFILMS connects directors, musicians, editors, photographers and storytellers
             to build projects they couldn't make alone.
           </p>
 
           {/* CTAs */}
-          <div data-scroll data-delay="3" className="flex flex-col sm:flex-row gap-4 justify-center mb-20">
+          <div
+            className="cinematic-fade flex flex-col sm:flex-row gap-4 justify-center mb-20"
+            style={{ animationDelay: '1.75s' }}
+          >
             <Link href={user ? '/create-project' : '/signup'}
-              className="inline-flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold px-8 py-4 rounded-xl transition-all duration-200 shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 active:scale-[0.98]">
+              className="inline-flex items-center justify-center gap-2 bg-[#6055de] hover:bg-[#4d44c8] text-white text-sm font-bold px-8 py-4 rounded-xl transition-all duration-200 shadow-lg shadow-[#6055de]/25 hover:shadow-[#6055de]/40 active:scale-[0.98]">
               {user ? 'Post a Project' : 'Start a Project'} →
             </Link>
             <Link href="/projects"
@@ -120,8 +199,10 @@ export default function Home() {
           </div>
 
           {/* Role pills */}
-          <div data-scroll="fade" data-delay="4"
-            className="flex justify-center flex-wrap gap-2">
+          <div
+            className="cinematic-fade flex justify-center flex-wrap gap-2"
+            style={{ animationDelay: '2s' }}
+          >
             {['Director', 'Editor', 'Musician', 'Photographer', 'Actor', 'Writer', 'Producer'].map((role) => (
               <span key={role}
                 className="text-xs text-white/40 px-4 py-1.5 border border-white/10 rounded-full hover:border-white/25 hover:text-white/60 transition-all cursor-default">
@@ -130,14 +211,11 @@ export default function Home() {
             ))}
           </div>
         </div>
-
-        {/* Bottom fade */}
-        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white to-transparent pointer-events-none" />
       </section>
 
       {/* ── MARQUEE ──────────────────────────────────────────────────────── */}
       <div className="bg-[#0e0e0d] py-4 overflow-hidden select-none border-t border-white/5">
-        <div className="marquee-track">
+        <div className="marquee-track flex whitespace-nowrap">
           {[...Array(2)].map((_, i) => (
             <div key={i} className="flex items-center">
               {TICKER_ROLES.map((role) => (
@@ -145,7 +223,7 @@ export default function Home() {
                   <span className="text-xs font-semibold text-white/40 tracking-[0.2em] uppercase px-8 whitespace-nowrap">
                     {role}
                   </span>
-                  <span className="text-amber-500/60 text-sm">✦</span>
+                  <span className="text-[#6055de]/60 text-sm">✦</span>
                 </span>
               ))}
             </div>
@@ -153,12 +231,25 @@ export default function Home() {
         </div>
       </div>
 
+      <style jsx>{`
+        @keyframes marquee {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        .animate-marquee {
+          animation: marquee 20s linear infinite;
+        }
+        .marquee-track:hover {
+          animation-play-state: paused;
+        }
+      `}</style>
+
       {/* ── WHAT IS CREWUPFILMS ───────────────────────────────────────────────── */}
       <section className="py-28 px-6 bg-white">
         <div className="max-w-5xl mx-auto">
           <div className="grid md:grid-cols-2 gap-16 items-center">
             <div>
-              <p data-scroll className="text-xs uppercase tracking-[0.2em] text-amber-500 font-bold mb-5">What is CREWUPFILMS</p>
+              <p data-scroll className="text-xs uppercase tracking-[0.2em] text-[#6055de] font-bold mb-5">What is CREWUPFILMS</p>
               <h2 data-scroll data-delay="1"
                 className="font-[Playfair_Display] text-4xl md:text-5xl text-[#0e0e0d] leading-[1.1] mb-6">
                 A platform built for independent creators.
@@ -172,7 +263,7 @@ export default function Home() {
                 <Link href="/explore" className="btn-outline">Find Creators</Link>
               </div>
             </div>
-            <div data-scroll="right" data-delay="1" className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               {[
                 { icon: '🎬', label: 'Post your project',  desc: 'Describe your vision and roles needed.' },
                 { icon: '🤝', label: 'Find your people',   desc: 'Browse creators by discipline and skill.' },
@@ -194,14 +285,14 @@ export default function Home() {
       <section className="py-28 px-6 bg-[#fafaf9] border-y border-[#efefed]">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-20">
-            <p data-scroll className="text-xs uppercase tracking-[0.2em] text-amber-500 font-bold mb-4">The Process</p>
+            <p data-scroll className="text-xs uppercase tracking-[0.2em] text-[#6055de] font-bold mb-4">The Process</p>
             <h2 data-scroll data-delay="1" className="font-[Playfair_Display] text-4xl md:text-5xl text-[#0e0e0d]">
               How It Works
             </h2>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
             {HOW_IT_WORKS.map((item, idx) => (
-              <div key={idx} data-scroll data-delay={String(idx + 1)}
+              <div key={idx}
                 className="relative bg-white border border-[#efefed] rounded-2xl p-8 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
                 <p className="font-[Playfair_Display] text-6xl text-[#efefed] leading-none mb-6 select-none">{item.number}</p>
                 <h3 className="text-lg font-bold text-[#0e0e0d] mb-3">{item.title}</h3>
@@ -220,7 +311,7 @@ export default function Home() {
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-16">
             <div>
-              <p data-scroll className="text-xs uppercase tracking-[0.2em] text-amber-500 font-bold mb-4">Live on CREWUPFILMS</p>
+              <p data-scroll className="text-xs uppercase tracking-[0.2em] text-[#6055de] font-bold mb-4">Live on CREWUPFILMS</p>
               <h2 data-scroll data-delay="1" className="font-[Playfair_Display] text-4xl md:text-5xl text-[#0e0e0d]">
                 Latest from the community
               </h2>
@@ -269,11 +360,10 @@ export default function Home() {
 
           {!projectsLoading && projects.length > 0 && (
             <div className="grid md:grid-cols-3 gap-6">
-              {projects.map((project, idx) => {
+              {projects.map((project) => {
                 const initials = (project.createdBy?.name || '?').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
                 return (
                   <Link key={project._id} href={`/projects/${project._id}`}
-                    data-scroll data-delay={String(idx + 1)}
                     className="group bg-white border border-[#efefed] rounded-2xl p-6 hover:border-[#d0d0cc] hover:-translate-y-1 transition-all duration-300 block"
                     style={{ boxShadow: 'var(--shadow-xs)' }}
                     onMouseEnter={e => e.currentTarget.style.boxShadow = 'var(--shadow-md)'}
@@ -312,16 +402,16 @@ export default function Home() {
       <section className="py-28 px-6 bg-[#0e0e0d]">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-20">
-            <p data-scroll className="text-xs uppercase tracking-[0.2em] text-amber-500 font-bold mb-4">Every Discipline</p>
+            <p data-scroll className="text-xs uppercase tracking-[0.2em] text-[#6055de] font-bold mb-4">Every Discipline</p>
             <h2 data-scroll data-delay="1" className="font-[Playfair_Display] text-4xl md:text-5xl text-white">
-              Who It's For
+              Who It&apos;s For
             </h2>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {DISCIPLINES.map((item, idx) => (
-              <div key={idx} data-scroll data-delay={String((idx % 4) + 1)}
-                className="group border border-white/10 rounded-xl p-6 text-center hover:border-amber-500/40 hover:bg-white/5 transition-all duration-300 cursor-default">
-                <p className="font-[Playfair_Display] text-4xl text-white/10 leading-none mb-4 group-hover:text-amber-500/30 transition-colors">
+              <div key={idx}
+                className="group border border-white/10 rounded-xl p-6 text-center hover:border-[#6055de]/40 hover:bg-white/5 transition-all duration-300 cursor-default">
+                <p className="font-[Playfair_Display] text-4xl text-white/10 leading-none mb-4 group-hover:text-[#6055de]/30 transition-colors">
                   {item.number}
                 </p>
                 <h3 className="text-sm font-bold text-white/80 mb-1.5 group-hover:text-white transition-colors">{item.role}</h3>
@@ -336,14 +426,14 @@ export default function Home() {
       <section className="py-28 px-6 bg-[#fafaf9] border-y border-[#efefed]">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-20">
-            <p data-scroll className="text-xs uppercase tracking-[0.2em] text-amber-500 font-bold mb-4">Built for Creators</p>
+            <p data-scroll className="text-xs uppercase tracking-[0.2em] text-[#6055de] font-bold mb-4">Built for Creators</p>
             <h2 data-scroll data-delay="1" className="font-[Playfair_Display] text-4xl md:text-5xl text-[#0e0e0d]">
               Everything You Need
             </h2>
           </div>
           <div className="grid md:grid-cols-3 gap-5">
             {FEATURES.map((feature, idx) => (
-              <div key={idx} data-scroll data-delay={String((idx % 3) + 1)}
+              <div key={idx}
                 className="bg-white border border-[#efefed] rounded-2xl p-7 hover:border-[#d0d0cc] hover:-translate-y-0.5 transition-all duration-200"
                 style={{ boxShadow: 'var(--shadow-xs)' }}>
                 <div className="w-10 h-10 rounded-xl bg-[#f7f7f6] border border-[#e0e0dd] flex items-center justify-center text-xl mb-5">
@@ -357,6 +447,95 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── TRENDING FILMS THIS WEEK ──────────────────────────────────────── */}
+      {trendingFilms.length > 0 && (
+        <section className="py-24 px-6 bg-white border-y border-[#efefed]">
+          <div className="max-w-6xl mx-auto">
+
+            {/* Header */}
+            <div className="flex items-end justify-between mb-10">
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-[#6055de] font-bold mb-3">Films Made on CrewUpFilms</p>
+                <h2 className="font-[Playfair_Display] text-4xl md:text-5xl text-[#0e0e0d]">
+                  Trending This Week
+                </h2>
+              </div>
+              <Link href="/films"
+                className="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold text-[#6b6b66] hover:text-[#111110] transition-colors border border-[#e0e0dd] hover:border-[#0e0e0d] px-4 py-2 rounded-xl">
+                View all films →
+              </Link>
+            </div>
+
+            {/* Film cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5">
+              {trendingFilms.map((film, idx) => (
+                <a
+                  key={film._id}
+                  href={film.youtubeLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group block bg-white rounded-2xl overflow-hidden border border-[#efefed] hover:border-[#b0a9ff] hover:shadow-[0_8px_32px_rgba(108,99,255,0.12)] transition-all duration-300"
+                >
+                  {/* Thumbnail */}
+                  <div className="relative aspect-video bg-[#f7f7f6] overflow-hidden">
+                    {film.thumbnail ? (
+                      <img
+                        src={film.thumbnail}
+                        alt={film.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-3xl text-[#d0d0cc]">🎬</div>
+                    )}
+
+                    {/* Rank badge */}
+                    <div className="absolute top-2.5 left-2.5">
+                      <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold text-white shadow-sm ${
+                        idx === 0 ? 'bg-[#6055de]' : idx === 1 ? 'bg-[#8b84ff]' : 'bg-[#0e0e0d]/70'
+                      }`}>
+                        #{idx + 1}
+                      </span>
+                    </div>
+
+                    {/* Play overlay */}
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-black/30">
+                      <div className="w-11 h-11 rounded-full bg-white/95 flex items-center justify-center shadow-lg">
+                        <span className="text-[#6055de] text-base ml-0.5">▶</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Info */}
+                  <div className="p-4">
+                    <p className="text-sm font-semibold text-[#111110] truncate mb-1 group-hover:text-[#6055de] transition-colors">
+                      {film.title}
+                    </p>
+                    <p className="text-xs text-[#6b6b66] truncate mb-3">by {film.director?.name || 'Unknown'}</p>
+                    <div className="flex items-center justify-between">
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-white bg-[#6055de] px-2.5 py-1 rounded-lg">
+                        ▶ Watch
+                      </span>
+                      <div className="flex items-center gap-2 text-[#a3a39e] text-[11px]">
+                        {film.likeCount > 0 && <span>♥ {film.likeCount}</span>}
+                        {film.commentCount > 0 && <span>💬 {film.commentCount}</span>}
+                      </div>
+                    </div>
+                  </div>
+                </a>
+              ))}
+            </div>
+
+            {/* Mobile view all */}
+            <div className="flex justify-center mt-8 sm:hidden">
+              <Link href="/films"
+                className="text-sm font-semibold text-[#6b6b66] hover:text-[#111110] transition-colors border border-[#e0e0dd] hover:border-[#0e0e0d] px-5 py-2.5 rounded-xl">
+                View all films →
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* ── CTA BANNER ───────────────────────────────────────────────────── */}
       <section className="relative py-32 px-6 bg-[#0e0e0d] overflow-hidden">
         <div className="absolute inset-0 pointer-events-none"
@@ -364,17 +543,17 @@ export default function Home() {
             backgroundImage: 'radial-gradient(circle, #252523 1px, transparent 1px)',
             backgroundSize: '32px 32px',
           }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] rounded-full bg-amber-500/5 blur-[120px] pointer-events-none" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] rounded-full bg-[#6055de]/5 blur-[120px] pointer-events-none" />
         <div className="relative max-w-4xl mx-auto text-center">
           <h2 data-scroll className="font-[Playfair_Display] text-5xl md:text-6xl text-white mb-6 leading-tight">
-            Ready to find<br /><em className="not-italic text-amber-400">your crew?</em>
+            Ready to find<br /><em className="not-italic text-[#8b82ff]">your crew?</em>
           </h2>
           <p data-scroll data-delay="1" className="text-lg text-white/50 mb-12 max-w-xl mx-auto leading-relaxed">
             Join creators already building something remarkable on CREWUPFILMS.
           </p>
           <div data-scroll data-delay="2" className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href={user ? '/dashboard' : '/signup'}
-              className="inline-flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold px-10 py-4 rounded-xl transition-all duration-200 shadow-lg shadow-amber-500/25">
+              className="inline-flex items-center justify-center gap-2 bg-[#6055de] hover:bg-[#4d44c8] text-white text-sm font-bold px-10 py-4 rounded-xl transition-all duration-200 shadow-lg shadow-[#6055de]/25">
               {user ? 'Go to Dashboard' : 'Get Started — It\'s Free'} →
             </Link>
             <Link href="/projects"
@@ -385,70 +564,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── FOOTER ───────────────────────────────────────────────────────── */}
-      <footer className="bg-white border-t border-[#efefed] pt-20 pb-12 px-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-10 mb-16">
-            <div className="col-span-2 md:col-span-1">
-              <div className="mb-2">
-                <Logo size="sm" noLink />
-              </div>
-              <p className="text-sm text-[#6b6b66] leading-relaxed mb-4">
-                Where creators find their team.
-              </p>
-              <p className="text-xs text-[#a3a39e]">hello@crewup.in</p>
-            </div>
-            {[
-              { title: 'Product', links: [
-                { href: '/projects',       label: 'Explore Projects' },
-                { href: '/explore',        label: 'Find Creators' },
-                { href: '/create-project', label: 'Create Project' },
-                { href: '/how-it-works',   label: 'How It Works' },
-                { href: '/features',       label: 'Features' },
-              ]},
-              { title: 'Company', links: [
-                { href: '/about',   label: 'About Us' },
-                { href: '/mission', label: 'Our Mission' },
-                { href: '/blog',    label: 'Blog' },
-                { href: '/contact', label: 'Contact' },
-              ]},
-              { title: 'Legal', links: [
-                { href: '/legal/terms',      label: 'Terms of Service' },
-                { href: '/legal/privacy',    label: 'Privacy Policy' },
-                { href: '/legal/guidelines', label: 'Community Guidelines' },
-                { href: '/legal/cookies',    label: 'Cookie Policy' },
-              ]},
-              { title: 'Support', links: [
-                { href: '/support',          label: 'Help Center' },
-                { href: '/support/report',   label: 'Report Issue' },
-                { href: '/support/safety',   label: 'Safety & Trust' },
-                { href: '/support/feedback', label: 'Feedback' },
-              ]},
-            ].map((col) => (
-              <div key={col.title}>
-                <p className="text-xs uppercase tracking-[0.15em] text-[#6b6b66] font-semibold mb-5">{col.title}</p>
-                <ul className="space-y-3">
-                  {col.links.map((link) => (
-                    <li key={link.href}>
-                      <Link href={link.href} className="text-sm text-[#6b6b66] hover:text-[#0e0e0d] transition-colors">
-                        {link.label}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-          <div className="border-t border-[#efefed] pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-[#a3a39e]">
-            <p>© 2026 CREWUPFILMS. All rights reserved.</p>
-            <div className="flex gap-6">
-              {['Twitter', 'Instagram', 'LinkedIn'].map((s) => (
-                <a key={s} href="#" className="hover:text-[#0e0e0d] transition-colors">{s}</a>
-              ))}
-            </div>
-          </div>
-        </div>
-      </footer>
     </main>
   );
 }

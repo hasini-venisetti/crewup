@@ -108,6 +108,10 @@ const projectSchema = new mongoose.Schema(
       role: { type: String, default: '' },
       joinedAt: { type: Date, default: Date.now },
     }],
+    // Set by the owner when the project is released — surfaces the film on all team members' profiles
+    youtubeLink: { type: String, default: '' },
+    // Film engagement
+    likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   },
   { timestamps: true }
 );

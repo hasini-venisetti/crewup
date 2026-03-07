@@ -5,7 +5,9 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { projectAPI, applicationAPI, timelineAPI, waitlistAPI, reviewAPI } from '@/lib/api';
+import { useRef } from 'react';
 import { AuthProvider, useAuth } from '@/hooks/useAuth';
+import CrewSuggestions from '@/components/ui/CrewSuggestions';
 
 const TYPE_LABELS = {
   'short-film': 'Short Film', 'feature-film': 'Feature Film', 'youtube': 'YouTube',
@@ -68,7 +70,7 @@ function ApplyModal({ project, onClose, onSuccess }) {
           <div>
             <label className="block text-xs font-semibold text-[#6b6b66] uppercase tracking-[0.12em] mb-2">Role You're Applying For</label>
             <select
-              className="w-full rounded-lg border border-[#e0e0dd] bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition"
+              className="w-full rounded-lg border border-[#e0e0dd] bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] transition"
               value={form.roleApplyingFor}
               onChange={(e) => setForm({ ...form, roleApplyingFor: e.target.value })}
               required
@@ -82,7 +84,7 @@ function ApplyModal({ project, onClose, onSuccess }) {
               Your Message <span className="text-[#a3a39e] normal-case font-normal">(max 1000 chars)</span>
             </label>
             <textarea
-              className="w-full rounded-lg border border-[#e0e0dd] bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition min-h-[120px] resize-none"
+              className="w-full rounded-lg border border-[#e0e0dd] bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] transition min-h-[120px] resize-none"
               placeholder="Tell the project owner why you're a great fit, what you bring, and any relevant experience…"
               value={form.message}
               onChange={(e) => setForm({ ...form, message: e.target.value })}
@@ -92,7 +94,7 @@ function ApplyModal({ project, onClose, onSuccess }) {
             <p className="text-xs text-[#a3a39e] mt-1">{form.message.length}/1000</p>
           </div>
           <button type="submit" disabled={loading}
-            className="w-full py-3 rounded-lg bg-amber-500 hover:bg-amber-400 text-white font-semibold text-sm shadow-lg shadow-amber-500/20 transition-all active:scale-[0.98] disabled:opacity-50">
+            className="w-full py-3 rounded-lg bg-[#6C63FF] hover:bg-[#7C75FF] text-white font-semibold text-sm shadow-lg shadow-[#6C63FF]/20 transition-all active:scale-[0.98] disabled:opacity-50">
             {loading ? 'Submitting…' : 'Submit Application'}
           </button>
         </form>
@@ -106,7 +108,7 @@ function StarRating({ value, onChange, disabled }) {
     <div className="flex gap-1">
       {[1,2,3,4,5].map((star) => (
         <button key={star} type="button" disabled={disabled} onClick={() => onChange(star)}
-          className={`text-xl transition-colors ${star <= value ? 'text-amber-400' : 'text-[#e0e0dd]'} ${disabled ? 'cursor-default' : 'hover:text-amber-300 cursor-pointer'}`}>
+          className={`text-xl transition-colors ${star <= value ? 'text-[#7C75FF]' : 'text-[#e0e0dd]'} ${disabled ? 'cursor-default' : 'hover:text-[#b0a9ff] cursor-pointer'}`}>
           ★
         </button>
       ))}
@@ -160,7 +162,7 @@ function RateTeamSection({ project, myId }) {
     <div className="bg-[#0e0e0d] rounded-2xl p-6 mb-6"
       style={{ backgroundImage: 'radial-gradient(circle, #1a1a18 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-xl flex-shrink-0">⭐</div>
+        <div className="w-10 h-10 rounded-xl bg-[#6C63FF]/20 border border-[#6C63FF]/30 flex items-center justify-center text-xl flex-shrink-0">⭐</div>
         <div>
           <h2 className="font-bold text-white">Rate Your Team</h2>
           <p className="text-xs text-white/50 mt-0.5">Project is released — share feedback on your collaborators.</p>
@@ -177,7 +179,7 @@ function RateTeamSection({ project, myId }) {
             return (
               <div key={uid} className="bg-white/5 border border-white/10 rounded-xl p-5">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-200 to-amber-100 text-amber-800 text-sm font-bold flex items-center justify-center flex-shrink-0">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#c9c4ff] to-[#e4e1ff] text-[#3730A3] text-sm font-bold flex items-center justify-center flex-shrink-0">
                     {name?.[0] || '?'}
                   </div>
                   <div>
@@ -196,10 +198,10 @@ function RateTeamSection({ project, myId }) {
                     <textarea
                       placeholder="Optional comment (max 1000 chars)…" maxLength={1000}
                       value={r.comment || ''} onChange={(e) => setRating(uid, 'comment', e.target.value)}
-                      className="w-full rounded-lg border border-white/10 bg-white/5 text-white placeholder-white/30 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500/50 transition resize-none min-h-[70px]"
+                      className="w-full rounded-lg border border-white/10 bg-white/5 text-white placeholder-white/30 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/30 focus:border-[#6C63FF]/50 transition resize-none min-h-[70px]"
                     />
                     <button disabled={!r.rating || submitting[uid]} onClick={() => handleSubmit(uid)}
-                      className="text-sm font-semibold bg-amber-500 hover:bg-amber-400 text-white px-5 py-2 rounded-lg w-fit transition-all disabled:opacity-50">
+                      className="text-sm font-semibold bg-[#6C63FF] hover:bg-[#7C75FF] text-white px-5 py-2 rounded-lg w-fit transition-all disabled:opacity-50">
                       {submitting[uid] ? 'Submitting…' : 'Submit Rating'}
                     </button>
                   </div>
@@ -209,6 +211,82 @@ function RateTeamSection({ project, myId }) {
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+/* ── YouTube Link Modal ─────────────────────────────────────────────────── */
+function YouTubeLinkModal({ projectTitle, onClose, onSave }) {
+  const [link, setLink]       = useState('');
+  const [saving, setSaving]   = useState(false);
+  const [error, setError]     = useState('');
+
+  const isYouTube = (url) =>
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([A-Za-z0-9_-]{11})/.test(url);
+
+  const handleSave = async () => {
+    if (!link.trim()) { setError('Please paste a YouTube URL.'); return; }
+    if (!isYouTube(link)) { setError('That doesn\'t look like a valid YouTube link.'); return; }
+    setSaving(true);
+    setError('');
+    try {
+      await onSave(link.trim());
+      onClose();
+    } catch {
+      setError('Could not save the link. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+      <div className="bg-white rounded-2xl w-full max-w-md p-8 relative shadow-2xl">
+        <button onClick={onClose} className="absolute top-4 right-4 text-[#6b6b66] hover:text-[#111110] transition-colors">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center text-xl flex-shrink-0">🎬</div>
+          <div>
+            <h2 className="text-lg font-[Playfair_Display] text-[#0e0e0d] leading-tight">Add Film to Portfolios</h2>
+            <p className="text-xs text-[#6b6b66] mt-0.5">"{projectTitle}" is now Released!</p>
+          </div>
+        </div>
+
+        <p className="text-sm text-[#6b6b66] mb-5 leading-relaxed">
+          Paste the YouTube link of your finished film. It will automatically appear in the portfolio of every team member who worked on this project.
+        </p>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-lg mb-4">{error}</div>
+        )}
+
+        <div className="flex flex-col gap-3">
+          <input
+            type="url"
+            value={link}
+            onChange={(e) => setLink(e.target.value)}
+            placeholder="https://www.youtube.com/watch?v=..."
+            className="w-full rounded-xl border border-[#e0e0dd] bg-[#f7f7f6] px-4 py-3 text-sm text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] transition"
+          />
+          <div className="flex gap-3">
+            <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-[#e0e0dd] text-sm font-semibold text-[#6b6b66] hover:bg-[#f7f7f6] transition-colors">
+              Skip for now
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex-1 py-2.5 rounded-xl bg-[#6C63FF] hover:bg-[#5750D4] text-white text-sm font-semibold shadow-lg shadow-[#6C63FF]/20 transition-all disabled:opacity-50"
+            >
+              {saving ? 'Saving…' : '🎬 Add Film'}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -232,6 +310,7 @@ function ProjectDetailContent() {
   const [waitlistRole, setWaitlistRole]             = useState('');
   const [waitlistLoading, setWaitlistLoading]       = useState(false);
   const [waitlistMsg, setWaitlistMsg]               = useState('');
+  const [showYoutubeModal, setShowYoutubeModal]     = useState(false);
 
   useEffect(() => {
     projectAPI.getById(id)
@@ -249,9 +328,21 @@ function ProjectDetailContent() {
 
   const handleUpdateTimeline = async (stage) => {
     setUpdatingTimeline(true);
-    try { const { data } = await timelineAPI.update(id, stage); setProject(data.data); }
+    try {
+      const { data } = await timelineAPI.update(id, stage);
+      setProject(data.data);
+      // When marking as released, prompt for YouTube link if not already set
+      if (stage === 'released' && !data.data?.youtubeLink) {
+        setShowYoutubeModal(true);
+      }
+    }
     catch { /* silent */ }
     finally { setUpdatingTimeline(false); }
+  };
+
+  const handleYoutubeSave = async (link) => {
+    const { data } = await projectAPI.setYoutubeLink(id, link);
+    setProject((prev) => ({ ...prev, youtubeLink: link }));
   };
 
   const handleWaitlist = async (role) => {
@@ -275,6 +366,13 @@ function ProjectDetailContent() {
   return (
     <div className="min-h-screen bg-[#fafaf9]">
       {showModal && <ApplyModal project={project} onClose={() => setShowModal(false)} onSuccess={() => setApplied(true)} />}
+      {showYoutubeModal && (
+        <YouTubeLinkModal
+          projectTitle={project.title}
+          onClose={() => setShowYoutubeModal(false)}
+          onSave={handleYoutubeSave}
+        />
+      )}
 
       {/* Dark Hero */}
       <div className="bg-[#0e0e0d] relative overflow-hidden"
@@ -282,7 +380,7 @@ function ProjectDetailContent() {
         <div className="absolute top-0 left-0 right-0 h-1">
           <div className={`h-full ${accentColor}`} />
         </div>
-        <div className="absolute top-0 right-1/3 w-80 h-64 bg-amber-500/6 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 right-1/3 w-80 h-64 bg-[#6C63FF]/6 rounded-full blur-3xl pointer-events-none" />
         <div className="relative max-w-[900px] mx-auto px-6 pt-8 pb-12">
           <Link href="/projects" className="inline-flex items-center gap-1.5 text-sm text-white/40 hover:text-white/80 transition-colors mb-8">
             ← Back to Projects
@@ -293,7 +391,7 @@ function ProjectDetailContent() {
                 <span className="text-xs font-bold tracking-widest uppercase text-white/60 bg-white/10 px-2.5 py-1 rounded-md">
                   {TYPE_LABELS[project.projectType] || project.projectType}
                 </span>
-                <span className={`text-xs font-bold px-2.5 py-1 rounded-md ${project.isPaid ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-white/10 text-white/60'}`}>
+                <span className={`text-xs font-bold px-2.5 py-1 rounded-md ${project.isPaid ? 'bg-[#6C63FF]/20 text-[#7C75FF] border border-[#6C63FF]/30' : 'bg-white/10 text-white/60'}`}>
                   {project.isPaid ? '💰 Paid' : '🤝 Collab'}
                 </span>
                 <span className="text-xs capitalize bg-white/10 text-white/60 px-2.5 py-1 rounded-md">{project.status}</span>
@@ -310,7 +408,7 @@ function ProjectDetailContent() {
               {(isOwner || isTeamMember) && (
                 <>
                   <Link href={`/projects/${id}/team?tab=chat`}
-                    className="text-sm font-semibold px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-white transition-all">
+                    className="text-sm font-semibold px-4 py-2 rounded-lg bg-[#6C63FF] hover:bg-[#7C75FF] text-white transition-all">
                     💬 Team Chat
                   </Link>
                   <Link href={`/projects/${id}/team`}
@@ -347,12 +445,12 @@ function ProjectDetailContent() {
                 </div>
               ) : user ? (
                 <button onClick={() => setShowModal(true)} disabled={applied}
-                  className="text-sm font-semibold px-6 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-white shadow-lg shadow-amber-500/20 transition-all active:scale-[0.98] disabled:opacity-60">
+                  className="text-sm font-semibold px-6 py-2.5 rounded-lg bg-[#6C63FF] hover:bg-[#7C75FF] text-white shadow-lg shadow-[#6C63FF]/20 transition-all active:scale-[0.98] disabled:opacity-60">
                   {applied ? '✓ Applied' : 'Apply Now'}
                 </button>
               ) : (
                 <Link href="/login"
-                  className="text-sm font-semibold px-6 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-white transition-all">
+                  className="text-sm font-semibold px-6 py-2.5 rounded-lg bg-[#6C63FF] hover:bg-[#7C75FF] text-white transition-all">
                   Login to Apply
                 </Link>
               )}
@@ -379,7 +477,7 @@ function ProjectDetailContent() {
                 return (
                   <div key={role}>
                     <div className="flex items-center justify-between gap-2 mb-1">
-                      <span className="px-3 py-1.5 bg-amber-50 border border-amber-200 text-amber-800 text-sm font-medium rounded-lg">{role}</span>
+                      <span className="px-3 py-1.5 bg-[#f0eeff] border border-[#c9c4ff] text-[#3730A3] text-sm font-medium rounded-lg">{role}</span>
                       {isFilled
                         ? <span className="text-xs text-[#a3a39e]">Filled</span>
                         : <span className="text-xs font-semibold text-green-600">Open</span>}
@@ -417,6 +515,14 @@ function ProjectDetailContent() {
           </div>
         </div>
 
+        {/* Crew Match Suggestions — visible to project owner only */}
+        {isOwner && (
+          <CrewSuggestions
+            projectId={id}
+            projectTitle={project.title}
+          />
+        )}
+
         {/* Team */}
         {project.teamMembers?.length > 0 && (
           <div className="bg-white rounded-2xl border border-[#efefed] p-6 mb-6">
@@ -425,7 +531,7 @@ function ProjectDetailContent() {
               {project.teamMembers.map((member) => (
                 <Link key={member.user?._id} href={`/profile/${member.user?._id}`}
                   className="flex items-center gap-3 p-4 bg-[#fafaf9] border border-[#efefed] rounded-xl hover:border-[#d0d0ce] hover:shadow-sm transition-all">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-200 to-amber-100 text-amber-800 text-sm font-bold flex items-center justify-center flex-shrink-0">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#c9c4ff] to-[#e4e1ff] text-[#3730A3] text-sm font-bold flex items-center justify-center flex-shrink-0">
                     {member.user?.name?.[0] || 'U'}
                   </div>
                   <div>
@@ -478,7 +584,7 @@ function ProjectDetailContent() {
                 <button key={stage} disabled={!canUpdate || updatingTimeline}
                   onClick={() => canUpdate && handleUpdateTimeline(stage)}
                   className={`flex-1 p-4 rounded-xl border text-center transition-all ${
-                    isCurrent ? 'border-amber-500 bg-amber-500 text-white shadow-lg shadow-amber-500/20' :
+                    isCurrent ? 'border-[#6C63FF] bg-[#6C63FF] text-white shadow-lg shadow-[#6C63FF]/20' :
                     isPast    ? 'border-[#e0e0dd] bg-[#f7f7f6] text-[#a3a39e]' :
                     'border-[#efefed] bg-white text-[#6b6b66] hover:border-[#0e0e0d]'
                   } ${!canUpdate ? 'cursor-default' : 'cursor-pointer'} disabled:opacity-70`}>

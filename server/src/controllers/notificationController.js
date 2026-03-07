@@ -1,4 +1,5 @@
 const Notification = require('../models/Notification');
+const User = require('../models/User');
 
 // @desc    Get all notifications for current user
 // @route   GET /api/notifications
@@ -95,10 +96,80 @@ const deleteNotification = async (req, res, next) => {
   }
 };
 
+// @desc    Send a notification to a specific user (e.g. project invite)
+// @route   POST /api/notifications/send
+// @access  Private
+const sendDirectNotification = async (req, res, next) => {
+  try {
+    const { recipientId, title, message, type = 'project_invite', link = '' } = req.body;
+    if (!recipientId || !title || !message) {
+      return res.status(400).json({ success: false, message: 'recipientId, title and message are required' });
+    }
+
+    const notification = await Notification.create({
+      recipient: recipientId,
+      sender:    req.user._id,
+      type,
+      title,
+      message,
+      link,
+    });
+
+    res.status(201).json({ success: true, data: notification });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Send a global notification to all users (admin only)
+// @route   POST /api/notifications/admin/global
+// @access  Private (admin)
+const sendGlobalNotification = async (req, res, next) => {
+  try {
+    // Optional: restrict to admin role
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Admin access required' });
+    }
+
+    const { title, message, type = 'platform_update', link = '' } = req.body;
+    if (!title || !message) {
+      return res.status(400).json({ success: false, message: 'title and message are required' });
+    }
+
+    // Fetch all user IDs
+    const users = await User.find({}, '_id');
+    if (users.length === 0) {
+      return res.status(200).json({ success: true, message: 'No users found', count: 0 });
+    }
+
+    const notifications = users.map((u) => ({
+      recipient: u._id,
+      sender:    req.user._id,
+      type,
+      title,
+      message,
+      link,
+      read: false,
+    }));
+
+    await Notification.insertMany(notifications);
+
+    res.status(201).json({
+      success: true,
+      message: `Global notification sent to ${notifications.length} users`,
+      count: notifications.length,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getNotifications,
   markRead,
   markAllRead,
   getUnreadCount,
   deleteNotification,
+  sendDirectNotification,
+  sendGlobalNotification,
 };

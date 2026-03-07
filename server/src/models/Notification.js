@@ -14,6 +14,9 @@ const notificationSchema = new mongoose.Schema(
         'new_message',
         'follow_request',         // recipient gets this when someone sends a follow request
         'follow_accepted',        // requester gets this when their request is accepted
+        'project_invite',         // user is invited to join a project
+        'contest_announcement',   // admin announces a contest
+        'platform_update',        // admin broadcasts a platform update
       ],
       required: true,
     },

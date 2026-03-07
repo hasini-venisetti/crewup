@@ -10,7 +10,7 @@ import { projectAPI, applicationAPI, followAPI, reviewAPI } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 
 const STATUS_CLASS = {
-  pending:  'inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200',
+  pending:  'inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-[#f0eeff] text-[#4740CC] border border-[#c9c4ff]',
   accepted: 'inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-green-50 text-green-700 border border-green-200',
   rejected: 'inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-red-50 text-red-700 border border-red-200',
 };
@@ -20,7 +20,7 @@ function Avatar({ name, image, size = 'sm' }) {
   const sz = size === 'sm' ? 'w-9 h-9 text-sm' : 'w-12 h-12 text-base';
   if (image) return <img src={image} alt={name} className={`${sz} rounded-full object-cover flex-shrink-0`} />;
   return (
-    <div className={`${sz} rounded-full bg-gradient-to-br from-amber-100 to-amber-50 text-amber-800 font-bold flex items-center justify-center flex-shrink-0`}>
+    <div className={`${sz} rounded-full bg-gradient-to-br from-[#e4e1ff] to-[#f0eeff] text-[#3730A3] font-bold flex items-center justify-center flex-shrink-0`}>
       {name?.[0]?.toUpperCase() || '?'}
     </div>
   );
@@ -175,11 +175,11 @@ export default function DashboardPage() {
         className="bg-[#0e0e0d] pt-8 pb-10 relative overflow-hidden"
         style={{ backgroundImage: 'radial-gradient(circle, #1a1a18 1px, transparent 1px)', backgroundSize: '24px 24px' }}
       >
-        <div className="absolute top-0 left-1/4 w-72 h-48 bg-amber-500/8 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 left-1/4 w-72 h-48 bg-[#6C63FF]/8 rounded-full blur-3xl pointer-events-none" />
         <div className="relative max-w-[1100px] mx-auto px-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
             <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-amber-500 font-bold mb-2">Dashboard</p>
+              <p className="text-xs uppercase tracking-[0.2em] text-[#6C63FF] font-bold mb-2">Dashboard</p>
               <h1 className="text-4xl font-[Playfair_Display] text-white">
                 Hey, {user.name?.split(' ')[0]}
               </h1>
@@ -191,7 +191,7 @@ export default function DashboardPage() {
                 Edit Profile
               </Link>
               <Link href="/create-project"
-                className="text-sm font-semibold px-5 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-white shadow-lg shadow-amber-500/20 transition-all active:scale-[0.98]">
+                className="text-sm font-semibold px-5 py-2.5 rounded-lg bg-[#6C63FF] hover:bg-[#7C75FF] text-white shadow-lg shadow-[#6C63FF]/20 transition-all active:scale-[0.98]">
                 + Post Project
               </Link>
             </div>
@@ -206,7 +206,7 @@ export default function DashboardPage() {
               { label: 'Pending Review',    value: pendingCount,          highlight: pendingCount > 0 },
             ].map((s) => (
               <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl p-5 text-center hover:bg-white/8 transition-colors">
-                <div className={`text-3xl font-black mb-1 ${s.highlight ? 'text-amber-400' : 'text-white'}`}>{s.value}</div>
+                <div className={`text-3xl font-black mb-1 ${s.highlight ? 'text-[#7C75FF]' : 'text-white'}`}>{s.value}</div>
                 <div className="text-xs text-white/40">{s.label}</div>
               </div>
             ))}
@@ -383,7 +383,7 @@ export default function DashboardPage() {
                         <div className="text-5xl font-black text-white">{avg}</div>
                         <div className="flex gap-0.5 justify-center mt-2">
                           {[1,2,3,4,5].map((s) => (
-                            <span key={s} className={`text-lg ${s <= Math.round(avg) ? 'text-amber-400' : 'text-white/20'}`}>★</span>
+                            <span key={s} className={`text-lg ${s <= Math.round(avg) ? 'text-[#7C75FF]' : 'text-white/20'}`}>★</span>
                           ))}
                         </div>
                         <div className="text-xs text-white/40 mt-1">{myReviews.length} rating{myReviews.length !== 1 ? 's' : ''}</div>
@@ -397,7 +397,7 @@ export default function DashboardPage() {
                 {myReviews.map((review) => (
                   <div key={review._id} className="bg-white rounded-xl border border-[#efefed] p-5">
                     <div className="flex items-start gap-3">
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-100 to-amber-50 text-amber-800 text-sm font-bold flex items-center justify-center flex-shrink-0">
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#e4e1ff] to-[#f0eeff] text-[#3730A3] text-sm font-bold flex items-center justify-center flex-shrink-0">
                         {review.reviewer?.name?.[0] || '?'}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -407,7 +407,7 @@ export default function DashboardPage() {
                           </Link>
                           <div className="flex gap-0.5">
                             {[1,2,3,4,5].map((s) => (
-                              <span key={s} className={`text-sm ${s <= review.rating ? 'text-amber-400' : 'text-[#e0e0dd]'}`}>★</span>
+                              <span key={s} className={`text-sm ${s <= review.rating ? 'text-[#7C75FF]' : 'text-[#e0e0dd]'}`}>★</span>
                             ))}
                           </div>
                         </div>

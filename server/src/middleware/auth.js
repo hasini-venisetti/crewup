@@ -23,6 +23,9 @@ const protect = async (req, res, next) => {
     if (!req.user.isActive) {
       return res.status(401).json({ success: false, message: 'Account is deactivated' });
     }
+    if (req.user.isSuspended) {
+      return res.status(403).json({ success: false, message: 'Account is suspended' });
+    }
 
     next();
   } catch (error) {
@@ -36,4 +39,12 @@ const protect = async (req, res, next) => {
   }
 };
 
-module.exports = { protect };
+// Must be used AFTER protect — checks req.user.isAdmin
+const adminOnly = (req, res, next) => {
+  if (!req.user?.isAdmin) {
+    return res.status(403).json({ success: false, message: 'Admin access required' });
+  }
+  next();
+};
+
+module.exports = { protect, adminOnly };

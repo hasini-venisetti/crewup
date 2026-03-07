@@ -22,7 +22,7 @@ function PasswordStrength({ password }) {
     color = 'bg-green-500';
   } else if (strength >= 3) {
     label = 'Medium';
-    color = 'bg-amber-500';
+    color = 'bg-[#6C63FF]';
   }
 
   return (
@@ -117,13 +117,13 @@ function AccountTab({ user, onUpdate }) {
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full bg-[#fafaf9] border border-[#e0e0dd] rounded-lg px-4 py-2.5 text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+              className="w-full bg-[#fafaf9] border border-[#e0e0dd] rounded-lg px-4 py-2.5 text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF]"
             />
           </div>
           <button
             type="submit"
             disabled={!!loading}
-            className="bg-amber-500 text-white rounded-lg px-5 py-2.5 text-sm font-medium hover:bg-amber-600 disabled:opacity-50 transition-colors"
+            className="bg-[#6C63FF] text-white rounded-lg px-5 py-2.5 text-sm font-medium hover:bg-[#5750D4] disabled:opacity-50 transition-colors"
           >
             {loading === 'name' ? 'Saving...' : 'Save Name'}
           </button>
@@ -149,7 +149,7 @@ function AccountTab({ user, onUpdate }) {
               type="email"
               value={newEmail}
               onChange={(e) => setNewEmail(e.target.value)}
-              className="w-full bg-[#fafaf9] border border-[#e0e0dd] rounded-lg px-4 py-2.5 text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+              className="w-full bg-[#fafaf9] border border-[#e0e0dd] rounded-lg px-4 py-2.5 text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF]"
             />
           </div>
           <div>
@@ -158,13 +158,13 @@ function AccountTab({ user, onUpdate }) {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-[#fafaf9] border border-[#e0e0dd] rounded-lg px-4 py-2.5 text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+              className="w-full bg-[#fafaf9] border border-[#e0e0dd] rounded-lg px-4 py-2.5 text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF]"
             />
           </div>
           <button
             type="submit"
             disabled={!!loading}
-            className="bg-amber-500 text-white rounded-lg px-5 py-2.5 text-sm font-medium hover:bg-amber-600 disabled:opacity-50 transition-colors"
+            className="bg-[#6C63FF] text-white rounded-lg px-5 py-2.5 text-sm font-medium hover:bg-[#5750D4] disabled:opacity-50 transition-colors"
           >
             {loading === 'email' ? 'Updating...' : 'Update Email'}
           </button>
@@ -269,7 +269,7 @@ function PasswordTab() {
                 type={showCurrent ? 'text' : 'password'}
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                className="w-full bg-[#fafaf9] border border-[#e0e0dd] rounded-lg px-4 py-2.5 pr-10 text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                className="w-full bg-[#fafaf9] border border-[#e0e0dd] rounded-lg px-4 py-2.5 pr-10 text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF]"
               />
               <button
                 type="button"
@@ -288,7 +288,7 @@ function PasswordTab() {
                 type={showNew ? 'text' : 'password'}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full bg-[#fafaf9] border border-[#e0e0dd] rounded-lg px-4 py-2.5 pr-10 text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                className="w-full bg-[#fafaf9] border border-[#e0e0dd] rounded-lg px-4 py-2.5 pr-10 text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF]"
               />
               <button
                 type="button"
@@ -308,7 +308,7 @@ function PasswordTab() {
                 type={showConfirm ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full bg-[#fafaf9] border border-[#e0e0dd] rounded-lg px-4 py-2.5 pr-10 text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                className="w-full bg-[#fafaf9] border border-[#e0e0dd] rounded-lg px-4 py-2.5 pr-10 text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF]"
               />
               <button
                 type="button"
@@ -323,7 +323,7 @@ function PasswordTab() {
           <button
             type="submit"
             disabled={loading}
-            className="bg-amber-500 text-white rounded-lg px-5 py-2.5 text-sm font-medium hover:bg-amber-600 disabled:opacity-50 transition-colors"
+            className="bg-[#6C63FF] text-white rounded-lg px-5 py-2.5 text-sm font-medium hover:bg-[#5750D4] disabled:opacity-50 transition-colors"
           >
             {loading ? 'Updating...' : 'Change Password'}
           </button>
@@ -376,7 +376,7 @@ function NotificationsTab({ user }) {
             <button
               onClick={() => handleToggle('appReceived')}
               className={`w-12 h-7 rounded-full transition-colors ${
-                prefs.appReceived ? 'bg-amber-500' : 'bg-[#f0f0ee]'
+                prefs.appReceived ? 'bg-[#6C63FF]' : 'bg-[#f0f0ee]'
               }`}
             >
               <div
@@ -395,7 +395,7 @@ function NotificationsTab({ user }) {
             <button
               onClick={() => handleToggle('appAccepted')}
               className={`w-12 h-7 rounded-full transition-colors ${
-                prefs.appAccepted ? 'bg-amber-500' : 'bg-[#f0f0ee]'
+                prefs.appAccepted ? 'bg-[#6C63FF]' : 'bg-[#f0f0ee]'
               }`}
             >
               <div
@@ -414,7 +414,7 @@ function NotificationsTab({ user }) {
             <button
               onClick={() => handleToggle('appDeclined')}
               className={`w-12 h-7 rounded-full transition-colors ${
-                prefs.appDeclined ? 'bg-amber-500' : 'bg-[#f0f0ee]'
+                prefs.appDeclined ? 'bg-[#6C63FF]' : 'bg-[#f0f0ee]'
               }`}
             >
               <div
@@ -433,7 +433,7 @@ function NotificationsTab({ user }) {
             <button
               onClick={() => handleToggle('roleFilled')}
               className={`w-12 h-7 rounded-full transition-colors ${
-                prefs.roleFilled ? 'bg-amber-500' : 'bg-[#f0f0ee]'
+                prefs.roleFilled ? 'bg-[#6C63FF]' : 'bg-[#f0f0ee]'
               }`}
             >
               <div
@@ -451,7 +451,7 @@ function NotificationsTab({ user }) {
             <button
               onClick={handleSave}
               disabled={loading}
-              className="bg-amber-500 text-white rounded-lg px-5 py-2.5 text-sm font-medium hover:bg-amber-600 disabled:opacity-50 transition-colors"
+              className="bg-[#6C63FF] text-white rounded-lg px-5 py-2.5 text-sm font-medium hover:bg-[#5750D4] disabled:opacity-50 transition-colors"
             >
               {loading ? 'Saving...' : 'Save Preferences'}
             </button>

@@ -14,9 +14,9 @@ export default function About() {
         }}
       >
         <div className="max-w-6xl mx-auto px-6">
-          <div className="inline-flex items-center gap-2 bg-amber-500/20 border border-amber-500/30 rounded-full px-4 py-1.5 mb-6">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-            <p className="text-xs uppercase tracking-[0.2em] text-amber-500 font-bold">Our Story</p>
+          <div className="inline-flex items-center gap-2 bg-[#6C63FF]/20 border border-[#6C63FF]/30 rounded-full px-4 py-1.5 mb-6">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#6C63FF]" />
+            <p className="text-xs uppercase tracking-[0.2em] text-[#6C63FF] font-bold">Our Story</p>
           </div>
           <h1 className="text-6xl font-[Playfair_Display] text-white mb-4 leading-tight">About CREWUPFILMS</h1>
           <p className="text-white/50 text-lg max-w-2xl leading-relaxed">
@@ -30,7 +30,7 @@ export default function About() {
         {/* Two Column Layout with Accent Sidebar */}
         <div className="flex gap-12">
           {/* Amber Accent Sidebar */}
-          <div className="w-1 bg-gradient-to-b from-amber-500 to-amber-200 rounded-full flex-shrink-0 hidden sm:block" />
+          <div className="w-1 bg-gradient-to-b from-bg-[#f0eeff]0 to-[#c9c4ff] rounded-full flex-shrink-0 hidden sm:block" />
 
           {/* Content */}
           <div className="space-y-8 text-[#6b6b66] leading-relaxed flex-1 text-[15px]">
@@ -74,7 +74,7 @@ export default function About() {
             { number: '11+', label: 'Creator Roles', amber: false },
           ].map(({ number, label, amber }) => (
             <div key={label} className="text-center">
-              <p className={`text-6xl md:text-7xl font-[Playfair_Display] mb-2 ${amber ? 'text-amber-500' : 'text-white'}`}>
+              <p className={`text-6xl md:text-7xl font-[Playfair_Display] mb-2 ${amber ? 'text-[#6C63FF]' : 'text-white'}`}>
                 {number}
               </p>
               <p className="text-xs uppercase tracking-[0.15em] text-white/40 font-medium">{label}</p>
@@ -84,7 +84,7 @@ export default function About() {
 
         {/* Learn More Section */}
         <div className="mt-20">
-          <p className="text-xs uppercase tracking-[0.2em] text-amber-500 font-bold mb-6">Learn More</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-[#6C63FF] font-bold mb-6">Learn More</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {[
               { href: '/mission',      title: 'Our Mission',  body: 'Discover what drives us forward',    cta: 'Read more' },
@@ -95,7 +95,7 @@ export default function About() {
                 <div className="bg-white rounded-xl border border-[#efefed] p-8 hover:shadow-[0_4px_24px_rgba(0,0,0,0.08)] hover:border-[#d0d0ce] transition-all duration-200 h-full flex flex-col">
                   <h3 className="text-xl font-[Playfair_Display] text-[#0e0e0d] mb-2">{title}</h3>
                   <p className="text-[#6b6b66] text-sm mb-6 flex-1">{body}</p>
-                  <div className="flex items-center gap-1.5 text-amber-600 font-semibold text-sm">
+                  <div className="flex items-center gap-1.5 text-[#5750D4] font-semibold text-sm">
                     {cta} <span>→</span>
                   </div>
                 </div>

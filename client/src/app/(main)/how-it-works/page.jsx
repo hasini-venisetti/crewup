@@ -58,11 +58,11 @@ export default function HowItWorks() {
           backgroundSize: '28px 28px',
         }}
       >
-        <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-amber-500/8 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-[#6C63FF]/8 rounded-full blur-3xl pointer-events-none" />
         <div className="relative max-w-6xl mx-auto px-6">
-          <div className="inline-flex items-center gap-2 bg-amber-500/20 border border-amber-500/30 rounded-full px-4 py-1.5 mb-6">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-            <p className="text-xs uppercase tracking-[0.2em] text-amber-500 font-bold">Getting Started</p>
+          <div className="inline-flex items-center gap-2 bg-[#6C63FF]/20 border border-[#6C63FF]/30 rounded-full px-4 py-1.5 mb-6">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#6C63FF]" />
+            <p className="text-xs uppercase tracking-[0.2em] text-[#6C63FF] font-bold">Getting Started</p>
           </div>
           <h1 className="text-6xl font-[Playfair_Display] text-white mb-4 leading-tight max-w-2xl">
             How It Works
@@ -86,8 +86,8 @@ export default function HowItWorks() {
                 <div className="flex-shrink-0 flex flex-col items-center z-10">
                   <div className={`w-[4.5rem] h-[4.5rem] rounded-2xl flex items-center justify-center font-[Playfair_Display] font-bold text-xl transition-all duration-300 ${
                     i === 0
-                      ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30'
-                      : 'bg-white border border-[#efefed] text-[#a3a39e] group-hover:border-amber-500/40 group-hover:text-amber-600'
+                      ? 'bg-[#6C63FF] text-white shadow-lg shadow-[#6C63FF]/30'
+                      : 'bg-white border border-[#efefed] text-[#a3a39e] group-hover:border-[#6C63FF]/40 group-hover:text-[#5750D4]'
                   }`}>
                     {step.number}
                   </div>
@@ -106,7 +106,7 @@ export default function HowItWorks() {
         {/* CTA */}
         <div className="mt-20 bg-[#0e0e0d] rounded-2xl p-12 text-center relative overflow-hidden"
           style={{ backgroundImage: 'radial-gradient(circle, #1a1a18 1px, transparent 1px)', backgroundSize: '24px 24px' }}>
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-80 h-24 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-80 h-24 bg-[#6C63FF]/10 rounded-full blur-3xl pointer-events-none" />
           <div className="relative">
             <h2 className="text-4xl font-[Playfair_Display] text-white mb-4">
               Ready to get started?
@@ -116,7 +116,7 @@ export default function HowItWorks() {
             </p>
             <Link
               href="/signup"
-              className="inline-block bg-amber-500 hover:bg-amber-400 text-white font-semibold text-sm px-8 py-3.5 rounded-lg shadow-lg shadow-amber-500/25 transition-all duration-200 active:scale-[0.98]"
+              className="inline-block bg-[#6C63FF] hover:bg-[#7C75FF] text-white font-semibold text-sm px-8 py-3.5 rounded-lg shadow-lg shadow-[#6C63FF]/25 transition-all duration-200 active:scale-[0.98]"
             >
               Create Your Free Account
             </Link>

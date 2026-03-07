@@ -73,8 +73,7 @@ const search = async (req, res, next) => {
       const creators = await creatorsQuery
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(limit)
-        .populate('Profile');
+        .limit(limit);
 
       const creatorsWithProfiles = await Promise.all(
         creators.map(async (user) => {

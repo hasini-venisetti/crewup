@@ -37,11 +37,11 @@ export default function LandingPreview() {
   const [mobileOpen, setMobileOpen]         = useState(false);
 
   const btn = {
-    primary: { background: "#f59e0b", color: "#000", fontWeight: 700, padding: "0.75rem 1.75rem", borderRadius: "9px", border: "none", cursor: "pointer", fontSize: "0.95rem", textDecoration: "none", display: "inline-block", letterSpacing: "-0.01em" },
+    primary: { background: "#7C75FF", color: "#000", fontWeight: 700, padding: "0.75rem 1.75rem", borderRadius: "9px", border: "none", cursor: "pointer", fontSize: "0.95rem", textDecoration: "none", display: "inline-block", letterSpacing: "-0.01em" },
     outline: { background: "transparent", color: "#fff", fontWeight: 600, padding: "0.75rem 1.75rem", borderRadius: "9px", border: "1px solid rgba(255,255,255,0.2)", cursor: "pointer", fontSize: "0.95rem", textDecoration: "none", display: "inline-block" },
   };
 
-  const chip = { display: "inline-block", background: "rgba(245,158,11,0.12)", color: "#f59e0b", fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", padding: "0.3rem 0.9rem", borderRadius: "100px", marginBottom: "1.25rem", border: "1px solid rgba(245,158,11,0.25)" };
+  const chip = { display: "inline-block", background: "rgba(245,158,11,0.12)", color: "#7C75FF", fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", padding: "0.3rem 0.9rem", borderRadius: "100px", marginBottom: "1.25rem", border: "1px solid rgba(245,158,11,0.25)" };
   const h2 = { fontSize: "clamp(2rem,4vw,3rem)", fontWeight: 800, letterSpacing: "-0.04em", lineHeight: 1.1, marginBottom: "1rem", color: "#fff" };
   const lead = { fontSize: "1.1rem", color: "#9ca3af", lineHeight: 1.7, maxWidth: "560px", margin: "0 auto" };
   const card = { background: "#111", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "16px", padding: "1.75rem" };
@@ -54,7 +54,7 @@ export default function LandingPreview() {
 
       {/* NAV */}
       <nav style={{ position: "sticky", top: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 2rem", height: "62px", background: "rgba(8,8,8,0.9)", backdropFilter: "blur(14px)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-        <span style={{ fontSize: "1.2rem", fontWeight: 800, letterSpacing: "-0.04em" }}>CREW<span style={{ color: "#f59e0b" }}>UP</span></span>
+        <span style={{ fontSize: "1.2rem", fontWeight: 800, letterSpacing: "-0.04em" }}>CREW<span style={{ color: "#7C75FF" }}>UP</span></span>
         <div style={{ display: "flex", gap: "1.5rem", alignItems: "center" }}>
           <span style={{ color: "#9ca3af", fontSize: "0.875rem", cursor: "pointer" }}>Explore</span>
           <span style={{ color: "#9ca3af", fontSize: "0.875rem", cursor: "pointer" }}>Login</span>
@@ -76,7 +76,7 @@ export default function LandingPreview() {
 
           <h1 style={{ fontSize: "clamp(2.8rem,7.5vw,5.75rem)", fontWeight: 900, letterSpacing: "-0.055em", lineHeight: 1.0, marginBottom: "1.75rem" }}>
             Find Your Creative Team.
-            <br /><span style={{ color: "#f59e0b" }}>Start Your Next Project.</span>
+            <br /><span style={{ color: "#7C75FF" }}>Start Your Next Project.</span>
           </h1>
           <p style={{ fontSize: "clamp(1rem,2vw,1.2rem)", color: "#9ca3af", lineHeight: 1.75, maxWidth: "580px", margin: "0 auto 3rem" }}>
             CREWUPFILMS connects filmmakers, actors, editors, writers, and every creative professional into project-based teams. Stop working alone — start creating together.
@@ -137,7 +137,7 @@ export default function LandingPreview() {
                 <div style={{ width: "52px", height: "52px", borderRadius: "13px", background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.5rem", marginBottom: "1.5rem" }}>
                   {i === 0 ? "📋" : i === 1 ? "🔍" : "🎬"}
                 </div>
-                <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.12em", color: "#f59e0b", textTransform: "uppercase", marginBottom: "0.5rem" }}>Step {step.num}</div>
+                <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.12em", color: "#7C75FF", textTransform: "uppercase", marginBottom: "0.5rem" }}>Step {step.num}</div>
                 <h3 style={{ fontSize: "1.15rem", fontWeight: 700, marginBottom: "0.7rem", letterSpacing: "-0.02em" }}>{step.title}</h3>
                 <p style={{ color: "#6b7280", fontSize: "0.875rem", lineHeight: 1.7 }}>{step.desc}</p>
               </div>
@@ -175,7 +175,7 @@ export default function LandingPreview() {
                 <div style={{ height: "3px", background: p.color, borderRadius: "2px", margin: "-1.75rem -1.75rem 0", borderTopLeftRadius: "15px", borderTopRightRadius: "15px" }} />
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#9ca3af", background: "rgba(255,255,255,0.05)", padding: "0.25rem 0.6rem", borderRadius: "6px" }}>{p.type}</span>
-                  <span style={{ fontSize: "0.7rem", fontWeight: 700, color: p.paid ? "#22c55e" : "#f59e0b", background: p.paid ? "rgba(34,197,94,0.1)" : "rgba(245,158,11,0.1)", padding: "0.25rem 0.6rem", borderRadius: "6px", border: `1px solid ${p.paid ? "rgba(34,197,94,0.2)" : "rgba(245,158,11,0.2)"}` }}>{p.paid ? "💰 Paid" : "🤝 Collab"}</span>
+                  <span style={{ fontSize: "0.7rem", fontWeight: 700, color: p.paid ? "#22c55e" : "#7C75FF", background: p.paid ? "rgba(34,197,94,0.1)" : "rgba(245,158,11,0.1)", padding: "0.25rem 0.6rem", borderRadius: "6px", border: `1px solid ${p.paid ? "rgba(34,197,94,0.2)" : "rgba(245,158,11,0.2)"}` }}>{p.paid ? "💰 Paid" : "🤝 Collab"}</span>
                 </div>
                 <div>
                   <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "0.45rem", letterSpacing: "-0.02em" }}>{p.title}</h3>
@@ -191,7 +191,7 @@ export default function LandingPreview() {
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "0.5rem", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
                   <span style={{ fontSize: "0.78rem", color: "#4b5563" }}>📍 {p.location}</span>
-                  <span style={{ fontSize: "0.78rem", color: "#f59e0b", fontWeight: 700, cursor: "pointer" }}>Apply →</span>
+                  <span style={{ fontSize: "0.78rem", color: "#7C75FF", fontWeight: 700, cursor: "pointer" }}>Apply →</span>
                 </div>
               </div>
             ))}
@@ -240,7 +240,7 @@ export default function LandingPreview() {
         <div style={{ position: "relative", maxWidth: "660px", margin: "0 auto" }}>
           <div style={chip}>Ready to Create?</div>
           <h2 style={{ fontSize: "clamp(2.2rem,5vw,3.75rem)", fontWeight: 900, letterSpacing: "-0.05em", lineHeight: 1.1, marginBottom: "1.5rem" }}>
-            Your next great project<br /><span style={{ color: "#f59e0b" }}>starts with the right team.</span>
+            Your next great project<br /><span style={{ color: "#7C75FF" }}>starts with the right team.</span>
           </h2>
           <p style={{ ...lead, margin: "0 auto 2.75rem" }}>Join thousands of creators who stopped working alone and started building the projects they always imagined.</p>
           <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
@@ -254,7 +254,7 @@ export default function LandingPreview() {
       {/* FOOTER */}
       <footer style={{ borderTop: "1px solid rgba(255,255,255,0.06)", padding: "2.5rem 2rem", background: "#080808" }}>
         <div style={{ maxWidth: "1160px", margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1.25rem" }}>
-          <span style={{ fontSize: "1.1rem", fontWeight: 800, letterSpacing: "-0.04em" }}>CREW<span style={{ color: "#f59e0b" }}>UP</span></span>
+          <span style={{ fontSize: "1.1rem", fontWeight: 800, letterSpacing: "-0.04em" }}>CREW<span style={{ color: "#7C75FF" }}>UP</span></span>
           <div style={{ display: "flex", gap: "1.75rem", flexWrap: "wrap" }}>
             {["Explore", "For Creators", "About", "Privacy", "Terms"].map((l) => (
               <span key={l} style={{ color: "#4b5563", fontSize: "0.8rem", cursor: "pointer" }}>{l}</span>

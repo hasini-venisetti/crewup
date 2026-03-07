@@ -208,7 +208,7 @@ const fillRole = async (req, res, next) => {
     });
 
     for (const recipientId of notificationRecipients) {
-      if (recipientId !== project.createdBy.toString() || recipientId === project.createdBy.toString()) {
+      if (recipientId !== req.user._id.toString()) {
         await Notification.create({
           recipient: recipientId,
           sender: req.user._id,
@@ -242,6 +242,154 @@ const fillRole = async (req, res, next) => {
   }
 };
 
+// ── YouTube link helpers ───────────────────────────────────────────────────
+function extractYoutubeId(url) {
+  if (!url) return null;
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/)([A-Za-z0-9_-]{11})/,
+  ];
+  for (const re of patterns) {
+    const m = url.match(re);
+    if (m) return m[1];
+  }
+  return null;
+}
+
+// @desc    Set YouTube link for a released project
+// @route   PATCH /api/projects/:id/youtube-link
+// @access  Private (project owner only)
+const setYoutubeLink = async (req, res, next) => {
+  try {
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ success: false, message: 'Project not found' });
+    if (project.createdBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+
+    const { youtubeLink } = req.body;
+    if (!youtubeLink) return res.status(400).json({ success: false, message: 'youtubeLink is required' });
+
+    const videoId = extractYoutubeId(youtubeLink);
+    if (!videoId) return res.status(400).json({ success: false, message: 'Invalid YouTube URL' });
+
+    project.youtubeLink = youtubeLink;
+    project.status      = 'completed'; // mark as released/completed
+    await project.save();
+
+    res.status(200).json({ success: true, message: 'YouTube link saved', data: { youtubeLink, videoId } });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get all released films platform-wide (have a youtubeLink)
+// @route   GET /api/projects/films
+// @access  Public
+const getAllFilms = async (req, res, next) => {
+  try {
+    const { genre, page = 1, limit = 24 } = req.query;
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const filter = { youtubeLink: { $ne: '' } };
+    if (genre) filter.projectType = genre;
+
+    const films = await Project.find(filter)
+      .select('title youtubeLink projectType createdBy teamMembers createdAt')
+      .populate('createdBy', 'name username profileImage')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit))
+      .lean();
+
+    const annotated = films.map((film) => {
+      const videoId   = extractYoutubeId(film.youtubeLink);
+      const thumbnail = videoId
+        ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+        : null;
+      return {
+        _id:         film._id,
+        title:       film.title,
+        youtubeLink: film.youtubeLink,
+        projectType: film.projectType,
+        videoId,
+        thumbnail,
+        director:  film.createdBy,
+        teamSize:  (film.teamMembers?.length || 0) + 1,
+        createdAt: film.createdAt,
+      };
+    });
+
+    const total = await Project.countDocuments(filter);
+
+    res.status(200).json({
+      success: true,
+      data:    annotated,
+      total,
+      page:    Number(page),
+      pages:   Math.ceil(total / Number(limit)),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get all released films for a specific user (as owner or team member)
+// @route   GET /api/projects/films/:userId
+// @access  Public
+const getUserFilms = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const mongoose   = require('mongoose');
+    const uid        = new mongoose.Types.ObjectId(userId);
+
+    // Released projects where user is owner OR a team member, AND has a youtubeLink
+    const films = await Project.find({
+      youtubeLink:  { $ne: '' },
+      $or: [
+        { createdBy: uid },
+        { 'teamMembers.user': uid },
+      ],
+    })
+      .select('title youtubeLink createdBy teamMembers status createdAt')
+      .populate('createdBy', 'name username')
+      .lean();
+
+    // Annotate each film with the user's role in that project
+    const annotated = films.map((film) => {
+      const isOwner = film.createdBy?._id?.toString() === userId;
+      let userRole  = isOwner ? 'Director' : null;
+      if (!userRole) {
+        const member = film.teamMembers?.find(
+          (m) => (m.user?._id || m.user)?.toString() === userId
+        );
+        userRole = member?.role || 'Team Member';
+      }
+
+      const videoId   = extractYoutubeId(film.youtubeLink);
+      const thumbnail = videoId
+        ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+        : null;
+
+      return {
+        _id:         film._id,
+        title:       film.title,
+        youtubeLink: film.youtubeLink,
+        videoId,
+        thumbnail,
+        userRole,
+        createdAt:   film.createdAt,
+      };
+    });
+
+    // Newest first
+    annotated.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    res.status(200).json({ success: true, data: annotated });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createProject,
   getProjects,
@@ -251,4 +399,7 @@ module.exports = {
   getMyProjects,
   getRecommended,
   fillRole,
+  setYoutubeLink,
+  getAllFilms,
+  getUserFilms,
 };

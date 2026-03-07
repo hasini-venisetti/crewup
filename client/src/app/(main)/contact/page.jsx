@@ -55,7 +55,7 @@ export default function ContactPage() {
           }}
         />
         <div className="relative h-full flex flex-col items-center justify-center text-center px-4">
-          <div className="inline-block bg-amber-500 text-white px-3 py-1 rounded-full text-xs font-semibold mb-4">
+          <div className="inline-block bg-[#6C63FF] text-white px-3 py-1 rounded-full text-xs font-semibold mb-4">
             Get in Touch
           </div>
           <h1 className="font-[Playfair_Display] text-5xl font-bold text-white mb-3">
@@ -93,7 +93,7 @@ export default function ContactPage() {
                     onChange={handleChange}
                     required
                     placeholder="John Doe"
-                    className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition"
+                    className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] transition"
                   />
                 </div>
 
@@ -109,7 +109,7 @@ export default function ContactPage() {
                     onChange={handleChange}
                     required
                     placeholder="john@example.com"
-                    className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition"
+                    className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] transition"
                   />
                 </div>
 
@@ -125,7 +125,7 @@ export default function ContactPage() {
                     onChange={handleChange}
                     required
                     placeholder="What is this about?"
-                    className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition"
+                    className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] transition"
                   />
                 </div>
 
@@ -139,7 +139,7 @@ export default function ContactPage() {
                     value={formData.type}
                     onChange={handleChange}
                     required
-                    className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition"
+                    className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] transition"
                   >
                     <option value="">Select an option</option>
                     <option value="partnership">Partnership Inquiry</option>
@@ -162,7 +162,7 @@ export default function ContactPage() {
                     required
                     placeholder="Tell us more about your inquiry..."
                     rows="6"
-                    className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition resize-none"
+                    className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] transition resize-none"
                   />
                 </div>
 
@@ -170,7 +170,7 @@ export default function ContactPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-amber-500 text-white rounded-xl px-8 py-3.5 font-bold hover:bg-amber-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-[#6C63FF] text-white rounded-xl px-8 py-3.5 font-bold hover:bg-[#5750D4] transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Sending...' : 'Send Message'}
                 </button>
@@ -186,7 +186,7 @@ export default function ContactPage() {
                 <h3 className="font-semibold text-[#0e0e0d] mb-2">Email</h3>
                 <a
                   href="mailto:hello@crewupfilms.com"
-                  className="text-amber-600 font-semibold hover:text-amber-700 transition block mb-1"
+                  className="text-[#5750D4] font-semibold hover:text-[#4740CC] transition block mb-1"
                 >
                   hello@crewupfilms.com
                 </a>
@@ -198,7 +198,7 @@ export default function ContactPage() {
                 <h3 className="font-semibold text-[#0e0e0d] mb-2">Support</h3>
                 <a
                   href="mailto:support@crewupfilms.com"
-                  className="text-amber-600 font-semibold hover:text-amber-700 transition block mb-1"
+                  className="text-[#5750D4] font-semibold hover:text-[#4740CC] transition block mb-1"
                 >
                   support@crewupfilms.com
                 </a>
@@ -210,7 +210,7 @@ export default function ContactPage() {
                 <h3 className="font-semibold text-[#0e0e0d] mb-2">Phone</h3>
                 <a
                   href="tel:+1234567890"
-                  className="text-amber-600 font-semibold hover:text-amber-700 transition block mb-1"
+                  className="text-[#5750D4] font-semibold hover:text-[#4740CC] transition block mb-1"
                 >
                   +1 (234) 567-890
                 </a>
@@ -233,24 +233,24 @@ export default function ContactPage() {
                 <div className="flex gap-3">
                   <a
                     href="#"
-                    className="w-10 h-10 rounded-lg bg-[#f7f7f6] hover:bg-amber-50 flex items-center justify-center transition"
+                    className="w-10 h-10 rounded-lg bg-[#f7f7f6] hover:bg-[#f0eeff] flex items-center justify-center transition"
                     title="Twitter"
                   >
-                    <span className="text-[#6b6b66] hover:text-amber-600">𝕏</span>
+                    <span className="text-[#6b6b66] hover:text-[#5750D4]">𝕏</span>
                   </a>
                   <a
                     href="#"
-                    className="w-10 h-10 rounded-lg bg-[#f7f7f6] hover:bg-amber-50 flex items-center justify-center transition"
+                    className="w-10 h-10 rounded-lg bg-[#f7f7f6] hover:bg-[#f0eeff] flex items-center justify-center transition"
                     title="Instagram"
                   >
-                    <span className="text-[#6b6b66] hover:text-amber-600">📷</span>
+                    <span className="text-[#6b6b66] hover:text-[#5750D4]">📷</span>
                   </a>
                   <a
                     href="#"
-                    className="w-10 h-10 rounded-lg bg-[#f7f7f6] hover:bg-amber-50 flex items-center justify-center transition"
+                    className="w-10 h-10 rounded-lg bg-[#f7f7f6] hover:bg-[#f0eeff] flex items-center justify-center transition"
                     title="LinkedIn"
                   >
-                    <span className="text-[#6b6b66] hover:text-amber-600">in</span>
+                    <span className="text-[#6b6b66] hover:text-[#5750D4]">in</span>
                   </a>
                 </div>
               </div>

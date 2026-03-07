@@ -18,7 +18,7 @@ const CITY_COORDS = {
   'chandigarh': [30.7333, 76.7794], 'kochi': [9.9312, 76.2673], 'goa': [15.2993, 74.124],
 };
 
-const AVAIL_COLOR = { 'available': '#22c55e', 'open-to-offers': '#f59e0b', 'busy': '#ef4444' };
+const AVAIL_COLOR = { 'available': '#22c55e', 'open-to-offers': '#7C75FF', 'busy': '#ef4444' };
 
 const ROLE_EMOJI = {
   'director': '🎬', 'cinematographer': '📷', 'editor': '✂️', 'musician': '🎵',
@@ -173,37 +173,54 @@ export default function MapPage() {
 
   return (
     <div className="min-h-screen bg-[#fafaf9]">
-      <div className="pt-24 pb-0 px-4 max-w-7xl mx-auto">
-
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-3xl font-black tracking-tight text-[#111110]">Creator Map</h1>
-            <p className="text-[#6b6b66] text-sm mt-1">
-              Discover {creators.length} creators by location
-            </p>
-          </div>
-          <div className="flex gap-3 flex-wrap">
-            <select value={filterRole} onChange={(e) => setFilterRole(e.target.value)}
-              className="input py-2 text-sm">
-              <option value="">All Roles</option>
-              {allRoles.map((r) => (
-                <option key={r} value={r} className="capitalize">{r.replace('-', ' ')}</option>
-              ))}
-            </select>
-            <div className="flex items-center gap-4 text-xs text-[#6b6b66]">
-              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-green-500 inline-block" />Available</span>
-              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-amber-500 inline-block" />Open</span>
-              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-red-500 inline-block" />Busy</span>
+      {/* Dark Hero */}
+      <div
+        className="relative bg-[#0e0e0d] pt-24 pb-8 overflow-hidden"
+        style={{
+          backgroundImage: 'radial-gradient(circle, #252523 1px, transparent 1px)',
+          backgroundSize: '28px 28px',
+        }}
+      >
+        <div className="absolute top-0 left-1/4 w-72 h-72 bg-[#6C63FF]/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative max-w-7xl mx-auto px-4">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div>
+              <div className="inline-flex items-center gap-2 bg-[#6C63FF]/20 border border-[#6C63FF]/30 rounded-full px-3 py-1 mb-3">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#6C63FF]" />
+                <p className="text-xs uppercase tracking-[0.15em] text-[#6C63FF] font-bold">Explore</p>
+              </div>
+              <h1 className="text-4xl font-[Playfair_Display] text-white mb-1">Creator Map</h1>
+              <p className="text-white/50 text-sm">
+                Discover {creators.length} creators by location
+              </p>
+            </div>
+            <div className="flex gap-3 flex-wrap items-center pb-1">
+              <select value={filterRole} onChange={(e) => setFilterRole(e.target.value)}
+                className="bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/30">
+                <option value="" className="text-black">All Roles</option>
+                {allRoles.map((r) => (
+                  <option key={r} value={r} className="capitalize text-black">{r.replace('-', ' ')}</option>
+                ))}
+              </select>
+              <div className="flex items-center gap-4 text-xs text-white/60">
+                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-green-500 inline-block" />Available</span>
+                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-[#6C63FF] inline-block" />Open</span>
+                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-red-500 inline-block" />Busy</span>
+              </div>
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="px-4 max-w-7xl mx-auto">
+        {/* spacer */}
+        <div className="h-4" />
 
         {/* Map + Sidebar Layout */}
         <div className="flex gap-4 h-[calc(100vh-220px)]">
 
           {/* Map */}
-          <div className="flex-1 border border-[#efefed] overflow-hidden relative">
+          <div className="flex-1 rounded-2xl border border-[#efefed] overflow-hidden relative">
             {loading && (
               <div className="absolute inset-0 bg-white flex items-center justify-center z-10">
                 <p className="text-[#6b6b66] text-sm">Loading creators...</p>
@@ -213,7 +230,7 @@ export default function MapPage() {
           </div>
 
           {/* Sidebar: selected city creators */}
-          <div className="w-72 flex-shrink-0 flex flex-col border border-[#efefed] bg-white overflow-y-auto">
+          <div className="w-72 flex-shrink-0 flex flex-col rounded-2xl border border-[#efefed] bg-white overflow-y-auto">
             {selected ? (
               <>
                 <div className="p-4 border-b border-[#efefed] flex items-center justify-between sticky top-0 bg-white z-10">

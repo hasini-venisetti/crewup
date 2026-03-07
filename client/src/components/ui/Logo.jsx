@@ -56,7 +56,7 @@ export default function Logo({ size = 'md', href = '/', noLink = false, light = 
         fontFamily="Inter, -apple-system, sans-serif"
         fontWeight="600"
         fontSize="10"
-        fill="#d97706"
+        fill="#6C63FF"
         letterSpacing="5"
       >
         FILMS

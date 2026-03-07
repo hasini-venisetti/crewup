@@ -13,7 +13,7 @@ const TAG_CONFIG = {
   'learning-project':       { label: '📚 Learning',     class: 'bg-purple-50 text-purple-700 border border-purple-200' },
   'practice-collaboration': { label: '🤝 Practice',     class: 'bg-cyan-50 text-cyan-700 border border-cyan-200' },
   'portfolio-building':     { label: '🎨 Portfolio',    class: 'bg-pink-50 text-pink-700 border border-pink-200' },
-  'mentorship-available':   { label: '🎓 Mentorship',   class: 'bg-amber-50 text-amber-700 border border-amber-200' },
+  'mentorship-available':   { label: '🎓 Mentorship',   class: 'bg-[#f0eeff] text-[#4740CC] border border-[#c9c4ff]' },
   'paid-opportunity':       { label: '💰 Paid',         class: 'bg-emerald-50 text-emerald-700 border border-emerald-200' },
 };
 
@@ -22,7 +22,7 @@ const TYPE_ACCENT = {
   'feature-film': 'bg-indigo-500',
   'youtube':      'bg-red-500',
   'music-video':  'bg-pink-500',
-  'podcast':      'bg-amber-500',
+  'podcast':      'bg-[#6C63FF]',
   'web-series':   'bg-blue-500',
   'documentary':  'bg-teal-500',
   'commercial':   'bg-orange-500',
@@ -46,10 +46,12 @@ export default function ProjectCard({ project }) {
     if (d < 7) return `${d}d ago`;
     return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
-
+  
   const levelCfg   = LEVEL_CONFIG[experienceLevel] || LEVEL_CONFIG.any;
   const isReleased = timelineStage === 'released';
   const accent     = TYPE_ACCENT[projectType] || TYPE_ACCENT.other;
+
+  
 
   return (
     <Link href={`/projects/${_id}`} className="block group h-full">

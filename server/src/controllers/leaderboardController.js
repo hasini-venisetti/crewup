@@ -1,9 +1,22 @@
-const Application = require('../models/Application');
-const Project = require('../models/Project');
-const User = require('../models/User');
+const User    = require('../models/User');
 const Profile = require('../models/Profile');
+const Review  = require('../models/Review');
 
-// @desc    Get leaderboard ranked by accepted applications and completed projects
+/**
+ * Reputation score formula (0–100):
+ *   averageRating (1–5) contributes up to 70 pts  → (avg / 5) * 70
+ *   reviewCount   contributes up to 30 pts         → min(count / 10, 1) * 30
+ *
+ * Rewards both quality (high average) and volume (many reviews).
+ */
+function computeReputationScore(averageRating, reviewCount) {
+  if (!reviewCount) return 0;
+  const qualityPts = (averageRating / 5) * 70;
+  const volumePts  = Math.min(reviewCount / 10, 1) * 30;
+  return Math.round(qualityPts + volumePts);
+}
+
+// @desc    Get leaderboard ranked by reputation score
 // @route   GET /api/leaderboard?period=alltime|month&role=
 // @access  Public
 const getLeaderboard = async (req, res, next) => {
@@ -17,83 +30,68 @@ const getLeaderboard = async (req, res, next) => {
       matchStage = { createdAt: { $gte: startOfMonth } };
     }
 
-    // Aggregate accepted applications per user (as applicant)
-    const acceptedApps = await Application.aggregate([
-      { $match: { status: 'accepted', ...matchStage } },
-      { $group: { _id: '$applicant', acceptedCount: { $sum: 1 } } },
+    // Aggregate review stats per user
+    const reviewStats = await Review.aggregate([
+      { $match: matchStage },
+      {
+        $group: {
+          _id:             '$reviewee',
+          averageRating:   { $avg: '$rating' },
+          totalRating:     { $sum: '$rating' },
+          reviewCount:     { $sum: 1 },
+          professionalism: { $avg: '$categories.professionalism' },
+          skill:           { $avg: '$categories.skill' },
+          communication:   { $avg: '$categories.communication' },
+        },
+      },
+      { $match: { reviewCount: { $gte: 1 } } },
     ]);
 
-    // Aggregate completed projects per user (as createdBy)
-    const completedProjects = await Project.aggregate([
-      { $match: { status: 'completed', ...matchStage } },
-      { $group: { _id: '$createdBy', completedProjects: { $sum: 1 } } },
+    const userIds = reviewStats.map((s) => s._id);
+
+    // Apply role filter using actual User.role enum values
+    const userFilter = { _id: { $in: userIds } };
+    if (role) userFilter.role = role;
+
+    const [users, profiles] = await Promise.all([
+      User.find(userFilter).select('-password').lean(),
+      Profile.find({ user: { $in: userIds } }).select('user experienceLevel location').lean(),
     ]);
 
-    // Build a map for quick lookup
-    const appMap = {};
-    acceptedApps.forEach((item) => {
-      appMap[item._id.toString()] = item.acceptedCount;
-    });
-
-    const projectMap = {};
-    completedProjects.forEach((item) => {
-      projectMap[item._id.toString()] = item.completedProjects;
-    });
-
-    // Collect all unique user IDs
-    const allUserIds = new Set([
-      ...acceptedApps.map((a) => a._id.toString()),
-      ...completedProjects.map((p) => p._id.toString()),
-    ]);
-
-    // Fetch user and profile data for all users
-    const users = await User.find({ _id: { $in: Array.from(allUserIds) } }).select('-password');
-    const profiles = await Profile.find({ user: { $in: Array.from(allUserIds) } });
+    const reviewMap = {};
+    reviewStats.forEach((s) => { reviewMap[s._id.toString()] = s; });
 
     const profileMap = {};
-    profiles.forEach((p) => {
-      profileMap[p.user.toString()] = p;
-    });
+    profiles.forEach((p) => { profileMap[p.user.toString()] = p; });
 
-    // Build leaderboard entries with scores
-    const leaderboard = users.map((user) => {
-      const userId = user._id.toString();
-      const acceptedCount = appMap[userId] || 0;
-      const completed = projectMap[userId] || 0;
-      const rank = acceptedCount * 2 + completed * 3;
-      const profile = profileMap[userId];
+    const leaderboard = users
+      .map((user) => {
+        const uid  = user._id.toString();
+        const stat = reviewMap[uid];
+        if (!stat) return null;
 
-      const entry = {
-        user: {
-          _id: user._id,
-          name: user.name,
-          username: user.username,
-          role: user.role,
-          profileImage: user.profileImage,
-        },
-        profile: profile || null,
-        stats: {
-          acceptedCount,
-          completedProjects: completed,
-          rank,
-        },
-      };
+        return {
+          _id:             user._id,
+          name:            user.name,
+          username:        user.username,
+          role:            user.role,
+          profileImage:    user.profileImage,
+          averageRating:   Math.round(stat.averageRating * 10) / 10,
+          reviewCount:     stat.reviewCount,
+          reputationScore: computeReputationScore(stat.averageRating, stat.reviewCount),
+          categories: {
+            professionalism: stat.professionalism,
+            skill:           stat.skill,
+            communication:   stat.communication,
+          },
+          location: profileMap[uid]?.location || null,
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.reputationScore - a.reputationScore || b.reviewCount - a.reviewCount)
+      .slice(0, 20);
 
-      // Filter by role if provided
-      if (role && user.role !== role) {
-        return null;
-      }
-
-      return entry;
-    });
-
-    // Remove null entries (filtered out by role)
-    const filtered = leaderboard.filter((e) => e !== null);
-
-    // Sort by rank descending and limit to top 20
-    const sorted = filtered.sort((a, b) => b.stats.rank - a.stats.rank).slice(0, 20);
-
-    res.status(200).json({ success: true, data: sorted });
+    res.status(200).json({ success: true, data: leaderboard });
   } catch (error) {
     next(error);
   }

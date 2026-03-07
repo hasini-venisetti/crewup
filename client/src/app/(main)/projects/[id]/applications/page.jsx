@@ -131,7 +131,7 @@ function FillRoleCard({ role, filled, onFill }) {
       {!open ? (
         <button
           onClick={() => setOpen(true)}
-          className="text-xs font-semibold px-3 py-2 rounded-lg bg-[#f7f7f6] text-[#111110] border border-amber-400/20 hover:bg-[#f0f0ee] transition-colors"
+          className="text-xs font-semibold px-3 py-2 rounded-lg bg-[#f7f7f6] text-[#111110] border border-[#7C75FF]/20 hover:bg-[#f0f0ee] transition-colors"
         >
           Mark as Filled
         </button>
@@ -156,7 +156,7 @@ function FillRoleCard({ role, filled, onFill }) {
             <button
               onClick={handleSubmit}
               disabled={loading}
-              className="text-xs font-semibold px-3 py-2 rounded-lg bg-amber-400/10 text-[#111110] border border-amber-400/20 hover:bg-amber-400/20 transition-colors disabled:opacity-50"
+              className="text-xs font-semibold px-3 py-2 rounded-lg bg-[#7C75FF]/10 text-[#111110] border border-[#7C75FF]/20 hover:bg-[#7C75FF]/20 transition-colors disabled:opacity-50"
             >
               {loading ? 'Marking...' : 'Confirm'}
             </button>
@@ -260,18 +260,24 @@ export default function ApplicationsPage() {
     <div className="min-h-screen bg-[#fafaf9]">
 
 
-      <div className="pt-24 pb-20 px-4 max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <Link href={`/projects/${id}`} className="text-[#111110] hover:text-[#2d2d2b] text-sm font-semibold mb-2 inline-block">
-              ← Back to Project
-            </Link>
-            <h1 className="text-3xl md:text-4xl font-black tracking-[-0.04em] text-[#111110]">
-              Applications for {project.title}
-            </h1>
-          </div>
+      {/* Dark Hero */}
+      <div
+        className="relative bg-[#0e0e0d] pt-24 pb-10 overflow-hidden"
+        style={{ backgroundImage: 'radial-gradient(circle, #252523 1px, transparent 1px)', backgroundSize: '28px 28px' }}
+      >
+        <div className="absolute top-0 left-1/3 w-64 h-64 bg-[#6C63FF]/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative max-w-4xl mx-auto px-4">
+          <Link href={`/projects/${id}`} className="inline-flex items-center gap-1 text-white/50 hover:text-white text-sm mb-4 transition-colors">
+            ← Back to Project
+          </Link>
+          <h1 className="text-3xl md:text-4xl font-[Playfair_Display] text-white">
+            Applications
+          </h1>
+          <p className="text-white/50 mt-2">{project.title}</p>
         </div>
+      </div>
+      <div className="pb-20 px-4 max-w-4xl mx-auto">
+        <div className="mb-8"></div>
 
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
@@ -344,6 +350,8 @@ export default function ApplicationsPage() {
             ))}
           </div>
         </div>
+      </div>
+      </div>
       </div>
     </div>
   );
