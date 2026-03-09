@@ -62,7 +62,7 @@ export default function Navbar() {
     const fetchCount = async () => {
       try {
         const { data } = await notificationAPI.getUnreadCount();
-        setUnreadCount(data?.count || 0);
+        setUnreadCount(data?.data?.count ?? data?.count ?? 0);
       } catch {}
     };
     fetchCount();
