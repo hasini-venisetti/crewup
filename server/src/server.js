@@ -39,10 +39,34 @@ connectDB();
 const app    = express();
 const server = http.createServer(app);         // HTTP server (wraps express)
 
+// ── Allowed origins (supports comma-separated list in CLIENT_URL) ─────────
+const rawOrigins = process.env.CLIENT_URL || 'http://localhost:3000';
+const allowedOrigins = rawOrigins.split(',').map((o) => o.trim()).filter(Boolean);
+
+// Auto-add www <-> non-www variants so both always work
+const expandedOrigins = new Set(allowedOrigins);
+for (const origin of allowedOrigins) {
+  try {
+    const url = new URL(origin);
+    if (url.hostname.startsWith('www.')) {
+      expandedOrigins.add(`${url.protocol}//${url.hostname.slice(4)}${url.port ? ':' + url.port : ''}`);
+    } else {
+      expandedOrigins.add(`${url.protocol}//www.${url.hostname}${url.port ? ':' + url.port : ''}`);
+    }
+  } catch (_) { /* ignore malformed entries */ }
+}
+
+const corsOrigin = (origin, callback) => {
+  // Allow requests with no origin (mobile apps, curl, Postman, etc.)
+  if (!origin) return callback(null, true);
+  if (expandedOrigins.has(origin)) return callback(null, true);
+  callback(new Error(`CORS: origin ${origin} not allowed`));
+};
+
 // ── Socket.io setup ──────────────────────────────────────────────────────
 const io = new Server(server, {
   cors: {
-    origin:      process.env.CLIENT_URL || 'http://localhost:3000',
+    origin:      corsOrigin,
     methods:     ['GET', 'POST'],
     credentials: true,
   },
@@ -57,7 +81,7 @@ socketHandler(io);
 app.use(helmet());
 app.use(
   cors({
-    origin:      process.env.CLIENT_URL || 'http://localhost:3000',
+    origin:      corsOrigin,
     credentials: true,
   })
 );

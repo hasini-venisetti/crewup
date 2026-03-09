@@ -91,11 +91,19 @@ export default function WaitlistPage() {
     setStatus('loading');
     setErrorMsg('');
     try {
-      const res  = await fetch(`${API_URL}/launch-waitlist`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ email: email.trim(), name: name.trim() }),
-      });
+      const controller = new AbortController();
+      const timeoutId  = setTimeout(() => controller.abort(), 15000);
+      let res;
+      try {
+        res = await fetch(`${API_URL}/launch-waitlist`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ email: email.trim(), name: name.trim() }),
+          signal:  controller.signal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
       const data = await res.json();
       if (!res.ok) {
         if (res.status === 409) { setStatus('success'); return; }
@@ -104,7 +112,13 @@ export default function WaitlistPage() {
       setCount(data.position || null);
       setStatus('success');
     } catch (err) {
-      setErrorMsg(err.message || 'Could not join waitlist. Please try again.');
+      if (err.name === 'AbortError') {
+        setErrorMsg('Request timed out. Please check your connection and try again.');
+      } else if (err.message === 'Failed to fetch' || err.message.includes('fetch')) {
+        setErrorMsg('Network error. Please check your connection and try again.');
+      } else {
+        setErrorMsg(err.message || 'Could not join waitlist. Please try again.');
+      }
       setStatus('error');
     }
   };
@@ -265,6 +279,58 @@ export default function WaitlistPage() {
               <p className="text-xs text-white/40 leading-relaxed">{s.desc}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* ── Short Film Contest Banner ── */}
+      <section className="relative z-10 max-w-4xl mx-auto px-6 pb-12">
+        <div className="rounded-3xl p-8 sm:p-10 relative overflow-hidden"
+          style={{ background: 'linear-gradient(135deg, #1a1510 0%, #120f08 100%)', border: '1px solid rgba(251,191,36,0.2)' }}>
+          {/* Glow */}
+          <div className="absolute inset-0 pointer-events-none"
+            style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(251,191,36,0.08) 0%, transparent 70%)' }} />
+
+          <div className="relative flex flex-col sm:flex-row items-start sm:items-center gap-6">
+            {/* Trophy */}
+            <div className="flex-shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center text-2xl"
+              style={{ background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.2)' }}>
+              🏆
+            </div>
+
+            {/* Text */}
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <span className="text-xs font-bold uppercase tracking-[0.14em] px-2.5 py-1 rounded-full"
+                  style={{ color: '#fbbf24', background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.2)' }}>
+                  Also Launching March 27
+                </span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-white mb-1.5">
+                Inaugural Short Film Contest
+              </h2>
+              <p className="text-sm text-white/45 leading-relaxed mb-4">
+                To celebrate our launch, we're kicking off our very first Short Film Contest.
+                Submit your short film, earn community votes, and win cash prizes (INR). Open to all independent creators.
+              </p>
+              {/* Pills */}
+              <div className="flex flex-wrap gap-2">
+                {['🎬 Short Films', '💰 Cash Prizes (INR)', '🗳 Community Voting', '🇮🇳 Open to All'].map((pill) => (
+                  <span key={pill} className="text-xs font-semibold px-3 py-1.5 rounded-full"
+                    style={{ color: 'rgba(255,255,255,0.6)', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    {pill}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* CTA */}
+            <div className="flex-shrink-0 self-start sm:self-center">
+              <span className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-bold"
+                style={{ color: '#fbbf24', background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.25)' }}>
+                Details on Launch Day →
+              </span>
+            </div>
+          </div>
         </div>
       </section>
 
