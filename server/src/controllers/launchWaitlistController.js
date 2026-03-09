@@ -24,8 +24,15 @@ const joinWaitlist = async (req, res, next) => {
     res.status(201).json({ success: true, message: 'You\'re on the waitlist!', position });
   } catch (err) {
     if (err.code === 11000) {
-      // Already on list — silently succeed so we don't expose user data
-      return res.status(409).json({ success: false, message: 'This email is already on the waitlist.' });
+      // Only treat it as "already joined" if the duplicate is on the email field
+      const dupField = err.keyValue ? Object.keys(err.keyValue)[0] : null;
+      if (dupField === 'email') {
+        // Silently succeed so we don't expose whether an email is registered
+        return res.status(409).json({ success: false, message: 'This email is already on the waitlist.' });
+      }
+      // Any other field caused the duplicate (e.g. stale unique index on name)
+      // — don't silently discard the signup, surface it so it can be fixed
+      return res.status(500).json({ success: false, message: 'Could not save your entry. Please try again.' });
     }
     next(err);
   }
