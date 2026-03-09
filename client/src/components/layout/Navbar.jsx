@@ -162,10 +162,10 @@ export default function Navbar() {
                   <BellIcon />
                   {unreadCount > 0 && (
                     <>
-                      <span className="absolute top-1 right-1 w-3.5 h-3.5 rounded-full bg-red-500 opacity-70 animate-ping" />
-                      <span className="absolute top-1 right-1 min-w-[14px] h-3.5 bg-red-500 rounded-full flex items-center justify-center text-white text-[9px] font-bold px-0.5 z-10">
-                        {unreadCount > 9 ? '9+' : unreadCount}
+                      <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 rounded-full z-10 flex items-center justify-center text-[10px] font-bold text-white leading-none shadow-lg">
+                        {unreadCount > 99 ? '99+' : unreadCount}
                       </span>
+                      <span className="absolute -top-1 -right-1 w-[18px] h-[18px] rounded-full bg-red-500 opacity-40 animate-ping" />
                     </>
                   )}
                 </button>

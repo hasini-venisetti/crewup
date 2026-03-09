@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { profileAPI, reviewAPI, followAPI, projectAPI, filmAPI } from '@/lib/api';
+import { profileAPI, reviewAPI, followAPI, projectAPI, filmAPI, notificationAPI } from '@/lib/api';
 import api from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -62,6 +62,12 @@ export default function ProfilePage() {
   const [reportDone, setReportDone]             = useState(false);
   const [copied, setCopied]                     = useState({});   // { [filmId]: bool }
 
+  // Invite to project
+  const [myProjects, setMyProjects]             = useState([]);
+  const [showInviteMenu, setShowInviteMenu]     = useState(false);
+  const [inviting, setInviting]                 = useState(false);
+  const [invitedProjectId, setInvitedProjectId] = useState(null);
+
   const handleMessage = async () => {
     if (!user) { router.push('/login'); return; }
     setMessaging(true);
@@ -71,6 +77,27 @@ export default function ProfilePage() {
       router.push(convId ? `/messages?conv=${convId}` : '/messages');
     } catch { router.push('/messages'); }
     finally { setMessaging(false); }
+  };
+
+  const handleInvite = async (project) => {
+    if (inviting) return;
+    setInviting(true);
+    try {
+      await notificationAPI.sendDirect({
+        recipientId: id,
+        type:        'project_invite',
+        title:       `You've been invited to join "${project.title}"`,
+        message:     `${user.name} thinks you'd be a great fit for their project.`,
+        link:        `/projects/${project._id}`,
+      });
+      setInvitedProjectId(project._id);
+      setShowInviteMenu(false);
+      toast.success(`Invite sent to ${profile?.user?.name || 'this creator'}!`);
+    } catch {
+      toast.error('Failed to send invite. Please try again.');
+    } finally {
+      setInviting(false);
+    }
   };
 
   const handleFollowToggle = async () => {
@@ -201,6 +228,24 @@ export default function ProfilePage() {
     followAPI.getStatus(id).then(({ data }) => setIsFollowing(data.data.following)).catch(() => {});
   }, [id, user]);
 
+  // Load current user's owned projects for "Invite to Project"
+  useEffect(() => {
+    if (!user || !id) return;
+    const myId = user._id || user.id;
+    if (myId === id) return; // viewing own profile
+    projectAPI.getMine()
+      .then(({ data }) => {
+        const owned = (data.data || []).filter(
+          (p) => (p.createdBy?._id || p.createdBy) === myId &&
+                  p.timelineStage !== 'released' &&
+                  p.status !== 'completed' &&
+                  p.status !== 'cancelled'
+        );
+        setMyProjects(owned);
+      })
+      .catch(() => {});
+  }, [id, user]);
+
   if (loading) return <LoadingSpinner size="lg" className="min-h-screen" />;
   if (!profile) return (
     <div className="min-h-screen bg-[#fafaf9] flex items-center justify-center">
@@ -241,6 +286,58 @@ export default function ProfilePage() {
               )}
               {!isOwnProfile && (
                 <>
+                  {/* Invite to Project — only shown to project owners */}
+                  {myProjects.length > 0 && (
+                    <div className="relative">
+                      <button
+                        onClick={() => setShowInviteMenu((v) => !v)}
+                        disabled={inviting}
+                        className="text-xs sm:text-sm font-semibold px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg border border-[#6C63FF]/50 text-[#a09aff] hover:border-[#6C63FF] hover:bg-[#6C63FF]/10 transition-all disabled:opacity-50 flex items-center gap-1.5"
+                      >
+                        🎬 Invite to Project
+                      </button>
+
+                      {showInviteMenu && (
+                        <div className="absolute top-full right-0 mt-2 w-64 bg-gray-900 border border-white/10 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] z-50 overflow-hidden">
+                          <div className="px-4 py-2.5 border-b border-white/10 bg-gray-800/50">
+                            <p className="text-xs font-semibold text-white/60 uppercase tracking-wider">Select a Project</p>
+                          </div>
+                          <div className="max-h-56 overflow-y-auto">
+                            {myProjects.map((proj) => {
+                              const alreadyInvited = invitedProjectId === proj._id;
+                              return (
+                                <button
+                                  key={proj._id}
+                                  onClick={() => !alreadyInvited && handleInvite(proj)}
+                                  disabled={inviting || alreadyInvited}
+                                  className={`w-full text-left px-4 py-3 border-b border-white/5 last:border-0 transition-colors flex items-center justify-between gap-2 ${
+                                    alreadyInvited
+                                      ? 'opacity-50 cursor-default'
+                                      : 'hover:bg-white/5 cursor-pointer'
+                                  }`}
+                                >
+                                  <div className="min-w-0">
+                                    <p className="text-sm text-white font-medium truncate">{proj.title}</p>
+                                    <p className="text-[11px] text-white/40 truncate mt-0.5">{proj.genre || proj.category || 'Film Project'}</p>
+                                  </div>
+                                  {alreadyInvited
+                                    ? <span className="text-[11px] text-green-400 flex-shrink-0">✓ Sent</span>
+                                    : <span className="text-[11px] text-[#a09aff] flex-shrink-0">Invite →</span>
+                                  }
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Click-outside overlay */}
+                      {showInviteMenu && (
+                        <div className="fixed inset-0 z-40" onClick={() => setShowInviteMenu(false)} />
+                      )}
+                    </div>
+                  )}
+
                   <button onClick={handleMessage} disabled={messaging}
                     className="text-xs sm:text-sm font-semibold px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg border border-white/20 text-white/70 hover:border-white/40 hover:text-white transition-all disabled:opacity-50">
                     {messaging ? 'Opening…' : '💬 Message'}
