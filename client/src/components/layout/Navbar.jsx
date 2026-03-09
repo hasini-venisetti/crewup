@@ -171,7 +171,7 @@ export default function Navbar() {
                 </button>
 
                 {showBellMenu && (
-                  <div className="absolute top-full right-0 mt-2 w-80 bg-gray-900 border border-white/10 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] z-50 overflow-hidden">
+                  <div className="absolute top-full right-0 mt-2 w-[calc(100vw-1rem)] sm:w-80 max-w-sm bg-gray-900 border border-white/10 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] z-50 overflow-hidden">
                     {/* Header */}
                     <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-gray-800/50">
                       <span className="text-sm font-semibold text-white">Notifications</span>
@@ -258,7 +258,7 @@ export default function Navbar() {
                 </button>
 
                 {showDropdown && (
-                  <div className="absolute top-full right-0 mt-2 bg-gray-900 border border-white/10 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] w-56 z-50 overflow-hidden">
+                  <div className="absolute top-full right-0 mt-2 bg-gray-900 border border-white/10 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] w-[calc(100vw-1rem)] sm:w-56 max-w-xs z-50 overflow-hidden">
                     <div className="px-4 py-3.5 border-b border-white/10 bg-gray-800/50">
                       <p className="text-sm font-semibold text-white truncate">{user.name}</p>
                       <p className="text-xs text-white/60 truncate mt-0.5">@{user.username}</p>

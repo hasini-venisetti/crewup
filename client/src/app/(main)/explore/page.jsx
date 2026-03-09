@@ -192,15 +192,15 @@ export default function ExplorePage() {
         style={{ backgroundImage: 'radial-gradient(circle, #252523 1px, transparent 1px)', backgroundSize: '28px 28px' }}
       >
         <div className="absolute top-0 right-1/4 w-72 h-72 bg-[#6C63FF]/8 rounded-full blur-3xl pointer-events-none" />
-        <div className="relative max-w-7xl mx-auto px-6 py-16">
+        <div className="relative max-w-7xl mx-auto px-3 sm:px-6 py-10 sm:py-16">
           <div className="inline-flex items-center gap-2 bg-[#6C63FF]/20 border border-[#6C63FF]/30 rounded-full px-4 py-1.5 mb-4">
             <span className="w-1.5 h-1.5 rounded-full bg-[#6C63FF]" />
             <span className="text-xs font-semibold text-[#6C63FF] uppercase tracking-widest">Creator Directory</span>
           </div>
-          <h1 className="text-5xl font-[Playfair_Display] text-white mb-3 leading-tight">
+          <h1 className="text-3xl sm:text-5xl font-[Playfair_Display] text-white mb-3 leading-tight">
             Find Your Crew
           </h1>
-          <p className="text-white/50 text-lg mb-8">Browse creators by role, skill and location</p>
+          <p className="text-white/50 text-sm sm:text-lg mb-8">Browse creators by role, skill and location</p>
 
           {/* Search bar */}
           <div className="relative max-w-md">
@@ -223,7 +223,7 @@ export default function ExplorePage() {
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-6 py-10">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 py-10">
 
         {/* Filter panel */}
         <div className="bg-white rounded-xl border border-[#efefed] p-6 mb-8">
@@ -282,7 +282,7 @@ export default function ExplorePage() {
 
         {/* Grid */}
         {loading && creators.length === 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mb-10">
             {Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)}
           </div>
         ) : creators.length === 0 ? (
@@ -292,7 +292,7 @@ export default function ExplorePage() {
             <p className="text-sm text-[#6b6b66]">Try adjusting your filters</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mb-10">
             {creators.map((creator) => <CreatorCard key={creator._id} creator={creator} />)}
           </div>
         )}

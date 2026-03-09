@@ -95,6 +95,7 @@ export const projectAPI = {
   update:          (id, data) => api.put(`/projects/${id}`, data),
   delete:          (id)       => api.delete(`/projects/${id}`),
   setYoutubeLink:  (id, link)     => api.patch(`/projects/${id}/youtube-link`, { youtubeLink: link }),
+  setEpisodeLinks: (id, episodes) => api.patch(`/projects/${id}/youtube-link`, { episodeLinks: episodes }),
   getAllFilms:     (params)        => api.get('/projects/films', { params }),
   getUserFilms:   (userId)        => api.get(`/projects/films/${userId}`),
 };
@@ -157,7 +158,9 @@ export const tagsAPI = {
 
 // ── Fill Role API ─────────────────────────────────────────────────────────
 export const fillRoleAPI = {
-  fill: (projectId, role, note) => api.patch(`/projects/${projectId}/roles/fill`, { role, note }),
+  fill:         (projectId, role, note) => api.patch(`/projects/${projectId}/roles/fill`, { role, note }),
+  removeMember: (projectId, userId)     => api.delete(`/projects/${projectId}/members/${userId}`),
+  leaveProject: (projectId)             => api.delete(`/projects/${projectId}/leave`),
 };
 
 /* ── Portfolio API ── */
@@ -232,9 +235,12 @@ export const mentorAPI = {
 
 /* ── Launch Waitlist ── */
 export const launchWaitlistAPI = {
-  join:   (data) => api.post('/launch-waitlist', data),
-  getAll: ()     => api.get('/launch-waitlist'),
-  notify: ()     => api.post('/launch-waitlist/notify'),
+  join:           (data) => api.post('/launch-waitlist', data),
+  getAll:         ()     => api.get('/launch-waitlist'),
+  notify:         ()     => api.post('/launch-waitlist/notify'),
+  forceNotify:    ()     => api.post('/launch-waitlist/force-notify'),
+  resetNotified:  ()     => api.post('/launch-waitlist/reset-notified'),
+  notifyOne:      (id)   => api.post(`/launch-waitlist/notify/${id}`),
 };
 
 /* ── Admin ── */

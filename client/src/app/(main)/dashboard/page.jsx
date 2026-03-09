@@ -176,11 +176,11 @@ export default function DashboardPage() {
         style={{ backgroundImage: 'radial-gradient(circle, #1a1a18 1px, transparent 1px)', backgroundSize: '24px 24px' }}
       >
         <div className="absolute top-0 left-1/4 w-72 h-48 bg-[#6C63FF]/8 rounded-full blur-3xl pointer-events-none" />
-        <div className="relative max-w-[1100px] mx-auto px-6">
+        <div className="relative max-w-[1100px] mx-auto px-3 sm:px-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-[#6C63FF] font-bold mb-2">Dashboard</p>
-              <h1 className="text-4xl font-[Playfair_Display] text-white">
+              <h1 className="text-3xl sm:text-4xl font-[Playfair_Display] text-white">
                 Hey, {user.name?.split(' ')[0]}
               </h1>
               <p className="text-white/40 mt-1 text-sm">@{user.username} · <span className="capitalize">{user.role?.replace('-',' ')}</span></p>
@@ -198,7 +198,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-8">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 mt-8">
             {[
               { label: 'My Projects',       value: myProjects.length,     highlight: false },
               { label: 'Applications Sent', value: myApplications.length, highlight: false },
@@ -214,7 +214,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="max-w-[1100px] mx-auto px-6 py-10">
+      <div className="max-w-[1100px] mx-auto px-3 sm:px-6 py-10">
 
         {/* Tabs */}
         <div className="flex gap-1 bg-white border border-[#efefed] rounded-xl p-1 mb-8 w-fit overflow-x-auto shadow-sm">

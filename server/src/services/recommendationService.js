@@ -165,9 +165,11 @@ async function getRecommendedProjects(userId) {
 
   // ── Step 3: Candidate projects ────────────────────────────────────────
   const candidates = await Project.find({
-    status:    'open',
-    createdBy: { $ne: userId },
-    _id:       { $nin: appliedIds },
+    status:        'open',
+    timelineStage: { $ne: 'released' },
+    createdBy:     { $ne: userId },
+    _id:           { $nin: appliedIds },
+    $expr:         { $lt: [{ $size: '$teamMembers' }, { $size: '$requiredRoles' }] },
   })
     .populate('createdBy', 'name username role profileImage')
     .lean();
@@ -218,9 +220,11 @@ async function getRecommendedProjects(userId) {
   if (top.length < MIN_RESULTS) {
     const topIds = new Set(top.map((p) => p._id.toString()));
     const extras = await Project.find({
-      status:    'open',
-      createdBy: { $ne: userId },
-      _id:       { $nin: [...appliedIds, ...Array.from(topIds)] },
+      status:        'open',
+      timelineStage: { $ne: 'released' },
+      createdBy:     { $ne: userId },
+      _id:           { $nin: [...appliedIds, ...Array.from(topIds)] },
+      $expr:         { $lt: [{ $size: '$teamMembers' }, { $size: '$requiredRoles' }] },
     })
       .populate('createdBy', 'name username role profileImage')
       .sort({ createdAt: -1 })

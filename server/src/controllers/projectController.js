@@ -46,8 +46,10 @@ const getProjects = async (req, res, next) => {
     if (isRemote === 'true') filter['location.isRemote'] = true;
     if (isPaid !== undefined) filter.isPaid = isPaid === 'true';
 
-    // Only show projects that still have at least one open role
-    // (teamMembers count < requiredRoles count)
+    // Hide released projects — they belong on the Films page, not Projects
+    filter.timelineStage = { $ne: 'released' };
+
+    // Hide full teams — only show projects that still have at least one open role
     filter.$expr = { $lt: [{ $size: '$teamMembers' }, { $size: '$requiredRoles' }] };
 
     const skip = (Number(page) - 1) * Number(limit);
@@ -255,7 +257,7 @@ function extractYoutubeId(url) {
   return null;
 }
 
-// @desc    Set YouTube link for a released project
+// @desc    Set YouTube link (or episode links for web-series) for a released project
 // @route   PATCH /api/projects/:id/youtube-link
 // @access  Private (project owner only)
 const setYoutubeLink = async (req, res, next) => {
@@ -266,14 +268,34 @@ const setYoutubeLink = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
-    const { youtubeLink } = req.body;
-    if (!youtubeLink) return res.status(400).json({ success: false, message: 'youtubeLink is required' });
+    const { youtubeLink, episodeLinks } = req.body;
 
+    // Web-series: accept array of episode links
+    if (project.projectType === 'web-series' && episodeLinks) {
+      if (!Array.isArray(episodeLinks) || episodeLinks.length === 0) {
+        return res.status(400).json({ success: false, message: 'episodeLinks must be a non-empty array' });
+      }
+      // Validate all URLs
+      for (const ep of episodeLinks) {
+        if (!ep.url) return res.status(400).json({ success: false, message: 'Each episode must have a url' });
+        const id = extractYoutubeId(ep.url);
+        if (!id) return res.status(400).json({ success: false, message: `Invalid YouTube URL: ${ep.url}` });
+      }
+      project.episodeLinks = episodeLinks;
+      // Use first episode as the main youtubeLink so it shows up in films lists
+      project.youtubeLink = episodeLinks[0].url;
+      project.status = 'completed';
+      await project.save();
+      return res.status(200).json({ success: true, message: 'Episode links saved', data: { episodeLinks, youtubeLink: episodeLinks[0].url } });
+    }
+
+    // All other types: single YouTube link
+    if (!youtubeLink) return res.status(400).json({ success: false, message: 'youtubeLink is required' });
     const videoId = extractYoutubeId(youtubeLink);
     if (!videoId) return res.status(400).json({ success: false, message: 'Invalid YouTube URL' });
 
     project.youtubeLink = youtubeLink;
-    project.status      = 'completed'; // mark as released/completed
+    project.status      = 'completed';
     await project.save();
 
     res.status(200).json({ success: true, message: 'YouTube link saved', data: { youtubeLink, videoId } });
@@ -294,7 +316,7 @@ const getAllFilms = async (req, res, next) => {
     if (genre) filter.projectType = genre;
 
     const films = await Project.find(filter)
-      .select('title youtubeLink projectType createdBy teamMembers createdAt')
+      .select('title youtubeLink episodeLinks projectType createdBy teamMembers createdAt')
       .populate('createdBy', 'name username profileImage')
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -307,10 +329,11 @@ const getAllFilms = async (req, res, next) => {
         ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
         : null;
       return {
-        _id:         film._id,
-        title:       film.title,
-        youtubeLink: film.youtubeLink,
-        projectType: film.projectType,
+        _id:          film._id,
+        title:        film.title,
+        youtubeLink:  film.youtubeLink,
+        episodeLinks: film.episodeLinks || [],
+        projectType:  film.projectType,
         videoId,
         thumbnail,
         director:  film.createdBy,
@@ -350,7 +373,7 @@ const getUserFilms = async (req, res, next) => {
         { 'teamMembers.user': uid },
       ],
     })
-      .select('title youtubeLink createdBy teamMembers status createdAt')
+      .select('title youtubeLink episodeLinks projectType createdBy teamMembers status createdAt')
       .populate('createdBy', 'name username')
       .lean();
 
@@ -371,13 +394,15 @@ const getUserFilms = async (req, res, next) => {
         : null;
 
       return {
-        _id:         film._id,
-        title:       film.title,
-        youtubeLink: film.youtubeLink,
+        _id:          film._id,
+        title:        film.title,
+        youtubeLink:  film.youtubeLink,
+        episodeLinks: film.episodeLinks || [],
+        projectType:  film.projectType,
         videoId,
         thumbnail,
         userRole,
-        createdAt:   film.createdAt,
+        createdAt:    film.createdAt,
       };
     });
 
@@ -385,6 +410,92 @@ const getUserFilms = async (req, res, next) => {
     annotated.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     res.status(200).json({ success: true, data: annotated });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Owner removes a team member (opens that role back up)
+// @route   DELETE /api/projects/:id/members/:userId
+// @access  Private (project owner only)
+const removeMember = async (req, res, next) => {
+  try {
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ success: false, message: 'Project not found' });
+
+    if (project.createdBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'Only the project owner can remove members' });
+    }
+
+    const member = project.teamMembers.find(
+      (m) => m.user.toString() === req.params.userId
+    );
+    if (!member) return res.status(404).json({ success: false, message: 'Member not found in project' });
+
+    const roleToReopen = member.role;
+
+    // Remove from teamMembers and filledRoles so the role is open again
+    await Project.findByIdAndUpdate(project._id, {
+      $pull: {
+        teamMembers: { user: member.user },
+        filledRoles: { role: roleToReopen },
+      },
+    });
+
+    // Notify the removed member
+    await Notification.create({
+      recipient: member.user,
+      sender:    req.user._id,
+      type:      'general',
+      title:     'Removed from project',
+      message:   `You have been removed from "${project.title}".`,
+      link:      `/projects/${project._id}`,
+    });
+
+    res.status(200).json({ success: true, message: 'Member removed and role is open again' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Team member leaves the project themselves (opens that role back up)
+// @route   DELETE /api/projects/:id/leave
+// @access  Private (team member only)
+const leaveProject = async (req, res, next) => {
+  try {
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ success: false, message: 'Project not found' });
+
+    if (project.createdBy.toString() === req.user._id.toString()) {
+      return res.status(400).json({ success: false, message: 'Project owner cannot leave — delete the project instead' });
+    }
+
+    const member = project.teamMembers.find(
+      (m) => m.user.toString() === req.user._id.toString()
+    );
+    if (!member) return res.status(404).json({ success: false, message: 'You are not a member of this project' });
+
+    const roleToReopen = member.role;
+
+    // Remove from teamMembers and filledRoles so the role is open again
+    await Project.findByIdAndUpdate(project._id, {
+      $pull: {
+        teamMembers: { user: req.user._id },
+        filledRoles: { role: roleToReopen },
+      },
+    });
+
+    // Notify the project owner
+    await Notification.create({
+      recipient: project.createdBy,
+      sender:    req.user._id,
+      type:      'general',
+      title:     'Team member left',
+      message:   `A team member left "${project.title}" — the ${roleToReopen} role is open again.`,
+      link:      `/projects/${project._id}`,
+    });
+
+    res.status(200).json({ success: true, message: 'You have left the project. The role is now open again.' });
   } catch (error) {
     next(error);
   }
@@ -402,4 +513,6 @@ module.exports = {
   setYoutubeLink,
   getAllFilms,
   getUserFilms,
+  removeMember,
+  leaveProject,
 };

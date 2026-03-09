@@ -226,27 +226,27 @@ export default function ProfilePage() {
         style={{ backgroundImage: 'radial-gradient(circle, #1a1a18 1px, transparent 1px)', backgroundSize: '24px 24px' }}
       >
         <div className="absolute top-0 right-1/4 w-80 h-64 bg-[#6C63FF]/6 rounded-full blur-3xl pointer-events-none" />
-        <div className="relative max-w-[900px] mx-auto px-6 pt-8 pb-12">
+        <div className="relative max-w-[900px] mx-auto px-3 sm:px-6 pt-8 pb-12">
           {/* Back + actions */}
-          <div className="flex items-center justify-between mb-10">
+          <div className="flex items-center justify-between mb-6 sm:mb-10">
             <Link href="/explore" className="text-sm text-white/40 hover:text-white/80 transition-colors flex items-center gap-1.5">
               ← Browse Creators
             </Link>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               {isOwnProfile && (
                 <Link href="/profile/edit"
-                  className="text-sm font-semibold px-4 py-2 rounded-lg border border-white/20 text-white/70 hover:border-white/40 hover:text-white transition-all">
+                  className="text-xs sm:text-sm font-semibold px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg border border-white/20 text-white/70 hover:border-white/40 hover:text-white transition-all">
                   Edit Profile
                 </Link>
               )}
               {!isOwnProfile && (
                 <>
                   <button onClick={handleMessage} disabled={messaging}
-                    className="text-sm font-semibold px-4 py-2 rounded-lg border border-white/20 text-white/70 hover:border-white/40 hover:text-white transition-all disabled:opacity-50">
+                    className="text-xs sm:text-sm font-semibold px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg border border-white/20 text-white/70 hover:border-white/40 hover:text-white transition-all disabled:opacity-50">
                     {messaging ? 'Opening…' : '💬 Message'}
                   </button>
                   <button onClick={handleFollowToggle} disabled={followLoading}
-                    className={`text-sm font-semibold px-4 py-2 rounded-lg transition-all disabled:opacity-50 ${
+                    className={`text-xs sm:text-sm font-semibold px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg transition-all disabled:opacity-50 ${
                       isFollowing
                         ? 'border border-white/20 text-white/60 hover:border-red-500/50 hover:text-red-400'
                         : 'bg-[#6C63FF] hover:bg-[#7C75FF] text-white shadow-lg shadow-[#6C63FF]/20'
@@ -270,7 +270,7 @@ export default function ProfilePage() {
 
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-start gap-3 mb-2">
-                <h1 className="text-3xl font-[Playfair_Display] text-white">{creator?.name}</h1>
+                <h1 className="text-2xl sm:text-3xl font-[Playfair_Display] text-white">{creator?.name}</h1>
                 <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border ${avail.badge}`}>
                   <span className={`w-2 h-2 rounded-full ${avail.dot}`} />
                   {avail.label}
@@ -335,7 +335,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Body */}
-      <div className="max-w-[900px] mx-auto px-6 py-10">
+      <div className="max-w-[900px] mx-auto px-3 sm:px-6 py-10">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
           {/* Left column */}

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
-import { projectAPI, applicationAPI, timelineAPI, waitlistAPI, reviewAPI } from '@/lib/api';
+import { projectAPI, applicationAPI, timelineAPI, waitlistAPI, reviewAPI, fillRoleAPI } from '@/lib/api';
 import { useRef } from 'react';
 import { AuthProvider, useAuth } from '@/hooks/useAuth';
 import CrewSuggestions from '@/components/ui/CrewSuggestions';
@@ -216,24 +216,45 @@ function RateTeamSection({ project, myId }) {
 }
 
 /* ── YouTube Link Modal ─────────────────────────────────────────────────── */
-function YouTubeLinkModal({ projectTitle, onClose, onSave }) {
-  const [link, setLink]       = useState('');
-  const [saving, setSaving]   = useState(false);
-  const [error, setError]     = useState('');
+function YouTubeLinkModal({ projectTitle, projectType, onClose, onSave }) {
+  const isWebSeries = projectType === 'web-series';
+
+  const [link, setLink]         = useState('');
+  const [episodes, setEpisodes] = useState([{ title: 'Episode 1', url: '' }]);
+  const [saving, setSaving]     = useState(false);
+  const [error, setError]       = useState('');
 
   const isYouTube = (url) =>
     /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([A-Za-z0-9_-]{11})/.test(url);
 
+  const addEpisode = () =>
+    setEpisodes((prev) => [...prev, { title: `Episode ${prev.length + 1}`, url: '' }]);
+
+  const removeEpisode = (i) =>
+    setEpisodes((prev) => prev.filter((_, idx) => idx !== i));
+
+  const updateEpisode = (i, field, value) =>
+    setEpisodes((prev) => prev.map((ep, idx) => idx === i ? { ...ep, [field]: value } : ep));
+
   const handleSave = async () => {
-    if (!link.trim()) { setError('Please paste a YouTube URL.'); return; }
-    if (!isYouTube(link)) { setError('That doesn\'t look like a valid YouTube link.'); return; }
-    setSaving(true);
     setError('');
+    setSaving(true);
     try {
-      await onSave(link.trim());
+      if (isWebSeries) {
+        const valid = episodes.filter((ep) => ep.url.trim());
+        if (valid.length === 0) { setError('Add at least one episode YouTube link.'); setSaving(false); return; }
+        for (const ep of valid) {
+          if (!isYouTube(ep.url)) { setError(`Invalid YouTube URL: ${ep.url}`); setSaving(false); return; }
+        }
+        await onSave(null, valid.map((ep) => ({ title: ep.title.trim() || 'Episode', url: ep.url.trim() })));
+      } else {
+        if (!link.trim()) { setError('Please paste a YouTube URL.'); setSaving(false); return; }
+        if (!isYouTube(link)) { setError("That doesn't look like a valid YouTube link."); setSaving(false); return; }
+        await onSave(link.trim(), null);
+      }
       onClose();
     } catch {
-      setError('Could not save the link. Please try again.');
+      setError('Could not save. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -241,24 +262,29 @@ function YouTubeLinkModal({ projectTitle, onClose, onSave }) {
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4">
-      <div className="bg-white rounded-2xl w-full max-w-md p-8 relative shadow-2xl">
+      <div className="bg-white rounded-2xl w-full max-w-md p-8 relative shadow-2xl max-h-[90vh] overflow-y-auto">
         <button onClick={onClose} className="absolute top-4 right-4 text-[#6b6b66] hover:text-[#111110] transition-colors">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
         </button>
 
-        {/* Header */}
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center text-xl flex-shrink-0">🎬</div>
+          <div className="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center text-xl flex-shrink-0">
+            {isWebSeries ? '📺' : '🎬'}
+          </div>
           <div>
-            <h2 className="text-lg font-[Playfair_Display] text-[#0e0e0d] leading-tight">Add Film to Portfolios</h2>
+            <h2 className="text-lg font-[Playfair_Display] text-[#0e0e0d] leading-tight">
+              {isWebSeries ? 'Add Episode Links' : 'Add Film to Portfolios'}
+            </h2>
             <p className="text-xs text-[#6b6b66] mt-0.5">"{projectTitle}" is now Released!</p>
           </div>
         </div>
 
         <p className="text-sm text-[#6b6b66] mb-5 leading-relaxed">
-          Paste the YouTube link of your finished film. It will automatically appear in the portfolio of every team member who worked on this project.
+          {isWebSeries
+            ? "Add YouTube links for each episode. They'll appear on every team member's portfolio."
+            : 'Paste the YouTube link of your finished film. It will automatically appear in the portfolio of every team member who worked on this project.'}
         </p>
 
         {error && (
@@ -266,23 +292,56 @@ function YouTubeLinkModal({ projectTitle, onClose, onSave }) {
         )}
 
         <div className="flex flex-col gap-3">
-          <input
-            type="url"
-            value={link}
-            onChange={(e) => setLink(e.target.value)}
-            placeholder="https://www.youtube.com/watch?v=..."
-            className="w-full rounded-xl border border-[#e0e0dd] bg-[#f7f7f6] px-4 py-3 text-sm text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] transition"
-          />
-          <div className="flex gap-3">
+          {isWebSeries ? (
+            <>
+              {episodes.map((ep, i) => (
+                <div key={i} className="flex flex-col gap-1.5 bg-[#f7f7f6] rounded-xl p-3 border border-[#e0e0dd]">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-[#6b6b66] w-16 flex-shrink-0">Title</span>
+                    <input
+                      type="text"
+                      value={ep.title}
+                      onChange={(e) => updateEpisode(i, 'title', e.target.value)}
+                      placeholder="Episode 1"
+                      className="flex-1 rounded-lg border border-[#e0e0dd] bg-white px-3 py-1.5 text-xs text-[#111110] focus:outline-none focus:border-[#6C63FF] transition"
+                    />
+                    {episodes.length > 1 && (
+                      <button onClick={() => removeEpisode(i)} className="text-red-400 hover:text-red-600 transition-colors text-sm flex-shrink-0 ml-1">✕</button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-[#6b6b66] w-16 flex-shrink-0">Link</span>
+                    <input
+                      type="url"
+                      value={ep.url}
+                      onChange={(e) => updateEpisode(i, 'url', e.target.value)}
+                      placeholder="https://youtube.com/watch?v=..."
+                      className="flex-1 rounded-lg border border-[#e0e0dd] bg-white px-3 py-1.5 text-xs text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:border-[#6C63FF] transition"
+                    />
+                  </div>
+                </div>
+              ))}
+              <button onClick={addEpisode}
+                className="text-sm font-semibold text-[#6C63FF] hover:text-[#5750D4] transition-colors py-1">
+                + Add Episode
+              </button>
+            </>
+          ) : (
+            <input
+              type="url"
+              value={link}
+              onChange={(e) => setLink(e.target.value)}
+              placeholder="https://www.youtube.com/watch?v=..."
+              className="w-full rounded-xl border border-[#e0e0dd] bg-[#f7f7f6] px-4 py-3 text-sm text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] transition"
+            />
+          )}
+          <div className="flex gap-3 mt-1">
             <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-[#e0e0dd] text-sm font-semibold text-[#6b6b66] hover:bg-[#f7f7f6] transition-colors">
               Skip for now
             </button>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="flex-1 py-2.5 rounded-xl bg-[#6C63FF] hover:bg-[#5750D4] text-white text-sm font-semibold shadow-lg shadow-[#6C63FF]/20 transition-all disabled:opacity-50"
-            >
-              {saving ? 'Saving…' : '🎬 Add Film'}
+            <button onClick={handleSave} disabled={saving}
+              className="flex-1 py-2.5 rounded-xl bg-[#6C63FF] hover:bg-[#5750D4] text-white text-sm font-semibold shadow-lg shadow-[#6C63FF]/20 transition-all disabled:opacity-50">
+              {saving ? 'Saving…' : isWebSeries ? '📺 Save Episodes' : '🎬 Add Film'}
             </button>
           </div>
         </div>
@@ -340,9 +399,14 @@ function ProjectDetailContent() {
     finally { setUpdatingTimeline(false); }
   };
 
-  const handleYoutubeSave = async (link) => {
-    const { data } = await projectAPI.setYoutubeLink(id, link);
-    setProject((prev) => ({ ...prev, youtubeLink: link }));
+  const handleYoutubeSave = async (link, episodeLinks) => {
+    if (episodeLinks) {
+      await projectAPI.setEpisodeLinks(id, episodeLinks);
+      setProject((prev) => ({ ...prev, episodeLinks, youtubeLink: episodeLinks[0]?.url || prev.youtubeLink }));
+    } else {
+      await projectAPI.setYoutubeLink(id, link);
+      setProject((prev) => ({ ...prev, youtubeLink: link }));
+    }
   };
 
   const handleWaitlist = async (role) => {
@@ -350,6 +414,33 @@ function ProjectDetailContent() {
     try { await waitlistAPI.join(id, role); setWaitlistMsg(`You're on the waitlist for ${role}!`); }
     catch (err) { setWaitlistMsg(err.response?.data?.message || 'Could not join waitlist'); }
     finally { setWaitlistLoading(false); }
+  };
+
+  const handleRemoveMember = async (userId, memberName) => {
+    if (!confirm(`Remove ${memberName} from the project? Their role will become open again.`)) return;
+    try {
+      await fillRoleAPI.removeMember(id, userId);
+      setProject((prev) => ({
+        ...prev,
+        teamMembers: prev.teamMembers.filter((m) => m.user?._id !== userId),
+        filledRoles: prev.filledRoles?.filter((f) => {
+          const member = prev.teamMembers.find((m) => m.user?._id === userId);
+          return f.role !== member?.role;
+        }) || [],
+      }));
+    } catch (err) {
+      alert(err.response?.data?.message || 'Could not remove member');
+    }
+  };
+
+  const handleLeaveProject = async () => {
+    if (!confirm('Leave this project? Your role will become open again.')) return;
+    try {
+      await fillRoleAPI.leaveProject(id);
+      router.push('/projects');
+    } catch (err) {
+      alert(err.response?.data?.message || 'Could not leave project');
+    }
   };
 
   if (loading) return <LoadingSpinner size="lg" className="min-h-screen" />;
@@ -369,6 +460,7 @@ function ProjectDetailContent() {
       {showYoutubeModal && (
         <YouTubeLinkModal
           projectTitle={project.title}
+          projectType={project.projectType}
           onClose={() => setShowYoutubeModal(false)}
           onSave={handleYoutubeSave}
         />
@@ -385,7 +477,7 @@ function ProjectDetailContent() {
           <Link href="/projects" className="inline-flex items-center gap-1.5 text-sm text-white/40 hover:text-white/80 transition-colors mb-8">
             ← Back to Projects
           </Link>
-          <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-6">
+          <div className="flex flex-col gap-4">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-4 flex-wrap">
                 <span className="text-xs font-bold tracking-widest uppercase text-white/60 bg-white/10 px-2.5 py-1 rounded-md">
@@ -396,7 +488,7 @@ function ProjectDetailContent() {
                 </span>
                 <span className="text-xs capitalize bg-white/10 text-white/60 px-2.5 py-1 rounded-md">{project.status}</span>
               </div>
-              <h1 className="text-4xl font-[Playfair_Display] text-white mb-2 leading-tight">{project.title}</h1>
+              <h1 className="text-2xl sm:text-4xl font-[Playfair_Display] text-white mb-2 leading-tight">{project.title}</h1>
               <div className="flex items-center gap-2 text-sm text-white/50">
                 <span>by</span>
                 <Link href={`/profile/${project.createdBy?._id}`} className="text-white/80 hover:text-white font-medium transition-colors">
@@ -404,7 +496,7 @@ function ProjectDetailContent() {
                 </Link>
               </div>
             </div>
-            <div className="flex gap-2 flex-wrap flex-shrink-0">
+            <div className="flex gap-2 flex-wrap">
               {(isOwner || isTeamMember) && (
                 <>
                   <Link href={`/projects/${id}/team?tab=chat`}
@@ -433,9 +525,15 @@ function ProjectDetailContent() {
                   </button>
                 </>
               ) : isTeamMember ? (
-                <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-green-400 bg-green-500/10 border border-green-500/30 px-4 py-2 rounded-lg">
-                  ✓ You're on the Team
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-green-400 bg-green-500/10 border border-green-500/30 px-4 py-2 rounded-lg">
+                    ✓ You're on the Team
+                  </span>
+                  <button onClick={handleLeaveProject}
+                    className="text-sm font-semibold px-4 py-2 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors">
+                    Leave
+                  </button>
+                </div>
               ) : isFull ? (
                 <div className="flex flex-col items-end gap-1">
                   <span className="text-xs font-semibold text-white/50 bg-white/10 border border-white/20 px-3 py-1.5 rounded-lg">
@@ -529,16 +627,25 @@ function ProjectDetailContent() {
             <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#a3a39e] mb-5">Team ({project.teamMembers.length})</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {project.teamMembers.map((member) => (
-                <Link key={member.user?._id} href={`/profile/${member.user?._id}`}
-                  className="flex items-center gap-3 p-4 bg-[#fafaf9] border border-[#efefed] rounded-xl hover:border-[#d0d0ce] hover:shadow-sm transition-all">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#c9c4ff] to-[#e4e1ff] text-[#3730A3] text-sm font-bold flex items-center justify-center flex-shrink-0">
-                    {member.user?.name?.[0] || 'U'}
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold text-[#111110]">{member.user?.name}</div>
-                    <div className="text-xs text-[#6b6b66]">{member.role}</div>
-                  </div>
-                </Link>
+                <div key={member.user?._id} className="flex items-center gap-3 p-4 bg-[#fafaf9] border border-[#efefed] rounded-xl hover:border-[#d0d0ce] hover:shadow-sm transition-all">
+                  <Link href={`/profile/${member.user?._id}`} className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#c9c4ff] to-[#e4e1ff] text-[#3730A3] text-sm font-bold flex items-center justify-center flex-shrink-0">
+                      {member.user?.name?.[0] || 'U'}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold text-[#111110] truncate">{member.user?.name}</div>
+                      <div className="text-xs text-[#6b6b66]">{member.role}</div>
+                    </div>
+                  </Link>
+                  {isOwner && (
+                    <button
+                      onClick={() => handleRemoveMember(member.user?._id, member.user?.name)}
+                      className="text-xs text-red-400 hover:text-red-600 border border-red-200 hover:border-red-400 px-2 py-1 rounded-lg transition-colors flex-shrink-0"
+                      title="Remove from project">
+                      Remove
+                    </button>
+                  )}
+                </div>
               ))}
             </div>
           </div>

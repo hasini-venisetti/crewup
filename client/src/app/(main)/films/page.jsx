@@ -699,10 +699,10 @@ export default function FilmsPage() {
       <div className="bg-[#0e0e0d] relative overflow-hidden"
         style={{ backgroundImage: 'radial-gradient(circle, #1a1a18 1px, transparent 1px)', backgroundSize: '24px 24px' }}>
         <div className="absolute top-0 right-1/4 w-96 h-72 bg-[#6C63FF]/8 rounded-full blur-3xl pointer-events-none" />
-        <div className="relative max-w-[1100px] mx-auto px-6 pt-14 pb-10">
+        <div className="relative max-w-[1100px] mx-auto px-3 sm:px-6 pt-14 pb-10">
           <div className="flex items-center gap-3 mb-3">
             <span className="text-3xl">🎬</span>
-            <h1 className="text-4xl font-[Playfair_Display] text-white">Films</h1>
+            <h1 className="text-3xl sm:text-4xl font-[Playfair_Display] text-white">Films</h1>
           </div>
           <p className="text-white/50 text-sm max-w-lg">
             Watch, like, and discuss short films, documentaries, and music videos made by CREWUPFILMS creators.
@@ -759,7 +759,7 @@ export default function FilmsPage() {
 
       {/* ── Saved Films Tab ── */}
       {activeTab === 'saved' && (
-        <div className="max-w-[1100px] mx-auto px-6 py-10">
+        <div className="max-w-[1100px] mx-auto px-3 sm:px-6 py-10">
           {savedLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
               {Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)}
@@ -799,7 +799,7 @@ export default function FilmsPage() {
 
       {/* ── All Films Tab ── */}
       {activeTab === 'all' && (
-        <div className="max-w-[1100px] mx-auto px-6 py-10">
+        <div className="max-w-[1100px] mx-auto px-3 sm:px-6 py-10">
           {!loading && (
             <p className="text-sm text-[#6b6b66] mb-6">
               {total === 0 ? 'No films yet' : `${total} film${total !== 1 ? 's' : ''}`}

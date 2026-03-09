@@ -13,6 +13,7 @@ export default function ProjectsPage() {
   const [isRemote, setIsRemote] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     setIsLoading(true);
@@ -39,14 +40,14 @@ export default function ProjectsPage() {
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
       <div
-        className="relative overflow-hidden bg-[#0e0e0d] px-6 py-24 sm:px-8"
+        className="relative overflow-hidden bg-[#0e0e0d] px-3 py-16 sm:px-8 sm:py-24"
         style={{
           backgroundImage: `radial-gradient(circle, rgba(255, 255, 255, 0.05) 1px, transparent 1px)`,
           backgroundSize: '50px 50px',
         }}
       >
         <div className="relative z-10 mx-auto max-w-6xl">
-          <h1 className="font-['Playfair_Display'] text-4xl font-bold text-white sm:text-5xl">
+          <h1 className="font-['Playfair_Display'] text-3xl font-bold text-white sm:text-5xl">
             Discover <span className="text-[#6C63FF]">Projects</span>
           </h1>
           <p className="mt-3 text-base text-gray-400">Find amazing film, music, and creative projects looking for talented crew members.</p>
@@ -54,10 +55,22 @@ export default function ProjectsPage() {
       </div>
 
       {/* Main Content */}
-      <div className="mx-auto max-w-6xl px-6 py-12 sm:px-8">
+      <div className="mx-auto max-w-6xl px-3 py-8 sm:px-8 sm:py-12">
+
+        {/* Mobile filter toggle */}
+        <div className="lg:hidden mb-4">
+          <button
+            onClick={() => setShowFilters((prev) => !prev)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#efefed] bg-white text-sm font-medium text-[#111110] shadow-sm w-full justify-between"
+          >
+            <span>🎛 Filters & Categories</span>
+            <span className="text-xs text-[#6b6b66]">{showFilters ? '▲ Hide' : '▼ Show'}</span>
+          </button>
+        </div>
+
         <div className="grid gap-8 lg:grid-cols-4">
           {/* Sidebar */}
-          <div className="lg:col-span-1">
+          <div className={`lg:col-span-1 ${showFilters ? 'block' : 'hidden lg:block'}`}>
             {/* Filter Tabs */}
             <div className="mb-6 rounded-xl bg-white p-1 shadow-sm ring-1 ring-[#efefed]">
               <div className="space-y-1">

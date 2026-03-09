@@ -110,18 +110,18 @@ export default function ContestsPage() {
           <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#6C63FF]/10 rounded-full blur-3xl" />
           <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl" />
         </div>
-        <div className="relative max-w-[1100px] mx-auto px-6 py-16 text-center">
+        <div className="relative max-w-[1100px] mx-auto px-3 sm:px-6 py-12 sm:py-16 text-center">
           <p className="text-[#6C63FF] text-sm font-bold uppercase tracking-[0.2em] mb-3">🏆 CREWUPFILMS</p>
-          <h1 className="text-4xl md:text-5xl font-[Playfair_Display] text-white mb-4">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-[Playfair_Display] text-white mb-4">
             Short Film Contests
           </h1>
-          <p className="text-white/50 text-lg max-w-xl mx-auto">
+          <p className="text-white/50 text-base sm:text-lg max-w-xl mx-auto">
             Compete, get featured, and win prizes for your short films.
           </p>
         </div>
       </div>
 
-      <div className="max-w-[1100px] mx-auto px-6 py-12 space-y-12">
+      <div className="max-w-[1100px] mx-auto px-3 sm:px-6 py-8 sm:py-12 space-y-12">
         {loading ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {Array(3).fill(0).map((_,i) => <div key={i} className="h-64 bg-white border border-[#efefed] rounded-2xl animate-pulse" />)}
