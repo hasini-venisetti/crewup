@@ -253,6 +253,7 @@ export const adminAPI = {
   getTrending:        ()              => api.get('/admin/trending-films'),
   getReports:         (params)        => api.get('/admin/reports', { params }),
   updateReportStatus: (id, status)    => api.patch(`/admin/reports/${id}`, { status }),
+  clearTestData:      ()              => api.delete('/admin/clear-test-data'),
 };
 
 /* ── Contests ── */

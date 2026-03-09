@@ -198,4 +198,36 @@ const updateReportStatus = async (req, res, next) => {
   } catch (e) { next(e); }
 };
 
-module.exports = { getPlatformStats, getWeeklyAnalytics, getUsers, suspendUser, getTrendingFilms, sendAnnouncement, getReports, updateReportStatus };
+// DELETE /api/admin/clear-test-data  — wipe all projects, films & related data for launch
+// Keeps: Users, Profiles, Waitlist, Reviews, Contests
+const Application   = require('../models/Application');
+const ProjectChat   = require('../models/ProjectChat');
+const Task          = require('../models/Task');
+const Conversation  = require('../models/Conversation');
+const Message       = require('../models/Message');
+
+const clearTestData = async (req, res, next) => {
+  try {
+    const [projects, applications, chats, tasks, notifications] = await Promise.all([
+      Project.deleteMany({}),
+      Application.deleteMany({}),
+      ProjectChat.deleteMany({}),
+      Task.deleteMany({}),
+      Notification.deleteMany({ type: { $in: ['application', 'application_accepted', 'application_declined', 'role_filled', 'general'] } }),
+    ]);
+
+    res.json({
+      success: true,
+      message: 'All test data cleared. Platform is ready for launch! 🚀',
+      deleted: {
+        projects:      projects.deletedCount,
+        applications:  applications.deletedCount,
+        projectChats:  chats.deletedCount,
+        tasks:         tasks.deletedCount,
+        notifications: notifications.deletedCount,
+      },
+    });
+  } catch (e) { next(e); }
+};
+
+module.exports = { getPlatformStats, getWeeklyAnalytics, getUsers, suspendUser, getTrendingFilms, sendAnnouncement, getReports, updateReportStatus, clearTestData };

@@ -35,6 +35,8 @@ function OverviewTab() {
   const [stats, setStats]         = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading]     = useState(true);
+  const [clearing, setClearing]   = useState(false);
+  const [clearResult, setClearResult] = useState(null);
 
   useEffect(() => {
     Promise.all([adminAPI.getStats(), adminAPI.getAnalytics()])
@@ -42,6 +44,22 @@ function OverviewTab() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  const handleClearTestData = async () => {
+    const confirmed = window.confirm(
+      '⚠️ DANGER: This will permanently delete ALL projects, films, applications, tasks and project chats.\n\nUsers, profiles, waitlist entries and reviews will be kept.\n\nType OK to confirm launch cleanup.'
+    );
+    if (!confirmed) return;
+    setClearing(true); setClearResult(null);
+    try {
+      const { data } = await adminAPI.clearTestData();
+      setClearResult({ ok: true, msg: data.message, deleted: data.deleted });
+    } catch (err) {
+      setClearResult({ ok: false, msg: err.response?.data?.message || 'Failed to clear data' });
+    } finally {
+      setClearing(false);
+    }
+  };
 
   if (loading) return <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">{Array(5).fill(0).map((_,i) => <div key={i} className="bg-[#efefed] rounded-2xl h-24 animate-pulse" />)}</div>;
 
@@ -56,6 +74,38 @@ function OverviewTab() {
           <StatCard icon="🎞" label="Released Films"   value={stats?.totalFilms?.toLocaleString()}    color="#10b981" />
           <StatCard icon="🏆" label="Contests"         value={stats?.totalContests?.toLocaleString()} color="#f59e0b" />
           <StatCard icon="🚩" label="Pending Reports"  value={stats?.pendingReports?.toLocaleString() ?? '0'} color="#ef4444" />
+        </div>
+      </div>
+
+      {/* ── Launch Cleanup ── */}
+      <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-sm font-bold text-red-700 mb-1">🚀 Launch Cleanup</h2>
+            <p className="text-xs text-red-600">
+              Delete all test projects, films, applications, tasks and project chats before going live.
+              Users, profiles, waitlist entries and reviews are kept safe.
+            </p>
+            {clearResult && (
+              <div className={`mt-3 p-3 rounded-lg text-xs ${clearResult.ok ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-100 border border-red-300 text-red-700'}`}>
+                {clearResult.msg}
+                {clearResult.ok && clearResult.deleted && (
+                  <div className="mt-1 flex gap-3 flex-wrap text-[11px] text-green-600">
+                    {Object.entries(clearResult.deleted).map(([k, v]) => (
+                      <span key={k}>✓ {v} {k}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <button
+            onClick={handleClearTestData}
+            disabled={clearing}
+            className="flex-shrink-0 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
+          >
+            {clearing ? 'Clearing…' : '🗑 Clear Test Data'}
+          </button>
         </div>
       </div>
 
@@ -924,7 +974,9 @@ function WaitlistTab() {
   const [loading, setLoading]   = useState(true);
   const [search, setSearch]     = useState('');
   const [notifying, setNotifying] = useState(false);
+  const [forceNotifying, setForceNotifying] = useState(false);
   const [notifyResult, setNotifyResult] = useState(null);
+  const [notifyingOne, setNotifyingOne] = useState(null); // entry _id being notified
 
   useEffect(() => {
     launchWaitlistAPI.getAll()
@@ -952,12 +1004,41 @@ function WaitlistTab() {
     try {
       const { data } = await launchWaitlistAPI.notify();
       setNotifyResult({ success: true, message: data.message });
-      // Mark notified in local state
       setEntries((prev) => prev.map((e) => ({ ...e, notified: true })));
     } catch (err) {
       setNotifyResult({ success: false, message: err?.response?.data?.message || 'Failed to send emails.' });
     } finally {
       setNotifying(false);
+    }
+  };
+
+  const handleNotifyOne = async (entry) => {
+    if (notifyingOne) return;
+    setNotifyingOne(entry._id);
+    setNotifyResult(null);
+    try {
+      const { data } = await launchWaitlistAPI.notifyOne(entry._id);
+      setNotifyResult({ success: true, message: data.message });
+      setEntries((prev) => prev.map((e) => e._id === entry._id ? { ...e, notified: true } : e));
+    } catch (err) {
+      setNotifyResult({ success: false, message: err?.response?.data?.message || `Failed to send to ${entry.email}.` });
+    } finally {
+      setNotifyingOne(null);
+    }
+  };
+
+  const handleForceNotifyAll = async () => {
+    if (!confirm(`Force re-send launch emails to ALL ${total} entries (including already-notified)? Use this if previous sends failed silently.`)) return;
+    setForceNotifying(true);
+    setNotifyResult(null);
+    try {
+      const { data } = await launchWaitlistAPI.forceNotify();
+      setNotifyResult({ success: true, message: data.message });
+      setEntries((prev) => prev.map((e) => ({ ...e, notified: true })));
+    } catch (err) {
+      setNotifyResult({ success: false, message: err?.response?.data?.message || 'Failed — check EMAIL env vars in Railway.' });
+    } finally {
+      setForceNotifying(false);
     }
   };
 
@@ -991,10 +1072,16 @@ function WaitlistTab() {
               <>🚀 Notify All {unnotifiedCount > 0 && `(${unnotifiedCount})`}</>
             )}
           </button>
-          <button onClick={copyAll}
-            className="text-xs text-white/40 hover:text-white transition-colors underline">
-            Copy all emails
-          </button>
+          <div className="flex gap-3 mt-1">
+            <button onClick={copyAll}
+              className="text-xs text-white/40 hover:text-white transition-colors underline">
+              Copy all emails
+            </button>
+            <button onClick={handleForceNotifyAll} disabled={forceNotifying || total === 0}
+              className="text-xs text-amber-400/70 hover:text-amber-400 transition-colors underline disabled:opacity-40">
+              {forceNotifying ? 'Sending…' : '⚠ Force re-send all'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1036,6 +1123,7 @@ function WaitlistTab() {
                 <th className="text-left px-5 py-3 text-xs font-bold uppercase tracking-[0.1em] text-[#a3a39e]">Email</th>
                 <th className="text-left px-5 py-3 text-xs font-bold uppercase tracking-[0.1em] text-[#a3a39e]">Joined</th>
                 <th className="text-left px-5 py-3 text-xs font-bold uppercase tracking-[0.1em] text-[#a3a39e]">Status</th>
+                <th className="text-left px-5 py-3 text-xs font-bold uppercase tracking-[0.1em] text-[#a3a39e]">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -1052,6 +1140,22 @@ function WaitlistTab() {
                       ? <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-green-600 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">✓ Notified</span>
                       : <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">⏳ Pending</span>
                     }
+                  </td>
+                  <td className="px-5 py-3">
+                    <button
+                      onClick={() => handleNotifyOne(e)}
+                      disabled={!!notifyingOne}
+                      className={`text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap ${
+                        e.notified
+                          ? 'bg-[#f7f7f6] text-[#6b6b66] border border-[#e0e0dd] hover:border-[#6C63FF] hover:text-[#6C63FF]'
+                          : 'bg-[#6C63FF] text-white hover:bg-[#5750D4] shadow-sm shadow-[#6C63FF]/20'
+                      }`}
+                    >
+                      {notifyingOne === e._id
+                        ? <span className="flex items-center gap-1"><span className="animate-spin inline-block w-2.5 h-2.5 border border-current border-t-transparent rounded-full" /> Sending…</span>
+                        : e.notified ? '↻ Re-send' : '🚀 Notify'
+                      }
+                    </button>
                   </td>
                 </tr>
               ))}

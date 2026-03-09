@@ -10,6 +10,7 @@ const {
   sendAnnouncement,
   getReports,
   updateReportStatus,
+  clearTestData,
 } = require('../controllers/adminController');
 
 const router = express.Router();
@@ -27,5 +28,6 @@ router.patch('/users/:id/suspend', suspendUser);
 router.post('/announce',        sendAnnouncement);
 router.get('/reports',          getReports);
 router.patch('/reports/:id',    updateReportStatus);
+router.delete('/clear-test-data', clearTestData);  // ⚠️ destructive — clears all projects/films/apps
 
 module.exports = router;
