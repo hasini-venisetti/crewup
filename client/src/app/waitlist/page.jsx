@@ -85,9 +85,20 @@ export default function WaitlistPage() {
   const [count, setCount]       = useState(null);
   const countdown               = useCountdown(LAUNCH_DATE);
 
+  const isValidEmail = (val) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val.trim());
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email.trim()) return;
+    if (!email.trim()) {
+      setErrorMsg('Please enter your email address.');
+      setStatus('error');
+      return;
+    }
+    if (!isValidEmail(email)) {
+      setErrorMsg('Please enter a valid email address (e.g. name@gmail.com).');
+      setStatus('error');
+      return;
+    }
     setStatus('loading');
     setErrorMsg('');
     try {
@@ -217,7 +228,7 @@ export default function WaitlistPage() {
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-5 py-3.5 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-[#6C63FF]/60 transition-colors" />
               <div className="flex gap-2">
                 <input type="email" placeholder="your@email.com" value={email}
-                  onChange={(e) => setEmail(e.target.value)} required
+                  onChange={(e) => setEmail(e.target.value)}
                   className="flex-1 bg-white/5 border border-white/10 rounded-xl px-5 py-3.5 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-[#6C63FF]/60 transition-colors" />
                 <button type="submit" disabled={status === 'loading' || !email.trim()}
                   className="flex-shrink-0 px-6 py-3.5 rounded-xl font-bold text-sm text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
@@ -346,7 +357,7 @@ export default function WaitlistPage() {
           {status !== 'success' ? (
             <form onSubmit={handleSubmit} className="flex gap-2 max-w-sm mx-auto">
               <input type="email" placeholder="your@email.com" value={email}
-                onChange={(e) => setEmail(e.target.value)} required
+                onChange={(e) => setEmail(e.target.value)}
                 className="flex-1 bg-white/8 border border-white/15 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-[#6C63FF]/60 transition-colors" />
               <button type="submit" disabled={status === 'loading' || !email.trim()}
                 className="flex-shrink-0 px-5 py-3 rounded-xl font-bold text-sm text-white disabled:opacity-40"
