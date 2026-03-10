@@ -305,6 +305,13 @@ function SubmitModal({ contestId, onClose, onSuccess }) {
         {/* Eligibility check */}
         {eligLoading ? (
           <div className="h-16 bg-[#f7f7f6] rounded-xl animate-pulse mb-5" />
+        ) : eligibility?.teamAlreadySubmitted ? (
+          /* ── Team already submitted ── */
+          <div className="bg-[#f0eeff] border border-[#c7c2f5] rounded-xl p-5 mb-5 text-center">
+            <p className="text-2xl mb-2">🎬</p>
+            <p className="text-sm font-bold text-[#4d44c8] mb-1">Your team has already submitted!</p>
+            <p className="text-xs text-[#6b6b66]">Each team can only enter one film per contest. Share your submission and get people to vote!</p>
+          </div>
         ) : !eligibility?.eligible ? (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5">
             <p className="text-sm font-semibold text-amber-800 mb-1">⚠️ Eligibility Required</p>

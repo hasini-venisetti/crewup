@@ -44,7 +44,10 @@ const contestSubmissionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// One submission per user per contest
-contestSubmissionSchema.index({ contest: 1, submittedBy: 1 }, { unique: true });
+// One submission per user per contest (query index only)
+contestSubmissionSchema.index({ contest: 1, submittedBy: 1 });
+
+// One submission per project (team) per contest — blocks all team members from re-submitting
+contestSubmissionSchema.index({ contest: 1, project: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('ContestSubmission', contestSubmissionSchema);

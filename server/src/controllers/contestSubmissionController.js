@@ -91,24 +91,38 @@ const checkEligibility = async (req, res, next) => {
 
     const eligibleProjects = await Project.find(query).select('title teamMembers createdAt').lean();
 
-    const eligible = eligibleProjects.length > 0;
+    // Check which of those projects have already submitted to this contest
+    const eligibleIds = eligibleProjects.map((p) => p._id);
+    const alreadySubmitted = await ContestSubmission.find({
+      contest: req.params.id,
+      project: { $in: eligibleIds },
+    }).select('project submittedBy').lean();
+
+    const submittedProjectIds  = new Set(alreadySubmitted.map((s) => s.project?.toString()));
+    const submittedByMe        = alreadySubmitted.find((s) => s.submittedBy?.toString() === userId.toString());
+    const availableProjects    = eligibleProjects.filter((p) => !submittedProjectIds.has(p._id.toString()));
+    const eligible             = availableProjects.length > 0;
 
     let reason = null;
-    if (!eligible) {
+    if (eligibleProjects.length === 0) {
       if (contest.teamFormedAfter) {
         const d = new Date(contest.teamFormedAfter).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' });
         reason = `Your team must have been formed on or after ${d} and have at least 2 members (including yourself).`;
       } else {
         reason = 'You must post a project on CREWUP with at least 2 team members (including yourself) to participate.';
       }
+    } else if (!eligible) {
+      reason = 'Your team has already submitted a film to this contest. Only one submission per team is allowed.';
     }
 
     res.json({
-      success: true,
+      success:             true,
       eligible,
       reason,
-      teamFormedAfter: contest.teamFormedAfter || null,
-      projects: eligibleProjects.map((p) => ({
+      teamAlreadySubmitted: !eligible && eligibleProjects.length > 0,
+      submittedByMe:        !!submittedByMe,
+      teamFormedAfter:      contest.teamFormedAfter || null,
+      projects: availableProjects.map((p) => ({
         id:          p._id,
         title:       p.title,
         memberCount: (p.teamMembers?.length || 0) + 1,
@@ -159,6 +173,19 @@ const submitFilm = async (req, res, next) => {
       ? eligibleProjects.find((p) => p._id.toString() === projectId) || eligibleProjects[0]
       : eligibleProjects[0];
 
+    // ── Team duplicate check: one submission per project per contest ──
+    const teamAlreadySubmitted = await ContestSubmission.findOne({
+      contest: req.params.id,
+      project: chosenProject._id,
+    }).lean();
+    if (teamAlreadySubmitted) {
+      return res.status(409).json({
+        success: false,
+        message: 'Your team has already submitted a film to this contest. Only one submission per team is allowed.',
+        teamAlreadySubmitted: true,
+      });
+    }
+
     const submission = await ContestSubmission.create({
       contest:     req.params.id,
       submittedBy: req.user._id,
@@ -170,7 +197,7 @@ const submitFilm = async (req, res, next) => {
 
     res.status(201).json({ success: true, data: submission });
   } catch (e) {
-    if (e.code === 11000) return res.status(409).json({ success: false, message: 'You have already submitted to this contest' });
+    if (e.code === 11000) return res.status(409).json({ success: false, message: 'Your team has already submitted a film to this contest. Only one submission per team is allowed.', teamAlreadySubmitted: true });
     next(e);
   }
 };
