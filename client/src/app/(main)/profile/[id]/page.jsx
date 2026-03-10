@@ -118,16 +118,11 @@ export default function ProfilePage() {
         setIsFollowing(true);
         setFollowCounts((c) => ({ ...c, followers: c.followers + 1 }));
       }
-      // Refresh counts from server (fire-and-forget, no status re-fetch to avoid race)
-      followAPI.getCounts(id)
-        .then(({ data }) => { if (data?.data) setFollowCounts(data.data); })
-        .catch(() => {});
     } catch (error) {
       const status = error.response?.status;
       if (status === 409) {
         // DB says already following — sync UI without showing error
         setIsFollowing(true);
-        followAPI.getCounts(id).then(({ data }) => { if (data?.data) setFollowCounts(data.data); }).catch(() => {});
       } else if (status === 404) {
         toast.error('User not found.');
       } else {

@@ -115,7 +115,9 @@ const getCounts = async (req, res, next) => {
 // GET /api/follow/followers/:userId
 const getFollowers = async (req, res, next) => {
   try {
-    const userId = req.params.userId;
+    const userId = toOid(req.params.userId);
+    if (!userId) return res.status(400).json({ success: false, message: 'Invalid user ID' });
+
     const follows = await Follow.find({ following: userId })
       .populate('follower', 'name username profileImage role')
       .sort({ createdAt: -1 });
@@ -130,7 +132,9 @@ const getFollowers = async (req, res, next) => {
 // GET /api/follow/following/:userId
 const getFollowing = async (req, res, next) => {
   try {
-    const userId = req.params.userId;
+    const userId = toOid(req.params.userId);
+    if (!userId) return res.status(400).json({ success: false, message: 'Invalid user ID' });
+
     const follows = await Follow.find({ follower: userId })
       .populate('following', 'name username profileImage role')
       .sort({ createdAt: -1 });
