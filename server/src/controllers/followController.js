@@ -23,22 +23,16 @@ const follow = async (req, res, next) => {
     const user = await User.findById(followingId);
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
-    // Check if already following with current schema
-    const existingFollow = await Follow.findOne({ follower: followerId, following: followingId });
+    // Check if already following
+    const existingFollow = await Follow.findOne({
+      follower:  toOid(followerId),
+      following: toOid(followingId),
+    });
     if (existingFollow) {
       return res.status(409).json({ success: false, message: 'Already following this user' });
     }
 
-    // Clean up any stale old-schema documents (requester/recipient) so they don't cause
-    // ghost "already following" states — self-healing migration
-    await Follow.deleteMany({
-      $or: [
-        { requester: followerId, recipient: followingId },
-        { requester: followingId, recipient: followerId },
-      ],
-    }).catch(() => {}); // fire-and-forget, don't fail the follow if cleanup errors
-
-    // Create new follow relationship
+    // Create follow
     await Follow.create({ follower: followerId, following: followingId });
 
     // Log activity (fire-and-forget)
@@ -66,12 +60,9 @@ const unfollow = async (req, res, next) => {
     const followerId  = req.user._id;
     const followingId = req.params.userId;
 
-    // Delete current-schema AND any stale old-schema docs in one pass
-    await Follow.deleteMany({
-      $or: [
-        { follower: followerId,  following: followingId },
-        { requester: followerId, recipient: followingId },
-      ],
+    await Follow.deleteOne({
+      follower:  toOid(followerId),
+      following: toOid(followingId),
     });
 
     res.status(200).json({ success: true, data: { following: false } });

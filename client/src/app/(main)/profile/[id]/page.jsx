@@ -104,51 +104,34 @@ export default function ProfilePage() {
   };
 
   const handleFollowToggle = async () => {
-    console.log('Follow toggle clicked:', { isFollowing, userId: id, currentUser: user });
-    
-    if (!user) {
-      console.log('No user found, redirecting to login');
-      router.push('/login');
-      return;
-    }
-    
-    if (!user._id && !user.id) {
-      console.log('User has no ID, cannot follow');
-      toast.error('Authentication error. Please log in again.');
-      return;
-    }
-    
-    const currentUserId = user._id || user.id;
-    console.log('Proceeding with follow toggle:', { currentUserId, targetUserId: id });
-    
+    if (!user) { router.push('/login'); return; }
+    if (followLoading) return;
+
     setFollowLoading(true);
-    const wasFollowing = isFollowing;
-    setIsFollowing(!wasFollowing);
-    setFollowCounts((c) => ({ ...c, followers: c.followers + (wasFollowing ? -1 : 1) }));
     try {
-      if (wasFollowing) {
+      if (isFollowing) {
         await followAPI.unfollow(id);
+        setIsFollowing(false);
+        setFollowCounts((c) => ({ ...c, followers: Math.max(0, c.followers - 1) }));
       } else {
         await followAPI.follow(id);
+        setIsFollowing(true);
+        setFollowCounts((c) => ({ ...c, followers: c.followers + 1 }));
       }
-      // Confirm real DB state after action
-      followAPI.getStatus(id)
-        .then(({ data }) => { if (data?.data != null) setIsFollowing(data.data.following); })
-        .catch(() => {});
+      // Refresh counts from server (fire-and-forget, no status re-fetch to avoid race)
       followAPI.getCounts(id)
         .then(({ data }) => { if (data?.data) setFollowCounts(data.data); })
         .catch(() => {});
     } catch (error) {
-      // Revert optimistic update
-      setIsFollowing(wasFollowing);
-      setFollowCounts((c) => ({ ...c, followers: c.followers + (wasFollowing ? 1 : -1) }));
-
-      // 409 = already following in DB — silently sync state, no error toast needed
-      if (error.response?.status === 409) {
+      const status = error.response?.status;
+      if (status === 409) {
+        // DB says already following — sync UI without showing error
         setIsFollowing(true);
         followAPI.getCounts(id).then(({ data }) => { if (data?.data) setFollowCounts(data.data); }).catch(() => {});
+      } else if (status === 404) {
+        toast.error('User not found.');
       } else {
-        toast.error(error.response?.data?.message || 'Failed to update follow status. Please try again.');
+        toast.error('Something went wrong. Please try again.');
       }
     } finally {
       setFollowLoading(false);
