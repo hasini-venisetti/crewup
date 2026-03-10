@@ -32,6 +32,9 @@ const contestSubmissionSchema = new mongoose.Schema(
     videoId:   { type: String, default: '' },
     thumbnail: { type: String, default: '' },
 
+    // Custom message from the filmmaker (shown on the submission card)
+    caption: { type: String, default: '', maxlength: 300, trim: true },
+
     // Legacy likes (kept for backward compat)
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
 

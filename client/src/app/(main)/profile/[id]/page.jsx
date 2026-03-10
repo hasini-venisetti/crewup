@@ -61,6 +61,7 @@ export default function ProfilePage() {
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [reportDone, setReportDone]             = useState(false);
   const [copied, setCopied]                     = useState({});   // { [filmId]: bool }
+  const [showShareMenu, setShowShareMenu]       = useState({});   // { [filmId]: bool }
 
   // Invite to project
   const [myProjects, setMyProjects]             = useState([]);
@@ -259,7 +260,18 @@ export default function ProfilePage() {
     </div>
   );
 
-  const { user: creator, bio, skills, location, portfolioLinks, experienceLevel, availability, socialLinks, portfolio } = profile;
+  const { user: creator, bio, skills, location, portfolioLinks, experienceLevel, availability, socialLinks, portfolio, availabilitySlots, isMentor, mentorFields, mentorBio, mentorRate, mentorCurrency } = profile;
+
+  // Filter to only future/active availability slots and sort by start date
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const upcomingSlots = (availabilitySlots || [])
+    .filter(s => new Date(s.endDate) >= today)
+    .sort((a, b) => new Date(a.startDate) - new Date(b.startDate))
+    .slice(0, 4);
+
+  const fmtSlotDate = (d) => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+  const isSlotActive = (s) => new Date(s.startDate) <= today && new Date(s.endDate) >= today;
   const isOwnProfile = user && (user._id === id || user.id === id);
   const avail = AVAIL_CONFIG[availability] || AVAIL_CONFIG['available'];
   const hasSocials = socialLinks && Object.values(socialLinks).some(Boolean);
@@ -499,6 +511,58 @@ export default function ProfilePage() {
                 {creator?.createdAt ? new Date(creator.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '—'}
               </p>
             </div>
+
+            {/* Availability Slots */}
+            {upcomingSlots.length > 0 && (
+              <div className="bg-white rounded-xl border border-[#efefed] p-6">
+                <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#a3a39e] mb-4">📅 Availability</h2>
+                <div className="space-y-2.5">
+                  {upcomingSlots.map((slot, i) => {
+                    const active = isSlotActive(slot);
+                    return (
+                      <div key={i} className={`rounded-lg px-3 py-2.5 ${active ? 'bg-green-50 border border-green-200' : 'bg-[#f7f7f6] border border-[#efefed]'}`}>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className={`text-xs font-semibold ${active ? 'text-green-700' : 'text-[#111110]'}`}>
+                            {fmtSlotDate(slot.startDate)} – {fmtSlotDate(slot.endDate)}
+                          </span>
+                          {active && (
+                            <span className="flex items-center gap-1 text-[10px] font-bold text-green-600 bg-green-100 px-1.5 py-0.5 rounded-full">
+                              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block" />
+                              Now
+                            </span>
+                          )}
+                        </div>
+                        {slot.note && <p className="text-[11px] text-[#6b6b66] mt-1 truncate">{slot.note}</p>}
+                      </div>
+                    );
+                  })}
+                </div>
+                {isOwnProfile && (
+                  <Link href="/profile/edit" className="inline-block mt-3 text-[11px] text-[#5750D4] hover:text-[#4740CC] font-semibold transition-colors">
+                    Manage availability →
+                  </Link>
+                )}
+              </div>
+            )}
+
+            {/* Mentor card */}
+            {isMentor && mentorFields?.length > 0 && (
+              <div className="bg-[#f0eeff] rounded-xl border border-[#c9c4ff] p-6">
+                <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#5750D4] mb-3">🎓 Open to Mentoring</h2>
+                {mentorBio && <p className="text-xs text-[#4b4b47] mb-3 leading-relaxed">{mentorBio}</p>}
+                <div className="flex flex-wrap gap-1.5 mb-3">
+                  {mentorFields.map((f) => (
+                    <span key={f} className="text-[11px] px-2.5 py-1 bg-[#e4e0ff] text-[#4740CC] rounded-full font-medium">{f}</span>
+                  ))}
+                </div>
+                {mentorRate && (
+                  <p className="text-xs font-semibold text-[#3730A3]">
+                    ₹{mentorRate.toLocaleString('en-IN')} / hr
+                    {mentorCurrency && mentorCurrency !== 'INR' && ` (${mentorCurrency})`}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Portfolio */}
@@ -603,11 +667,34 @@ export default function ProfilePage() {
                     } catch {}
                   };
 
-                  const handleShare = async () => {
-                    const url = film.youtubeLink || `${window.location.origin}/films`;
-                    await navigator.clipboard.writeText(url);
+                  const filmUrl    = film.youtubeLink || `${window.location.origin}/films`;
+                  const shareText  = `Watch "${film.title}"${film.director?.name ? ` by ${film.director.name}` : ''} 🎬 Check it out on CREWUPFILMS!`;
+
+                  const handleShareX = () => {
+                    window.open(
+                      `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(filmUrl)}`,
+                      '_blank'
+                    );
+                    setShowShareMenu((prev) => ({ ...prev, [film._id]: false }));
+                  };
+
+                  const handleShareNative = async () => {
+                    if (navigator.share) {
+                      try { await navigator.share({ title: film.title, text: shareText, url: filmUrl }); }
+                      catch (_) {}
+                    } else {
+                      await navigator.clipboard.writeText(filmUrl);
+                      setCopied((prev) => ({ ...prev, [film._id]: true }));
+                      setTimeout(() => setCopied((prev) => ({ ...prev, [film._id]: false })), 2000);
+                    }
+                    setShowShareMenu((prev) => ({ ...prev, [film._id]: false }));
+                  };
+
+                  const handleCopyLink = async () => {
+                    await navigator.clipboard.writeText(filmUrl);
                     setCopied((prev) => ({ ...prev, [film._id]: true }));
                     setTimeout(() => setCopied((prev) => ({ ...prev, [film._id]: false })), 2000);
+                    setShowShareMenu((prev) => ({ ...prev, [film._id]: false }));
                   };
 
                   const openComments = async () => {
@@ -702,28 +789,52 @@ export default function ProfilePage() {
                             <span>Comment</span>
                           </button>
 
-                          {/* Share */}
-                          <button onClick={handleShare}
-                            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                              isCopied
-                                ? 'text-green-600 bg-green-50'
-                                : 'text-[#a3a39e] hover:text-[#6C63FF] hover:bg-[#f0eeff]'
-                            }`}>
-                            {isCopied ? (
+                          {/* Share — dropdown */}
+                          <div className="relative">
+                            <button
+                              onClick={() => setShowShareMenu((prev) => ({ ...prev, [film._id]: !prev[film._id] }))}
+                              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                                isCopied
+                                  ? 'text-green-600 bg-green-50'
+                                  : showShareMenu[film._id]
+                                  ? 'text-[#6C63FF] bg-[#f0eeff]'
+                                  : 'text-[#a3a39e] hover:text-[#6C63FF] hover:bg-[#f0eeff]'
+                              }`}>
+                              {isCopied ? (
+                                <>
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                  <span>Copied!</span>
+                                </>
+                              ) : (
+                                <>
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                                  </svg>
+                                  <span>Share</span>
+                                </>
+                              )}
+                            </button>
+                            {showShareMenu[film._id] && (
                               <>
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
-                                <span>Copied!</span>
-                              </>
-                            ) : (
-                              <>
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-                                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-                                </svg>
-                                <span>Share</span>
+                                <div className="fixed inset-0 z-40" onClick={() => setShowShareMenu((prev) => ({ ...prev, [film._id]: false }))} />
+                                <div className="absolute bottom-full left-0 mb-2 w-44 bg-white border border-[#efefed] rounded-xl shadow-xl z-50 overflow-hidden">
+                                  <button onClick={handleShareX}
+                                    className="w-full text-left px-4 py-2.5 text-xs font-medium text-[#111110] hover:bg-[#f7f7f6] flex items-center gap-2.5 transition-colors">
+                                    <span className="text-[13px] font-bold">𝕏</span> Share on X
+                                  </button>
+                                  <button onClick={handleShareNative}
+                                    className="w-full text-left px-4 py-2.5 text-xs font-medium text-[#111110] hover:bg-[#f7f7f6] flex items-center gap-2.5 transition-colors border-t border-[#f0f0ee]">
+                                    <span>📸</span> Share (Instagram…)
+                                  </button>
+                                  <button onClick={handleCopyLink}
+                                    className="w-full text-left px-4 py-2.5 text-xs font-medium text-[#111110] hover:bg-[#f7f7f6] flex items-center gap-2.5 transition-colors border-t border-[#f0f0ee]">
+                                    <span>🔗</span> Copy Link
+                                  </button>
+                                </div>
                               </>
                             )}
-                          </button>
+                          </div>
 
                           {/* Bookmark */}
                           <button onClick={handleBookmark} title={isBookmarked ? 'Remove bookmark' : 'Save film'}

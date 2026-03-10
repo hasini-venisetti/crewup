@@ -181,7 +181,7 @@ function SubmissionCard({ sub, contestId, user, rank, onLikeToggle, onVoteToggle
       {/* Info */}
       <div className="p-4">
         <h3 className="font-semibold text-[#111110] mb-1 line-clamp-1">{sub.title}</h3>
-        <div className="flex items-center gap-2 mb-3">
+        <div className="flex items-center gap-2 mb-2">
           <div className="w-5 h-5 rounded-full bg-gradient-to-br from-[#c9c4ff] to-[#6C63FF] flex items-center justify-center text-[8px] font-bold text-white overflow-hidden flex-shrink-0">
             {sub.submittedBy?.profileImage
               ? <img src={sub.submittedBy.profileImage} alt="" className="w-full h-full object-cover" />
@@ -194,28 +194,46 @@ function SubmissionCard({ sub, contestId, user, rank, onLikeToggle, onVoteToggle
           <span className="text-xs text-[#a3a39e]">{timeAgo(sub.createdAt)}</span>
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Vote button — logged-in users only (guests redirected to login) */}
+        {/* Filmmaker caption/message */}
+        {sub.caption && (
+          <p className="text-xs text-[#4b4b47] bg-[#fafaf9] border border-[#efefed] rounded-lg px-3 py-2 mb-3 leading-relaxed italic">
+            "{sub.caption}"
+          </p>
+        )}
+
+        {/* Vote CTA — prominent bar */}
+        {!isOwner && (
           <button
             onClick={handleVote}
-            disabled={voting || isOwner}
+            disabled={voting}
             title={
-              !user       ? 'Sign in to vote'
-              : isOwner   ? "You can't vote on your own submission"
-              : isVoted   ? 'Remove your vote'
-              :             'Vote for this film'
+              !user     ? 'Sign in to vote'
+              : isVoted ? 'Remove your vote'
+              :           'Vote for this film!'
             }
-            className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-lg border transition-all ${
+            className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all mb-3 ${
               isVoted
-                ? 'bg-[#6055de] text-white border-[#6055de]'
+                ? 'bg-[#6055de] text-white shadow-md shadow-[#6055de]/25'
                 : !user
-                  ? 'border-[#6055de]/20 text-[#6055de]/50 hover:border-[#6055de]/50 hover:text-[#6055de] cursor-pointer'
-                  : 'border-[#6055de]/30 text-[#6055de] hover:bg-[#6055de]/10'
-            } disabled:opacity-40`}>
-            🗳 {voteCount}
-            {!user && <span className="text-[9px] font-normal opacity-70">Login</span>}
+                  ? 'bg-[#f4f3ff] text-[#6055de] border border-[#c9c4ff] hover:bg-[#ece9ff]'
+                  : 'bg-[#f4f3ff] text-[#6055de] border border-[#c9c4ff] hover:bg-[#ece9ff] hover:border-[#6055de]/50'
+            } disabled:opacity-50`}>
+            <span className="text-base leading-none">🗳</span>
+            {isVoted
+              ? `Voted · ${voteCount} vote${voteCount !== 1 ? 's' : ''}`
+              : !user
+              ? `Vote for this film · Sign in`
+              : `Vote for this film · ${voteCount} vote${voteCount !== 1 ? 's' : ''}`}
           </button>
+        )}
+        {isOwner && voteCount > 0 && (
+          <div className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold text-[#6055de] bg-[#f4f3ff] mb-3">
+            🗳 {voteCount} vote{voteCount !== 1 ? 's' : ''} — keep sharing to get more!
+          </div>
+        )}
+
+        {/* Actions row */}
+        <div className="flex items-center gap-2 flex-wrap">
           <button onClick={handleLike} disabled={liking}
             title={!user ? 'Sign in to like' : isLiked ? 'Unlike' : 'Like'}
             className={`flex items-center gap-1 text-xs font-semibold transition-all ${
@@ -249,7 +267,7 @@ function SubmissionCard({ sub, contestId, user, rank, onLikeToggle, onVoteToggle
 
 /* ─── SubmitModal ───────────────────────────────────────────────────────────── */
 function SubmitModal({ contestId, onClose, onSuccess }) {
-  const [form, setForm]           = useState({ title: '', youtubeLink: '', projectId: '' });
+  const [form, setForm]           = useState({ title: '', youtubeLink: '', projectId: '', caption: '' });
   const [error, setError]         = useState('');
   const [loading, setLoading]     = useState(false);
   const [eligibility, setElig]    = useState(null);
@@ -330,6 +348,20 @@ function SubmitModal({ contestId, onClose, onSuccess }) {
                 <input required type="url" value={form.youtubeLink} onChange={(e) => setForm({ ...form, youtubeLink: e.target.value })}
                   placeholder="https://www.youtube.com/watch?v=…"
                   className="w-full rounded-xl border border-[#e0e0dd] bg-[#fafaf9] px-4 py-2.5 text-sm focus:outline-none focus:border-[#6055de]" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[#6b6b66] uppercase tracking-[0.1em] mb-1.5">
+                  Your Message <span className="normal-case font-normal text-[#a3a39e]">(optional — shown on your film card)</span>
+                </label>
+                <textarea
+                  value={form.caption}
+                  onChange={(e) => setForm({ ...form, caption: e.target.value })}
+                  placeholder="Tell the community about your film — what inspired it, who made it, or ask for their vote! 🎬"
+                  maxLength={300}
+                  rows={3}
+                  className="w-full rounded-xl border border-[#e0e0dd] bg-[#fafaf9] px-4 py-2.5 text-sm focus:outline-none focus:border-[#6055de] resize-none"
+                />
+                <p className="text-[11px] text-[#a3a39e] text-right mt-0.5">{form.caption.length}/300</p>
               </div>
               <p className="text-xs text-[#a3a39e]">Make sure your video is set to <strong>Public</strong> or <strong>Unlisted</strong> on YouTube.</p>
               <div className="flex gap-2 pt-2">

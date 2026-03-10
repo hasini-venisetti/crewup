@@ -36,9 +36,9 @@ const ROLE_COLORS = {
 };
 
 function Avatar({ name, image }) {
-  if (image) return <img src={image} alt={name} className="w-14 h-14 rounded-full object-cover flex-shrink-0" />;
+  if (image) return <img src={image} alt={name} className="w-10 h-10 sm:w-14 sm:h-14 rounded-full object-cover flex-shrink-0" />;
   return (
-    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#e4e1ff] to-[#f0eeff] flex items-center justify-center text-lg font-semibold text-[#3730A3] flex-shrink-0">
+    <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-[#e4e1ff] to-[#f0eeff] flex items-center justify-center text-base sm:text-lg font-semibold text-[#3730A3] flex-shrink-0">
       {name?.[0]?.toUpperCase() || '?'}
     </div>
   );
@@ -48,6 +48,7 @@ function CreatorCard({ creator }) {
   const roleIcon  = ROLE_ICONS[creator.role]  || '🎨';
   const roleLabel = creator.role?.replace(/-/g, ' ') || 'Creator';
   const roleColor = ROLE_COLORS[creator.role] || ROLE_COLORS['other'];
+  const avail = AVAIL_CONFIG[creator.availability] || AVAIL_CONFIG['available'];
 
   return (
     <Link
@@ -57,54 +58,53 @@ function CreatorCard({ creator }) {
       {/* Colored accent bar per role */}
       <div className={`absolute top-0 left-0 right-0 h-1 ${roleColor}`} />
 
-      <div className="p-5 flex flex-col gap-4 flex-1 pt-6">
-        <div className="flex items-start gap-3">
+      <div className="p-3 sm:p-5 flex flex-col gap-2 sm:gap-4 flex-1 pt-4 sm:pt-6">
+        {/* Avatar + name stacked on mobile */}
+        <div className="flex flex-col items-center sm:flex-row sm:items-start gap-2 sm:gap-3 text-center sm:text-left">
           <Avatar name={creator.name} image={creator.profileImage} />
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-[#111110] text-sm truncate group-hover:underline">{creator.name}</h3>
-            <p className="text-xs text-[#a3a39e] mb-3">@{creator.username}</p>
-            {(() => {
-              const cfg = AVAIL_CONFIG[creator.availability] || AVAIL_CONFIG['available'];
-              return (
-                <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${cfg.badge}`}>
-                  <span className={`w-2 h-2 rounded-full ${cfg.dot} ${creator.availability === 'available' ? 'animate-pulse' : ''}`} />
-                  {cfg.label}
-                </span>
-              );
-            })()}
+            <h3 className="font-semibold text-[#111110] text-xs sm:text-sm truncate group-hover:underline leading-tight">{creator.name}</h3>
+            <p className="text-[10px] sm:text-xs text-[#a3a39e] mb-1 sm:mb-3 truncate">@{creator.username}</p>
+            <span className={`inline-flex items-center gap-1 text-[10px] sm:text-xs font-medium px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full ${avail.badge}`}>
+              <span className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${avail.dot} ${creator.availability === 'available' ? 'animate-pulse' : ''}`} />
+              <span className="hidden sm:inline">{avail.label}</span>
+              <span className="sm:hidden">{avail.label.split(' ')[0]}</span>
+            </span>
           </div>
         </div>
 
         <div>
-          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#6b6b66] bg-[#f7f7f6] border border-[#e0e0dd] px-2.5 py-1 rounded-full">
+          <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-medium text-[#6b6b66] bg-[#f7f7f6] border border-[#e0e0dd] px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full">
             <span>{roleIcon}</span>
-            <span className="capitalize">{roleLabel}</span>
+            <span className="capitalize truncate max-w-[70px] sm:max-w-none">{roleLabel}</span>
           </span>
         </div>
 
         {creator.bio && (
-          <p className="text-xs text-[#6b6b66] line-clamp-2 leading-relaxed">{creator.bio}</p>
+          <p className="hidden sm:block text-xs text-[#6b6b66] line-clamp-2 leading-relaxed">{creator.bio}</p>
         )}
 
         {creator.skills?.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {creator.skills.slice(0, 4).map((skill) => (
-              <span key={skill} className="text-[11px] px-2 py-0.5 bg-[#f7f7f6] text-[#6b6b66] border border-[#e0e0dd] rounded-full">
+          <div className="flex flex-wrap gap-1">
+            {creator.skills.slice(0, 2).map((skill) => (
+              <span key={skill} className="text-[10px] sm:text-[11px] px-1.5 sm:px-2 py-0.5 bg-[#f7f7f6] text-[#6b6b66] border border-[#e0e0dd] rounded-full truncate max-w-[70px]">
                 {skill}
               </span>
             ))}
-            {creator.skills.length > 4 && (
-              <span className="text-[11px] px-2 py-0.5 text-[#a3a39e]">+{creator.skills.length - 4}</span>
+            {creator.skills.length > 2 && (
+              <span className="text-[10px] sm:text-[11px] px-1.5 py-0.5 text-[#a3a39e]">+{creator.skills.length - 2}</span>
             )}
           </div>
         )}
 
-        <div className="mt-auto pt-3 border-t border-[#f0f0ee]">
-          <span className="text-xs text-[#a3a39e] flex items-center gap-1">
+        <div className="mt-auto pt-2 sm:pt-3 border-t border-[#f0f0ee]">
+          <span className="text-[10px] sm:text-xs text-[#a3a39e] flex items-center gap-1 truncate">
             📍{' '}
-            {creator.location?.city
-              ? `${creator.location.city}${creator.location.country ? `, ${creator.location.country}` : ''}`
-              : 'Location not set'}
+            <span className="truncate">
+              {creator.location?.city
+                ? `${creator.location.city}${creator.location.country ? `, ${creator.location.country}` : ''}`
+                : 'Location not set'}
+            </span>
           </span>
         </div>
       </div>
@@ -282,7 +282,7 @@ export default function ExplorePage() {
 
         {/* Grid */}
         {loading && creators.length === 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mb-10">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5 mb-10">
             {Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)}
           </div>
         ) : creators.length === 0 ? (
@@ -292,7 +292,7 @@ export default function ExplorePage() {
             <p className="text-sm text-[#6b6b66]">Try adjusting your filters</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mb-10">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5 mb-10">
             {creators.map((creator) => <CreatorCard key={creator._id} creator={creator} />)}
           </div>
         )}

@@ -71,10 +71,10 @@ function ApplicationCard({ app, onDecision }) {
 
 function EmptyState({ icon, title, body, cta, href }) {
   return (
-    <div className="bg-white rounded-2xl border border-[#efefed] text-center py-20 px-8">
-      <div className="text-5xl mb-4">{icon}</div>
+    <div className="bg-white rounded-2xl border border-[#efefed] text-center py-10 sm:py-20 px-4 sm:px-8">
+      <div className="text-4xl sm:text-5xl mb-3 sm:mb-4">{icon}</div>
       <p className="font-bold text-[#111110] mb-2">{title}</p>
-      <p className="text-[#6b6b66] text-sm mb-8 max-w-xs mx-auto leading-relaxed">{body}</p>
+      <p className="text-[#6b6b66] text-sm mb-6 sm:mb-8 max-w-xs mx-auto leading-relaxed">{body}</p>
       <Link href={href}
         className="inline-block bg-[#0e0e0d] text-white text-sm font-semibold px-6 py-2.5 rounded-lg hover:bg-[#2d2d2b] transition-colors active:scale-[0.98]">
         {cta}
@@ -205,9 +205,9 @@ export default function DashboardPage() {
               { label: 'Accepted',          value: acceptedCount,         highlight: acceptedCount > 0 },
               { label: 'Pending Review',    value: pendingCount,          highlight: pendingCount > 0 },
             ].map((s) => (
-              <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl p-5 text-center hover:bg-white/8 transition-colors">
-                <div className={`text-3xl font-black mb-1 ${s.highlight ? 'text-[#7C75FF]' : 'text-white'}`}>{s.value}</div>
-                <div className="text-xs text-white/40">{s.label}</div>
+              <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl p-3 sm:p-5 text-center hover:bg-white/8 transition-colors">
+                <div className={`text-2xl sm:text-3xl font-black mb-0.5 sm:mb-1 ${s.highlight ? 'text-[#7C75FF]' : 'text-white'}`}>{s.value}</div>
+                <div className="text-[10px] sm:text-xs text-white/40 leading-tight">{s.label}</div>
               </div>
             ))}
           </div>
@@ -217,17 +217,19 @@ export default function DashboardPage() {
       <div className="max-w-[1100px] mx-auto px-3 sm:px-6 py-10">
 
         {/* Tabs */}
-        <div className="flex gap-1 bg-white border border-[#efefed] rounded-xl p-1 mb-8 w-fit overflow-x-auto shadow-sm">
-          {tabs.map((t) => (
-            <button key={t.key} onClick={() => setTab(t.key)}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${
-                tab === t.key
-                  ? 'bg-[#0e0e0d] text-white shadow-sm'
-                  : 'text-[#6b6b66] hover:text-[#111110] hover:bg-[#f7f7f6]'
-              }`}>
-              {t.label}
-            </button>
-          ))}
+        <div className="w-full overflow-x-auto mb-8 -mx-0">
+          <div className="flex gap-1 bg-white border border-[#efefed] rounded-xl p-1 shadow-sm w-max min-w-full sm:w-fit">
+            {tabs.map((t) => (
+              <button key={t.key} onClick={() => setTab(t.key)}
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap ${
+                  tab === t.key
+                    ? 'bg-[#0e0e0d] text-white shadow-sm'
+                    : 'text-[#6b6b66] hover:text-[#111110] hover:bg-[#f7f7f6]'
+                }`}>
+                {t.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* ── My Projects ── */}
@@ -235,30 +237,30 @@ export default function DashboardPage() {
           myProjects.length === 0
             ? <EmptyState icon="🎬" title="No projects yet" body="Post your first project and start building a team." cta="Post a Project" href="/create-project" />
             : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
                 {myProjects.map((p) => (
                   <div key={p._id} className="flex flex-col gap-2">
                     <ProjectCard project={p} />
                     {p.timelineStage === 'released' ? (
-                      <div className="flex gap-2">
+                      <div className="flex gap-1.5 sm:gap-2">
                         <Link href={`/projects/${p._id}`}
-                          className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold bg-green-500 text-white py-2.5 px-3 rounded-lg hover:bg-green-600 transition-colors">
-                          🚀 View Completed
+                          className="flex-1 flex items-center justify-center gap-1 text-[10px] sm:text-xs font-semibold bg-green-500 text-white py-2 sm:py-2.5 px-2 rounded-lg hover:bg-green-600 transition-colors">
+                          🚀 <span className="hidden sm:inline">View </span>Done
                         </Link>
                         <Link href={`/projects/${p._id}`}
-                          className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold border border-green-200 text-green-700 py-2.5 px-3 rounded-lg hover:bg-green-50 transition-colors">
-                          ⭐ Rate Teammates
+                          className="flex-1 flex items-center justify-center gap-1 text-[10px] sm:text-xs font-semibold border border-green-200 text-green-700 py-2 sm:py-2.5 px-2 rounded-lg hover:bg-green-50 transition-colors">
+                          ⭐ Rate
                         </Link>
                       </div>
                     ) : (
-                      <div className="flex gap-2">
+                      <div className="flex gap-1.5 sm:gap-2">
                         <Link href={`/projects/${p._id}/team?tab=chat`}
-                          className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold bg-[#0e0e0d] text-white py-2.5 px-3 rounded-lg hover:bg-[#2d2d2b] transition-colors">
-                          💬 Team Chat
+                          className="flex-1 flex items-center justify-center gap-1 text-[10px] sm:text-xs font-semibold bg-[#0e0e0d] text-white py-2 sm:py-2.5 px-2 rounded-lg hover:bg-[#2d2d2b] transition-colors">
+                          💬 Chat
                         </Link>
                         <Link href={`/projects/${p._id}/team`}
-                          className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold border border-[#e0e0dd] text-[#111110] py-2.5 px-3 rounded-lg hover:border-[#0e0e0d] transition-colors">
-                          👥 Team Dashboard
+                          className="flex-1 flex items-center justify-center gap-1 text-[10px] sm:text-xs font-semibold border border-[#e0e0dd] text-[#111110] py-2 sm:py-2.5 px-2 rounded-lg hover:border-[#0e0e0d] transition-colors">
+                          👥 Team
                         </Link>
                       </div>
                     )}
@@ -360,7 +362,7 @@ export default function DashboardPage() {
               ? <SkeletonGrid count={6} />
               : followingFeed.length === 0
                 ? <EmptyState icon="👥" title="Your feed is empty" body="Follow creators on the Explore page to see their projects here." cta="Explore Creators" href="/explore" />
-                : <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">{followingFeed.map((p) => <ProjectCard key={p._id} project={p} />)}</div>
+                : <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">{followingFeed.map((p) => <ProjectCard key={p._id} project={p} />)}</div>
             }
           </div>
         )}
@@ -378,9 +380,9 @@ export default function DashboardPage() {
                 {(() => {
                   const avg = (myReviews.reduce((s, r) => s + r.rating, 0) / myReviews.length).toFixed(1);
                   return (
-                    <div className="bg-[#0e0e0d] rounded-2xl p-6 flex items-center gap-6">
+                    <div className="bg-[#0e0e0d] rounded-2xl p-4 sm:p-6 flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
                       <div className="text-center flex-shrink-0">
-                        <div className="text-5xl font-black text-white">{avg}</div>
+                        <div className="text-4xl sm:text-5xl font-black text-white">{avg}</div>
                         <div className="flex gap-0.5 justify-center mt-2">
                           {[1,2,3,4,5].map((s) => (
                             <span key={s} className={`text-lg ${s <= Math.round(avg) ? 'text-[#7C75FF]' : 'text-white/20'}`}>★</span>
@@ -388,8 +390,8 @@ export default function DashboardPage() {
                         </div>
                         <div className="text-xs text-white/40 mt-1">{myReviews.length} rating{myReviews.length !== 1 ? 's' : ''}</div>
                       </div>
-                      <div className="w-px h-12 bg-white/10" />
-                      <p className="text-sm text-white/50">Ratings received from teammates on completed collaborative projects.</p>
+                      <div className="hidden sm:block w-px h-12 bg-white/10" />
+                      <p className="text-xs sm:text-sm text-white/50 text-center sm:text-left">Ratings received from teammates on completed collaborative projects.</p>
                     </div>
                   );
                 })()}
@@ -437,7 +439,7 @@ export default function DashboardPage() {
               ? <SkeletonGrid count={6} />
               : recommended.length === 0
                 ? <EmptyState icon="✦" title="No recommendations yet" body="Complete your profile with your role to get matched with relevant projects." cta="Edit Profile" href="/profile/edit" />
-                : <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">{recommended.map((p) => <ProjectCard key={p._id} project={p} />)}</div>
+                : <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">{recommended.map((p) => <ProjectCard key={p._id} project={p} />)}</div>
             }
             {recommended.length > 0 && (
               <div className="mt-8 text-center">

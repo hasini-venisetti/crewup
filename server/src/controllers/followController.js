@@ -1,6 +1,7 @@
 const Follow   = require('../models/Follow');
 const Project  = require('../models/Project');
 const User     = require('../models/User');
+const { logActivity } = require('./activityController');
 
 // ── Follow a user ─────────────────────────────────────────────────────────
 // POST /api/follow/:userId
@@ -50,6 +51,15 @@ const follow = async (req, res, next) => {
       following: followingId
     });
     console.log('New follow created:', newFollow);
+
+    // Log activity (fire-and-forget)
+    logActivity({
+      actor:   followerId,
+      type:    'user_followed',
+      title:   `started following ${user.name}`,
+      link:    `/profile/${followingId}`,
+      userRef: followingId,
+    });
 
     res.status(200).json({ success: true, data: { following: true } });
   } catch (error) {

@@ -168,7 +168,7 @@ export default function ProjectsPage() {
           {/* Projects Grid */}
           <div className="lg:col-span-3">
             {isLoading ? (
-              <div className="grid gap-6 sm:grid-cols-2">
+              <div className="grid grid-cols-2 gap-3 sm:gap-6">
                 {[...Array(6)].map((_, i) => (
                   <div
                     key={i}
@@ -182,7 +182,7 @@ export default function ProjectsPage() {
                 ))}
               </div>
             ) : projects.length > 0 ? (
-              <div className="grid gap-6 sm:grid-cols-2">
+              <div className="grid grid-cols-2 gap-3 sm:gap-6">
                 {projects.map((project) => (
                   <ProjectCard key={project.id} project={project} />
                 ))}

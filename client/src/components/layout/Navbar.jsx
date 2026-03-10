@@ -142,6 +142,12 @@ export default function Navbar() {
               </Link>
             ))}
             {user && (
+              <Link href="/feed"
+                className="px-3.5 py-2 rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200">
+                Feed
+              </Link>
+            )}
+            {user && (
               <Link href="/messages"
                 className="px-3.5 py-2 rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200">
                 Messages
@@ -331,6 +337,7 @@ export default function Navbar() {
             ))}
             {user && (
               <>
+                {user && <Link href="/feed" onClick={() => setShowMenu(false)} className="block px-3 py-2.5 rounded-lg text-sm text-white/70 hover:bg-white/10 transition-colors">Feed</Link>}
                 <Link href="/messages" onClick={() => setShowMenu(false)} className="block px-3 py-2.5 rounded-lg text-sm text-white/70 hover:bg-white/10 transition-colors">Messages</Link>
                 <Link href="/notifications" onClick={() => setShowMenu(false)} className="block px-3 py-2.5 rounded-lg text-sm text-white/70 hover:bg-white/10 transition-colors">
                   Notifications {unreadCount > 0 && <span className="ml-1 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{unreadCount}</span>}

@@ -3,6 +3,7 @@ const Application = require('../models/Application');
 const Notification = require('../models/Notification');
 const { getRecommendedProjects } = require('../services/recommendationService');
 const emailService = require('../utils/emailService');
+const { logActivity } = require('./activityController');
 
 // @desc    Create a project
 // @route   POST /api/projects
@@ -25,6 +26,15 @@ const createProject = async (req, res, next) => {
     });
 
     await project.populate('createdBy', 'name username role profileImage');
+
+    // Log activity (fire-and-forget)
+    logActivity({
+      actor:      req.user._id,
+      type:       'project_created',
+      title:      `created a new project: "${project.title}"`,
+      link:       `/projects/${project._id}`,
+      projectRef: project._id,
+    });
 
     res.status(201).json({ success: true, message: 'Project created', data: project });
   } catch (error) {
@@ -297,6 +307,15 @@ const setYoutubeLink = async (req, res, next) => {
     project.youtubeLink = youtubeLink;
     project.status      = 'completed';
     await project.save();
+
+    // Log activity
+    logActivity({
+      actor:      req.user._id,
+      type:       'film_uploaded',
+      title:      `uploaded a film: "${project.title}"`,
+      link:       `/films`,
+      projectRef: project._id,
+    });
 
     res.status(200).json({ success: true, message: 'YouTube link saved', data: { youtubeLink, videoId } });
   } catch (error) {

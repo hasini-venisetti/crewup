@@ -44,6 +44,8 @@ export default function EditProfilePage() {
   const [addingItem, setAddingItem] = useState(false);
   const [newItem, setNewItem]       = useState({ title: '', description: '', type: 'other', link: '', tags: '' });
   const [deletingId, setDeletingId] = useState('');
+  const [availSlots, setAvailSlots] = useState([]);        // { startDate, endDate, note }
+  const [newSlot, setNewSlot]       = useState({ startDate: '', endDate: '', note: '' });
 
   useEffect(() => {
     if (!authLoading && !user) { router.push('/login'); return; }
@@ -53,6 +55,11 @@ export default function EditProfilePage() {
         const p = data.data;
         setProfile(p);
         setPortfolio(p.portfolio || []);
+        setAvailSlots((p.availabilitySlots || []).map((s) => ({
+          ...s,
+          startDate: s.startDate ? s.startDate.slice(0, 10) : '',
+          endDate:   s.endDate   ? s.endDate.slice(0, 10)   : '',
+        })));
         setForm({
           name:            p.user?.name       || '',
           role:            p.user?.role       || '',
@@ -95,6 +102,7 @@ export default function EditProfilePage() {
       await profileAPI.update({
         ...form, name: form.name, role: form.role,
         portfolioLinks: form.portfolioLinks.filter((l) => l.url),
+        availabilitySlots: availSlots.filter((s) => s.startDate && s.endDate),
         isMentor: form.isMentor, mentorBio: form.mentorBio, mentorFields: form.mentorFields,
         mentorRate: form.mentorRate !== '' ? Number(form.mentorRate) : null,
         mentorCurrency: form.mentorCurrency,
@@ -131,12 +139,23 @@ export default function EditProfilePage() {
   if (!user) return null;
 
   const TABS = [
-    { key: 'basic',     label: 'Basic Info' },
-    { key: 'skills',    label: 'Skills' },
-    { key: 'portfolio', label: 'Portfolio' },
-    { key: 'links',     label: 'Links' },
-    { key: 'mentor',    label: '🎓 Mentor' },
+    { key: 'basic',        label: 'Basic Info' },
+    { key: 'skills',       label: 'Skills' },
+    { key: 'availability', label: '📅 Availability' },
+    { key: 'portfolio',    label: 'Portfolio' },
+    { key: 'links',        label: 'Links' },
+    { key: 'mentor',       label: '🎓 Mentor' },
   ];
+
+  const addSlot = () => {
+    if (!newSlot.startDate || !newSlot.endDate) return toast.error('Pick a start and end date');
+    if (newSlot.endDate < newSlot.startDate)    return toast.error('End date must be after start date');
+    setAvailSlots((prev) => [...prev, { ...newSlot }]);
+    setNewSlot({ startDate: '', endDate: '', note: '' });
+  };
+  const removeSlot = (i) => setAvailSlots((prev) => prev.filter((_, idx) => idx !== i));
+
+  const fmtDate = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
 
   return (
     <div className="min-h-screen bg-[#fafaf9]">
@@ -284,6 +303,59 @@ export default function EditProfilePage() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── AVAILABILITY CALENDAR ── */}
+        {tab === 'availability' && (
+          <div className="flex flex-col gap-4">
+            <div className="bg-white rounded-2xl border border-[#efefed] p-8">
+              <h2 className="text-base font-bold text-[#111110] mb-1">Availability Calendar</h2>
+              <p className="text-sm text-[#6b6b66] mb-6">Tell project owners when you're free to join a project. These dates show on your public profile.</p>
+
+              {/* Existing slots */}
+              {availSlots.length > 0 && (
+                <div className="flex flex-col gap-2 mb-6">
+                  {availSlots.map((slot, i) => (
+                    <div key={i} className="flex items-center justify-between gap-3 bg-[#f7f7f6] border border-[#e0e0dd] rounded-xl px-4 py-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-[#111110]">{fmtDate(slot.startDate)} → {fmtDate(slot.endDate)}</p>
+                        {slot.note && <p className="text-xs text-[#6b6b66] mt-0.5 truncate">{slot.note}</p>}
+                      </div>
+                      <button onClick={() => removeSlot(i)} className="text-[#a3a39e] hover:text-red-500 transition-colors text-sm flex-shrink-0">✕</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Add new slot */}
+              <div className="border border-dashed border-[#d0d0cc] rounded-xl p-5 flex flex-col gap-3">
+                <p className="text-xs font-semibold text-[#a3a39e] uppercase tracking-wider">Add Available Period</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-[#6b6b66] font-medium block mb-1">From</label>
+                    <input type="date" value={newSlot.startDate} onChange={(e) => setNewSlot((p) => ({ ...p, startDate: e.target.value }))}
+                      min={new Date().toISOString().slice(0, 10)}
+                      className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-3 py-2 text-sm focus:outline-none focus:border-[#6C63FF]" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-[#6b6b66] font-medium block mb-1">To</label>
+                    <input type="date" value={newSlot.endDate} onChange={(e) => setNewSlot((p) => ({ ...p, endDate: e.target.value }))}
+                      min={newSlot.startDate || new Date().toISOString().slice(0, 10)}
+                      className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-3 py-2 text-sm focus:outline-none focus:border-[#6C63FF]" />
+                  </div>
+                </div>
+                <input type="text" placeholder="Note (optional) — e.g. 'Weekends only', 'Available for short roles'" value={newSlot.note}
+                  onChange={(e) => setNewSlot((p) => ({ ...p, note: e.target.value }))} maxLength={100}
+                  className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-3 py-2 text-sm focus:outline-none focus:border-[#6C63FF]" />
+                <button onClick={addSlot}
+                  className="self-start px-5 py-2 rounded-lg bg-[#111110] text-white text-sm font-semibold hover:bg-[#2a2a28] transition-colors">
+                  + Add Period
+                </button>
+              </div>
+
+              <p className="text-xs text-[#a3a39e] mt-4">Click <strong>Save Changes</strong> above to save your availability.</p>
+            </div>
           </div>
         )}
 

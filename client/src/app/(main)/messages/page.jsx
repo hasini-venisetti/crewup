@@ -63,11 +63,26 @@ export default function MessagesPage() {
     if (!text || !selectedConvId) return;
     setMessageText('');
     try {
-      await conversationAPI.sendMessage({
+      const res = await conversationAPI.sendMessage({
         conversationId: selectedConvId,
         text,
       });
-      await loadMessages();
+      const newMsg = res.data?.data;
+      if (newMsg) {
+        setMessages((prev) => {
+          const exists = prev.some((m) => (m._id || m.id) === (newMsg._id || newMsg.id));
+          return exists ? prev : [...prev, newMsg];
+        });
+        scrollToBottom();
+        // Update sidebar preview without reloading all conversations
+        setConversations((prev) =>
+          prev.map((c) =>
+            (c._id || c.id) === selectedConvId
+              ? { ...c, lastMessage: text, lastMessageAt: new Date().toISOString() }
+              : c
+          )
+        );
+      }
     } catch (err) {
       console.error('sendMessage:', err);
       setMessageText(text);
@@ -97,14 +112,19 @@ export default function MessagesPage() {
     const handleNewMessage = (msg) => {
       if (msg.conversationId === selectedConvId) {
         setMessages((prev) => {
-          // avoid duplicates if sendMessage already re-fetched
           const exists = prev.some((m) => (m._id || m.id) === (msg._id || msg.id));
           return exists ? prev : [...prev, msg];
         });
         scrollToBottom();
       }
-      // refresh sidebar so lastMessage + unread count update
-      loadConversations();
+      // Update sidebar preview in-place — no full refetch needed
+      setConversations((prev) =>
+        prev.map((c) =>
+          (c._id || c.id) === msg.conversationId
+            ? { ...c, lastMessage: msg.text, lastMessageAt: msg.createdAt }
+            : c
+        )
+      );
     };
     socket.on('newMessage', handleNewMessage);
     return () => {

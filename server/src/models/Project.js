@@ -110,6 +110,13 @@ const projectSchema = new mongoose.Schema(
     }],
     // Set by the owner when the project is released — surfaces the film on all team members' profiles
     youtubeLink: { type: String, default: '' },
+    // For web-series projects: multiple episode links
+    episodeLinks: [
+      {
+        title: { type: String, default: '' },
+        url:   { type: String, required: true },
+      },
+    ],
     // Film engagement
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   },

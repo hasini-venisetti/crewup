@@ -300,4 +300,10 @@ export const filmAPI = {
   report:           (projectId, reason, details) => api.post(`/films/${projectId}/report`, { reason, details }),
 };
 
+/* ── Activity Feed ── */
+export const activityAPI = {
+  getFeed:         (page = 1, limit = 20) => api.get(`/activity/feed?page=${page}&limit=${limit}`),
+  getUserActivity: (userId, page = 1)     => api.get(`/activity/user/${userId}?page=${page}`),
+};
+
 export default api;

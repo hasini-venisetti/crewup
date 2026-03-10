@@ -146,7 +146,7 @@ const submitFilm = async (req, res, next) => {
       return res.status(403).json({ success: false, message: msg, needsTeam: true });
     }
 
-    const { title, youtubeLink, projectId } = req.body;
+    const { title, youtubeLink, projectId, caption } = req.body;
     if (!title || !youtubeLink)
       return res.status(400).json({ success: false, message: 'title and youtubeLink are required' });
 
@@ -164,6 +164,7 @@ const submitFilm = async (req, res, next) => {
       submittedBy: req.user._id,
       project:     chosenProject._id,
       title, youtubeLink, videoId, thumbnail,
+      caption: (caption || '').trim().slice(0, 300),
     });
     await submission.populate('submittedBy', 'name username profileImage');
 

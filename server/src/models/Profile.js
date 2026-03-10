@@ -53,6 +53,13 @@ const profileSchema = new mongoose.Schema(
       linkedin: { type: String, default: '' },
       website: { type: String, default: '' },
     },
+    availabilitySlots: [
+      {
+        startDate: { type: Date, required: true },
+        endDate:   { type: Date, required: true },
+        note:      { type: String, default: '', maxlength: 100 },
+      },
+    ],
     portfolio: [
       {
         title:       { type: String, required: true, trim: true },

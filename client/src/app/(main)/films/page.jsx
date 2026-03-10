@@ -356,6 +356,7 @@ function FilmCard({ film, user, router, onBookmarkChange }) {
   const [bookmarked, setBookmarked] = useState(film.bookmarked || false);
   const [bookmarking, setBookmarking] = useState(false);
   const [copied, setCopied]         = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
   const [showComments, setShowComments] = useState(false);
   const [showReport, setShowReport] = useState(false);
@@ -418,13 +419,42 @@ function FilmCard({ film, user, router, onBookmarkChange }) {
     }
   };
 
-  const handleShare = async (e) => {
+  const filmUrl  = film.youtubeLink || `${typeof window !== 'undefined' ? window.location.origin : 'https://crewupfilms.com'}/films`;
+  const shareText = `Watch "${film.title}"${film.director?.name ? ` by ${film.director.name}` : ''} 🎬 Check it out on CREWUPFILMS!`;
+
+  const handleShareX = (e) => {
     e.preventDefault();
-    try {
-      await navigator.clipboard.writeText(film.youtubeLink);
+    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(filmUrl)}`;
+    window.open(url, '_blank', 'noopener,noreferrer,width=600,height=400');
+    setShowShareMenu(false);
+  };
+
+  const handleShareNative = async (e) => {
+    e.preventDefault();
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: film.title, text: shareText, url: filmUrl });
+      } catch {}
+    } else {
+      // fallback: copy link
+      await navigator.clipboard.writeText(filmUrl).catch(() => {});
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {}
+    }
+    setShowShareMenu(false);
+  };
+
+  const handleCopyLink = async (e) => {
+    e.preventDefault();
+    await navigator.clipboard.writeText(filmUrl).catch(() => {});
+    setCopied(true);
+    setShowShareMenu(false);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleShare = (e) => {
+    e.preventDefault();
+    setShowShareMenu((v) => !v);
   };
 
   const handleComment = (e) => {
@@ -479,66 +509,107 @@ function FilmCard({ film, user, router, onBookmarkChange }) {
               <span className="ml-auto text-[10px] text-white/25 flex-shrink-0">{film.teamSize} crew</span>
             )}
           </div>
+          {/* Web-series: show all episode links */}
+          {film.projectType === 'web-series' && film.episodeLinks?.length > 0 && (
+            <div className="mt-2 flex flex-col gap-0.5 border-t border-white/8 pt-2">
+              {film.episodeLinks.map((ep, i) => (
+                <a key={i} href={ep.url} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-[10px] text-white/40 hover:text-[#7C75FF] transition-colors py-0.5 group">
+                  <span className="text-[8px] text-white/20 group-hover:text-[#7C75FF]">▶</span>
+                  <span className="truncate">{ep.title || `Episode ${i + 1}`}</span>
+                </a>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* ── Like / Share / Comment bar ── */}
-        <div className="flex items-center gap-1 px-3 py-2.5 border-t border-white/5 mt-2">
+        <div className="flex items-center gap-0.5 sm:gap-1 px-2 sm:px-3 py-2 sm:py-2.5 border-t border-white/5 mt-2">
 
           {/* Like */}
           <button
             onClick={handleLike}
             disabled={liking}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
               liked
                 ? 'text-red-400 bg-red-500/10 hover:bg-red-500/15'
                 : 'text-white/40 hover:text-white/70 hover:bg-white/8'
             }`}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24"
+            <svg width="13" height="13" viewBox="0 0 24 24"
               fill={liked ? 'currentColor' : 'none'}
               stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
             </svg>
-            <span>{likeCount > 0 ? likeCount : 'Like'}</span>
+            <span className="hidden sm:inline">{likeCount > 0 ? likeCount : 'Like'}</span>
+            <span className="sm:hidden">{likeCount > 0 ? likeCount : ''}</span>
           </button>
 
           {/* Comment */}
           <button
             onClick={handleComment}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white/40 hover:text-white/70 hover:bg-white/8 transition-all"
+            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium text-white/40 hover:text-white/70 hover:bg-white/8 transition-all"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
             </svg>
-            <span>{commentCount > 0 ? commentCount : 'Comment'}</span>
+            <span className="hidden sm:inline">{commentCount > 0 ? commentCount : 'Comment'}</span>
+            <span className="sm:hidden">{commentCount > 0 ? commentCount : ''}</span>
           </button>
 
           {/* Share */}
-          <button
-            onClick={handleShare}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              copied
-                ? 'text-green-400 bg-green-500/10'
-                : 'text-white/40 hover:text-white/70 hover:bg-white/8'
-            }`}
-          >
-            {copied ? (
-              <>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
-                <span>Copied!</span>
-              </>
-            ) : (
-              <>
+          <div className="relative">
+            <button
+              onClick={handleShare}
+              className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                copied
+                  ? 'text-green-400 bg-green-500/10'
+                  : showShareMenu
+                  ? 'text-white/70 bg-white/8'
+                  : 'text-white/40 hover:text-white/70 hover:bg-white/8'
+              }`}
+            >
+              {copied ? (
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+              ) : (
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
                   <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
                 </svg>
-                <span>Share</span>
+              )}
+              <span className="hidden sm:inline">{copied ? 'Copied!' : 'Share'}</span>
+            </button>
+
+            {showShareMenu && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowShareMenu(false)} />
+                <div className="absolute bottom-full left-0 mb-2 w-44 bg-[#1a1a18] border border-white/10 rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.5)] z-50 overflow-hidden">
+                  {/* X / Twitter */}
+                  <button onClick={handleShareX}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs text-white/70 hover:text-white hover:bg-white/8 transition-colors">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.259 5.632L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                    Share on X
+                  </button>
+                  {/* Instagram / Native share */}
+                  <button onClick={handleShareNative}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs text-white/70 hover:text-white hover:bg-white/8 transition-colors border-t border-white/5">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+                    </svg>
+                    {typeof navigator !== 'undefined' && navigator.share ? 'Share (Instagram…)' : 'Share on Instagram'}
+                  </button>
+                  {/* Copy link */}
+                  <button onClick={handleCopyLink}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs text-white/70 hover:text-white hover:bg-white/8 transition-colors border-t border-white/5">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                    </svg>
+                    Copy Link
+                  </button>
+                </div>
               </>
             )}
-          </button>
+          </div>
 
           {/* Bookmark */}
           <button
@@ -761,7 +832,7 @@ export default function FilmsPage() {
       {activeTab === 'saved' && (
         <div className="max-w-[1100px] mx-auto px-3 sm:px-6 py-10">
           {savedLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
               {Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)}
             </div>
           ) : saved.length === 0 ? (
@@ -781,7 +852,7 @@ export default function FilmsPage() {
               <p className="text-sm text-[#6b6b66] mb-6">
                 {saved.length} saved film{saved.length !== 1 ? 's' : ''}
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
                 {saved.map((film) => (
                   <FilmCard
                     key={film._id}
@@ -807,7 +878,7 @@ export default function FilmsPage() {
           )}
 
           {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
               {Array.from({ length: 12 }).map((_, i) => <SkeletonCard key={i} />)}
             </div>
           ) : films.length === 0 ? (
@@ -824,7 +895,7 @@ export default function FilmsPage() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
                 {films.map((film) => (
                   <FilmCard key={film._id} film={film} user={user} router={router} />
                 ))}

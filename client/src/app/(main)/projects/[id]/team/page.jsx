@@ -139,9 +139,13 @@ function ChatTab({ project, user }) {
     const token = localStorage.getItem('crewup_token');
     if (!token) return;
 
-    const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:5001', {
+    const SOCKET_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001').replace('/api', '');
+    const socket = io(SOCKET_URL, {
       auth: { token },
       transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5,
     });
 
     socketRef.current = socket;

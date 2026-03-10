@@ -62,7 +62,7 @@ const socketHandler = (io) => {
         if (!text?.trim()) return;
 
         const conversation = await Conversation.findById(conversationId);
-        if (!conversation || !conversation.members.includes(socket.user._id)) {
+        if (!conversation || !conversation.members.some((m) => m.toString() === socket.user._id.toString())) {
           return socket.emit('error', { message: 'Not authorized for this conversation' });
         }
 

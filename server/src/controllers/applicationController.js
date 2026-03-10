@@ -3,6 +3,7 @@ const Project = require('../models/Project');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
 const emailService = require('../utils/emailService');
+const { logActivity } = require('./activityController');
 
 // @desc    Apply to a project
 // @route   POST /api/apply
@@ -50,14 +51,14 @@ const applyToProject = async (req, res, next) => {
       link: `/projects/${project._id}/applications`,
     });
 
-    // Send email to project owner
-    await emailService.sendApplicationReceived(
+    // Send email to project owner (fire-and-forget — don't block response)
+    emailService.sendApplicationReceived(
       project.createdBy.email,
       project.createdBy.name,
       applicant.name,
       project.title,
       project._id
-    );
+    ).catch(() => {});
 
     res.status(201).json({ success: true, message: 'Application submitted', data: application });
   } catch (error) {
@@ -141,13 +142,22 @@ const updateApplicationStatus = async (req, res, next) => {
         link: `/projects/${application.project._id}`,
       });
 
-      // Send email to applicant
-      await emailService.sendApplicationAccepted(
+      // Send email to applicant (fire-and-forget)
+      emailService.sendApplicationAccepted(
         application.applicant.email,
         application.applicant.name,
         application.project.title,
         application.project._id
-      );
+      ).catch(() => {});
+
+      // Log activity for the applicant joining the project
+      logActivity({
+        actor:      application.applicant._id,
+        type:       'project_joined',
+        title:      `joined the project "${application.project.title}" as ${application.roleApplyingFor}`,
+        link:       `/projects/${application.project._id}`,
+        projectRef: application.project._id,
+      });
     } else if (status === 'rejected') {
       // Create notification for applicant
       await Notification.create({
@@ -159,12 +169,12 @@ const updateApplicationStatus = async (req, res, next) => {
         link: `/projects/${application.project._id}`,
       });
 
-      // Send email to applicant
-      await emailService.sendApplicationDeclined(
+      // Send email to applicant (fire-and-forget)
+      emailService.sendApplicationDeclined(
         application.applicant.email,
         application.applicant.name,
         application.project.title
-      );
+      ).catch(() => {});
     }
 
     res.status(200).json({ success: true, message: `Application ${status}`, data: application });
