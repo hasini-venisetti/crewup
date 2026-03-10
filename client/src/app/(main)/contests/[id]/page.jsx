@@ -220,15 +220,15 @@ function SubmissionCard({ sub, contestId, user, rank, onLikeToggle, onVoteToggle
             } disabled:opacity-50`}>
             <span className="text-base leading-none">🗳</span>
             {isVoted
-              ? `Voted · ${voteCount} vote${voteCount !== 1 ? 's' : ''}`
+              ? 'Voted! ✓'
               : !user
-              ? `Vote for this film · Sign in`
-              : `Vote for this film · ${voteCount} vote${voteCount !== 1 ? 's' : ''}`}
+              ? 'Vote for this film — Sign in'
+              : 'Vote for this film!'}
           </button>
         )}
-        {isOwner && voteCount > 0 && (
+        {isOwner && (
           <div className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold text-[#6055de] bg-[#f4f3ff] mb-3">
-            🗳 {voteCount} vote{voteCount !== 1 ? 's' : ''} — keep sharing to get more!
+            📣 Share your film and ask your community to vote!
           </div>
         )}
 
