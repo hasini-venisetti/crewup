@@ -127,34 +127,31 @@ export default function ProfilePage() {
     setFollowCounts((c) => ({ ...c, followers: c.followers + (wasFollowing ? -1 : 1) }));
     try {
       if (wasFollowing) {
-        console.log('Unfollowing user:', id);
         await followAPI.unfollow(id);
       } else {
-        console.log('Following user:', id);
-        const response = await followAPI.follow(id);
-        console.log('Follow response:', response);
+        await followAPI.follow(id);
       }
+      // Confirm real DB state after action
+      followAPI.getStatus(id)
+        .then(({ data }) => { if (data?.data != null) setIsFollowing(data.data.following); })
+        .catch(() => {});
+      followAPI.getCounts(id)
+        .then(({ data }) => { if (data?.data) setFollowCounts(data.data); })
+        .catch(() => {});
     } catch (error) {
-      console.error('Follow toggle error:', error);
-      console.error('Error response:', error.response);
-      
-      // Revert state on error
+      // Revert optimistic update
       setIsFollowing(wasFollowing);
       setFollowCounts((c) => ({ ...c, followers: c.followers + (wasFollowing ? 1 : -1) }));
-      
-      // Handle specific 409 (already following) error
+
+      // 409 = already following in DB — silently sync state, no error toast needed
       if (error.response?.status === 409) {
-        // If we tried to follow but already following, keep the following state
-        if (!wasFollowing) {
-          setIsFollowing(true);
-          setFollowCounts((c) => ({ ...c, followers: c.followers + 1 }));
-          toast.error('You are already following this user');
-        }
+        setIsFollowing(true);
+        followAPI.getCounts(id).then(({ data }) => { if (data?.data) setFollowCounts(data.data); }).catch(() => {});
       } else {
-        toast.error(`Failed to follow user: ${error.response?.data?.message || error.message}`);
+        toast.error(error.response?.data?.message || 'Failed to update follow status. Please try again.');
       }
-    } finally { 
-      setFollowLoading(false); 
+    } finally {
+      setFollowLoading(false);
     }
   };
 
@@ -226,9 +223,20 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (!user || !id) return;
-    const myId = user._id || user.id;
-    if (myId === id) return;
-    followAPI.getStatus(id).then(({ data }) => setIsFollowing(data.data.following)).catch(() => {});
+    const myId = String(user._id || user.id);
+    if (myId === String(id)) return; // viewing own profile
+    followAPI.getStatus(id)
+      .then(({ data }) => {
+        if (data?.data != null) setIsFollowing(data.data.following);
+      })
+      .catch(() => {
+        // Retry once after 1 s in case auth token wasn't ready yet
+        setTimeout(() => {
+          followAPI.getStatus(id)
+            .then(({ data }) => { if (data?.data != null) setIsFollowing(data.data.following); })
+            .catch(() => {});
+        }, 1000);
+      });
   }, [id, user]);
 
   // Load current user's owned projects for "Invite to Project"
@@ -272,7 +280,7 @@ export default function ProfilePage() {
 
   const fmtSlotDate = (d) => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
   const isSlotActive = (s) => new Date(s.startDate) <= today && new Date(s.endDate) >= today;
-  const isOwnProfile = user && (user._id === id || user.id === id);
+  const isOwnProfile = user && (String(user._id || user.id) === String(id));
   const avail = AVAIL_CONFIG[availability] || AVAIL_CONFIG['available'];
   const hasSocials = socialLinks && Object.values(socialLinks).some(Boolean);
 
