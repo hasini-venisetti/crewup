@@ -66,7 +66,8 @@ export default function ProfilePage() {
   const [myProjects, setMyProjects]             = useState([]);
   const [showInviteMenu, setShowInviteMenu]     = useState(false);
   const [inviting, setInviting]                 = useState(false);
-  const [invitedProjectId, setInvitedProjectId] = useState(null);
+  const [invitedMap, setInvitedMap]             = useState({});   // { [projectId]: roleName }
+  const [expandedProject, setExpandedProject]  = useState(null); // projectId showing role picker
 
   const handleMessage = async () => {
     if (!user) { router.push('/login'); return; }
@@ -79,20 +80,21 @@ export default function ProfilePage() {
     finally { setMessaging(false); }
   };
 
-  const handleInvite = async (project) => {
+  const handleInvite = async (project, role) => {
     if (inviting) return;
     setInviting(true);
     try {
       await notificationAPI.sendDirect({
         recipientId: id,
         type:        'project_invite',
-        title:       `You've been invited to join "${project.title}"`,
-        message:     `${user.name} thinks you'd be a great fit for their project.`,
+        title:       `You've been invited to join "${project.title}" as ${role}`,
+        message:     `${user.name} wants you for the ${role} role on their project.`,
         link:        `/projects/${project._id}`,
       });
-      setInvitedProjectId(project._id);
+      setInvitedMap((prev) => ({ ...prev, [project._id]: role }));
       setShowInviteMenu(false);
-      toast.success(`Invite sent to ${profile?.user?.name || 'this creator'}!`);
+      setExpandedProject(null);
+      toast.success(`Invite sent for ${role} role!`);
     } catch {
       toast.error('Failed to send invite. Please try again.');
     } finally {
@@ -290,7 +292,7 @@ export default function ProfilePage() {
                   {myProjects.length > 0 && (
                     <div className="relative">
                       <button
-                        onClick={() => setShowInviteMenu((v) => !v)}
+                        onClick={() => { setShowInviteMenu((v) => !v); setExpandedProject(null); }}
                         disabled={inviting}
                         className="text-xs sm:text-sm font-semibold px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg border border-[#6C63FF]/50 text-[#a09aff] hover:border-[#6C63FF] hover:bg-[#6C63FF]/10 transition-all disabled:opacity-50 flex items-center gap-1.5"
                       >
@@ -298,33 +300,77 @@ export default function ProfilePage() {
                       </button>
 
                       {showInviteMenu && (
-                        <div className="absolute top-full right-0 mt-2 w-64 bg-gray-900 border border-white/10 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] z-50 overflow-hidden">
+                        <div className="absolute top-full right-0 mt-2 w-72 bg-gray-900 border border-white/10 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] z-50 overflow-hidden">
                           <div className="px-4 py-2.5 border-b border-white/10 bg-gray-800/50">
                             <p className="text-xs font-semibold text-white/60 uppercase tracking-wider">Select a Project</p>
                           </div>
-                          <div className="max-h-56 overflow-y-auto">
+                          <div className="max-h-72 overflow-y-auto">
                             {myProjects.map((proj) => {
-                              const alreadyInvited = invitedProjectId === proj._id;
+                              // check if profile user is already on this project's team
+                              const isOnTeam = (proj.teamMembers || []).some(
+                                (m) => (m.user?._id || m.user) === id
+                              );
+                              // open roles = required minus filled
+                              const filledRoleNames = (proj.filledRoles || []).map((f) => f.role);
+                              const openRoles = (proj.requiredRoles || []).filter(
+                                (r) => !filledRoleNames.includes(r)
+                              );
+                              const sentRole   = invitedMap[proj._id];
+                              const isExpanded = expandedProject === proj._id;
+
                               return (
-                                <button
-                                  key={proj._id}
-                                  onClick={() => !alreadyInvited && handleInvite(proj)}
-                                  disabled={inviting || alreadyInvited}
-                                  className={`w-full text-left px-4 py-3 border-b border-white/5 last:border-0 transition-colors flex items-center justify-between gap-2 ${
-                                    alreadyInvited
-                                      ? 'opacity-50 cursor-default'
-                                      : 'hover:bg-white/5 cursor-pointer'
-                                  }`}
-                                >
-                                  <div className="min-w-0">
-                                    <p className="text-sm text-white font-medium truncate">{proj.title}</p>
-                                    <p className="text-[11px] text-white/40 truncate mt-0.5">{proj.genre || proj.category || 'Film Project'}</p>
-                                  </div>
-                                  {alreadyInvited
-                                    ? <span className="text-[11px] text-green-400 flex-shrink-0">✓ Sent</span>
-                                    : <span className="text-[11px] text-[#a09aff] flex-shrink-0">Invite →</span>
-                                  }
-                                </button>
+                                <div key={proj._id} className="border-b border-white/5 last:border-0">
+                                  {/* Project row */}
+                                  <button
+                                    onClick={() => {
+                                      if (isOnTeam || sentRole || openRoles.length === 0) return;
+                                      setExpandedProject(isExpanded ? null : proj._id);
+                                    }}
+                                    disabled={inviting || isOnTeam || !!sentRole}
+                                    className={`w-full text-left px-4 py-3 transition-colors flex items-center justify-between gap-2 ${
+                                      isOnTeam || sentRole || openRoles.length === 0
+                                        ? 'opacity-60 cursor-default'
+                                        : 'hover:bg-white/5 cursor-pointer'
+                                    } ${isExpanded ? 'bg-white/5' : ''}`}
+                                  >
+                                    <div className="min-w-0">
+                                      <p className="text-sm text-white font-medium truncate">{proj.title}</p>
+                                      <p className="text-[11px] text-white/40 mt-0.5">
+                                        {isOnTeam
+                                          ? '✓ Already on team'
+                                          : sentRole
+                                          ? `✓ Invited as ${sentRole}`
+                                          : openRoles.length === 0
+                                          ? 'No open roles'
+                                          : `${openRoles.length} open role${openRoles.length !== 1 ? 's' : ''}`}
+                                      </p>
+                                    </div>
+                                    {!isOnTeam && !sentRole && openRoles.length > 0 && (
+                                      <span className={`text-[11px] flex-shrink-0 transition-transform ${isExpanded ? 'rotate-90' : ''} text-[#a09aff]`}>›</span>
+                                    )}
+                                    {isOnTeam && <span className="text-[11px] text-blue-400 flex-shrink-0">👥 Team</span>}
+                                    {sentRole  && <span className="text-[11px] text-green-400 flex-shrink-0">✓ Sent</span>}
+                                  </button>
+
+                                  {/* Role picker — expands below the project row */}
+                                  {isExpanded && openRoles.length > 0 && (
+                                    <div className="bg-black/30 border-t border-white/5 px-4 py-2">
+                                      <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2">Pick a role to invite for</p>
+                                      <div className="flex flex-wrap gap-1.5">
+                                        {openRoles.map((role) => (
+                                          <button
+                                            key={role}
+                                            onClick={() => handleInvite(proj, role)}
+                                            disabled={inviting}
+                                            className="text-xs px-3 py-1.5 rounded-lg bg-[#6C63FF]/20 border border-[#6C63FF]/40 text-[#a09aff] hover:bg-[#6C63FF]/35 hover:border-[#6C63FF]/70 transition-all font-medium disabled:opacity-50"
+                                          >
+                                            {role}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
                               );
                             })}
                           </div>
@@ -333,7 +379,7 @@ export default function ProfilePage() {
 
                       {/* Click-outside overlay */}
                       {showInviteMenu && (
-                        <div className="fixed inset-0 z-40" onClick={() => setShowInviteMenu(false)} />
+                        <div className="fixed inset-0 z-40" onClick={() => { setShowInviteMenu(false); setExpandedProject(null); }} />
                       )}
                     </div>
                   )}
