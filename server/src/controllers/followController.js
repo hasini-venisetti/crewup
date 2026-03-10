@@ -1,7 +1,13 @@
+const mongoose = require('mongoose');
 const Follow   = require('../models/Follow');
 const Project  = require('../models/Project');
 const User     = require('../models/User');
 const { logActivity } = require('./activityController');
+
+// Helper: safely cast a string to ObjectId, returns null if invalid
+const toOid = (id) => {
+  try { return new mongoose.Types.ObjectId(id); } catch { return null; }
+};
 
 // ── Follow a user ─────────────────────────────────────────────────────────
 // POST /api/follow/:userId
@@ -79,10 +85,9 @@ const unfollow = async (req, res, next) => {
 const getStatus = async (req, res, next) => {
   try {
     const myId    = req.user._id;
-    const otherId = req.params.userId;
+    const otherId = toOid(req.params.userId);
+    if (!otherId) return res.status(400).json({ success: false, message: 'Invalid user ID' });
 
-    // Only check current schema — old requester/recipient docs are stale and should
-    // not create false positives. They are cleaned up lazily via follow/unfollow.
     const [iFollow, theyFollow] = await Promise.all([
       Follow.findOne({ follower: myId,    following: otherId }),
       Follow.findOne({ follower: otherId, following: myId }),
@@ -101,7 +106,8 @@ const getStatus = async (req, res, next) => {
 // GET /api/follow/counts/:userId  (public — no auth required)
 const getCounts = async (req, res, next) => {
   try {
-    const userId = req.params.userId;
+    const userId = toOid(req.params.userId);
+    if (!userId) return res.status(400).json({ success: false, message: 'Invalid user ID' });
 
     const [followers, following] = await Promise.all([
       Follow.countDocuments({ following: userId }),
