@@ -77,10 +77,19 @@ const getFeed = async (req, res, next) => {
     const page   = Math.max(1, parseInt(req.query.page) || 1);
     const limit  = Math.min(50, parseInt(req.query.limit) || 20);
 
-    // Who we follow (+ self)
+    // Only show activity from people I follow — not my own
     const follows      = await Follow.find({ follower: userId }).select('following').lean();
     const followingIds = follows.map((f) => f.following);
-    const actorIds     = [userId, ...followingIds];
+    const actorIds     = followingIds;
+
+    // Not following anyone yet — return empty feed immediately
+    if (actorIds.length === 0) {
+      return res.json({
+        success: true,
+        data: [],
+        pagination: { page, limit, total: 0, pages: 0 },
+      });
+    }
 
     // Real activity docs + synthetic items in parallel
     const [realActivities, syntheticItems] = await Promise.all([
