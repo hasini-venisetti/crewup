@@ -99,7 +99,7 @@ function EmptyFeed() {
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function FeedPage() {
-  const { user }  = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router    = useRouter();
 
   const [activities, setActivities] = useState([]);
@@ -126,15 +126,17 @@ export default function FeedPage() {
   }, []);
 
   useEffect(() => {
+    if (authLoading) return;          // wait for auth to hydrate
     if (!user) { router.push('/login'); return; }
     loadFeed(1);
-  }, [user, loadFeed, router]);
+  }, [user, authLoading, loadFeed, router]);
 
   const handleLoadMore = () => {
     if (!loadingMore && hasMore) loadFeed(page + 1, true);
   };
 
-  if (!user) return null;
+  // Prevent flash-redirect while auth is initialising on reload
+  if (authLoading || !user) return null;
 
   return (
     <div className="min-h-screen bg-[#fafaf9]">
