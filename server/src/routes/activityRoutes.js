@@ -1,7 +1,7 @@
 const express  = require('express');
 const router   = express.Router();
 const { getFeed, getUserActivity } = require('../controllers/activityController');
-const { protect } = require('../middleware/authMiddleware');
+const { protect } = require('../middleware/auth');
 
 // GET /api/activity/feed   — auth required, returns personalized feed
 router.get('/feed', protect, getFeed);
