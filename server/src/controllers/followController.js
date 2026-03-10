@@ -13,43 +13,41 @@ const toOid = (id) => {
 // POST /api/follow/:userId
 const follow = async (req, res, next) => {
   try {
-    const followerId  = req.user._id;
-    const followingId = req.params.userId;
+    const followerOid  = toOid(req.user._id);
+    const followingOid = toOid(req.params.userId);
 
-    if (followerId.toString() === followingId) {
+    if (!followerOid || !followingOid) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' });
+    }
+    if (followerOid.equals(followingOid)) {
       return res.status(400).json({ success: false, message: "You can't follow yourself" });
     }
 
-    const user = await User.findById(followingId);
+    const user = await User.findById(followingOid);
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
-    // Check if already following
-    const existingFollow = await Follow.findOne({
-      follower:  toOid(followerId),
-      following: toOid(followingId),
-    });
-    if (existingFollow) {
-      return res.status(409).json({ success: false, message: 'Already following this user' });
+    // Atomic upsert — creates the doc if it doesn't exist, no-ops if it does.
+    // This avoids findOne+create race conditions and 11000 duplicate-key errors.
+    const result = await Follow.findOneAndUpdate(
+      { follower: followerOid, following: followingOid },
+      { $setOnInsert: { follower: followerOid, following: followingOid } },
+      { upsert: true, new: false, rawResult: true }
+    );
+
+    // If the doc was just inserted (not already there) log the activity
+    if (result.lastErrorObject?.upserted) {
+      logActivity({
+        actor:   followerOid,
+        type:    'user_followed',
+        title:   `started following ${user.name}`,
+        link:    `/profile/${followingOid}`,
+        userRef: followingOid,
+      });
     }
-
-    // Create follow
-    await Follow.create({ follower: followerId, following: followingId });
-
-    // Log activity (fire-and-forget)
-    logActivity({
-      actor:   followerId,
-      type:    'user_followed',
-      title:   `started following ${user.name}`,
-      link:    `/profile/${followingId}`,
-      userRef: followingId,
-    });
 
     res.status(200).json({ success: true, data: { following: true } });
-  } catch (error) {
-    if (error.code === 11000) {
-      return res.status(409).json({ success: false, message: 'Already following this user' });
-    }
-    next(error);
+  } catch (err) {
+    next(err);
   }
 };
 
@@ -57,17 +55,18 @@ const follow = async (req, res, next) => {
 // DELETE /api/follow/:userId
 const unfollow = async (req, res, next) => {
   try {
-    const followerId  = req.user._id;
-    const followingId = req.params.userId;
+    const followerOid  = toOid(req.user._id);
+    const followingOid = toOid(req.params.userId);
 
-    await Follow.deleteOne({
-      follower:  toOid(followerId),
-      following: toOid(followingId),
-    });
+    if (!followerOid || !followingOid) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' });
+    }
+
+    await Follow.deleteOne({ follower: followerOid, following: followingOid });
 
     res.status(200).json({ success: true, data: { following: false } });
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    next(err);
   }
 };
 

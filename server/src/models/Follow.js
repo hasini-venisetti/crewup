@@ -19,7 +19,9 @@ const followSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-followSchema.index({ follower: 1, following: 1 }, { unique: true });
+// sparse:true means documents missing follower/following (old schema) are ignored
+// by the unique index, so stale old-format docs don't block new inserts
+followSchema.index({ follower: 1, following: 1 }, { unique: true, sparse: true });
 followSchema.index({ following: 1 }); // fast "who follows me" lookups
 
 module.exports = mongoose.model('Follow', followSchema);
