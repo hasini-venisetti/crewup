@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
-import { adminAPI, contestAPI, contestSubmissionAPI, launchWaitlistAPI } from '@/lib/api';
+import { adminAPI, contestAPI, contestSubmissionAPI, launchWaitlistAPI, reportAPI } from '@/lib/api';
 
 /* ── helpers ── */
 const ROLE_LABEL = {
@@ -1167,13 +1167,270 @@ function WaitlistTab() {
   );
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+   TAB: Moderation (Phase 2 - Project approval queue)
+══════════════════════════════════════════════════════════════════════ */
+function ModerationTab() {
+  const [projects, setProjects]   = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [acting, setActing]       = useState(null); // id of project being actioned
+  const [noteMap, setNoteMap]     = useState({});   // { [projectId]: note }
+
+  const load = () => {
+    setLoading(true);
+    adminAPI.getPendingProjects()
+      .then(({ data }) => setProjects(data.data || []))
+      .catch(() => toast.error('Failed to load pending projects'))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const handleModerate = async (id, action) => {
+    setActing(id);
+    try {
+      await adminAPI.moderateProject(id, action, noteMap[id] || '');
+      toast.success(`Project ${action === 'approve' ? 'approved ✅' : 'rejected ❌'}`);
+      setProjects(prev => prev.filter(p => p._id !== id));
+    } catch {
+      toast.error('Action failed');
+    } finally {
+      setActing(null);
+    }
+  };
+
+  if (loading) return <div className="flex justify-center py-20"><div className="w-8 h-8 border-2 border-[#6C63FF] border-t-transparent rounded-full animate-spin" /></div>;
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-bold text-[#111110]">Project Moderation Queue</h2>
+          <p className="text-sm text-[#6b6b66]">{projects.length} project{projects.length !== 1 ? 's' : ''} pending review</p>
+        </div>
+        <button onClick={load} className="text-xs text-[#6C63FF] hover:underline">↻ Refresh</button>
+      </div>
+
+      {projects.length === 0 ? (
+        <div className="bg-white border border-[#efefed] rounded-2xl p-12 text-center">
+          <p className="text-4xl mb-3">✅</p>
+          <p className="font-bold text-[#111110]">Queue is empty</p>
+          <p className="text-sm text-[#6b6b66] mt-1">All projects have been reviewed.</p>
+        </div>
+      ) : (
+        projects.map((p) => (
+          <div key={p._id} className="bg-white border border-[#efefed] rounded-2xl p-6 shadow-sm">
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-bold uppercase tracking-widest text-[#6C63FF]">{p.projectType?.replace('-', ' ')}</span>
+                  <span className="text-xs text-[#a3a39e]">·</span>
+                  <span className="text-xs text-[#a3a39e]">{p.productionType}</span>
+                </div>
+                <h3 className="font-bold text-[#111110] text-base mb-1">{p.title}</h3>
+                <p className="text-sm text-[#6b6b66] line-clamp-2">{p.description}</p>
+              </div>
+              <div className="text-right text-xs text-[#a3a39e] flex-shrink-0">
+                <p>{new Date(p.createdAt).toLocaleDateString()}</p>
+                <p className="mt-1">{p.createdBy?.email}</p>
+                {p.createdBy?.isEmailVerified
+                  ? <span className="text-green-600 font-semibold">✅ Email verified</span>
+                  : <span className="text-red-500 font-semibold">⚠️ Unverified email</span>
+                }
+              </div>
+            </div>
+
+            {/* Safety info */}
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              {[
+                { label: 'Audition Format',     value: p.auditionFormat?.replace('-', ' ') || '—' },
+                { label: 'Shooting Location',   value: p.shootingLocationType?.replace('-', ' ') || '—' },
+                { label: 'Compensation',        value: p.isPaid ? (p.compensationDetails || 'Paid, no details') : 'Unpaid' },
+              ].map(({ label, value }) => (
+                <div key={label} className="bg-[#fafaf9] rounded-xl p-3 border border-[#efefed]">
+                  <p className="text-xs text-[#a3a39e] mb-0.5">{label}</p>
+                  <p className="text-sm font-medium text-[#111110] capitalize">{value}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Rejection note */}
+            <div className="mb-4">
+              <label className="text-xs text-[#6b6b66] font-medium block mb-1">
+                Rejection note (optional — sent to creator if rejected)
+              </label>
+              <input
+                type="text"
+                className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-3 py-2 text-sm text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:border-[#6C63FF]"
+                placeholder="e.g. Missing compensation details, please resubmit with full pay information."
+                value={noteMap[p._id] || ''}
+                onChange={(e) => setNoteMap(m => ({ ...m, [p._id]: e.target.value }))}
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => handleModerate(p._id, 'approve')}
+                disabled={acting === p._id}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors disabled:opacity-50"
+              >
+                {acting === p._id ? '…' : '✅ Approve'}
+              </button>
+              <button
+                onClick={() => handleModerate(p._id, 'reject')}
+                disabled={acting === p._id}
+                className="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors disabled:opacity-50"
+              >
+                {acting === p._id ? '…' : '❌ Reject'}
+              </button>
+              <a
+                href={`/projects/${p._id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-2.5 border border-[#e0e0dd] text-sm font-semibold text-[#6b6b66] rounded-xl hover:border-[#111110] hover:text-[#111110] transition-colors"
+              >
+                View →
+              </a>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   TAB: Report Queue (One-Tap Reports)
+══════════════════════════════════════════════════════════════════════ */
+const REPORT_REASON_LABEL = {
+  scam:                 { label: '💰 Scam',               color: 'bg-red-50 text-red-700 border-red-200' },
+  harassment:           { label: '😡 Harassment',         color: 'bg-orange-50 text-orange-700 border-orange-200' },
+  fake_project:         { label: '🎭 Fake Project',       color: 'bg-yellow-50 text-yellow-700 border-yellow-200' },
+  minor_protection:     { label: '🧒 Minor Safety',       color: 'bg-blue-50 text-blue-700 border-blue-200' },
+  inappropriate_content:{ label: '🚫 Inappropriate',     color: 'bg-purple-50 text-purple-700 border-purple-200' },
+  spam:                 { label: '📨 Spam',               color: 'bg-gray-50 text-gray-600 border-gray-200' },
+  copyright:            { label: '©️ Copyright',          color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+  misinformation:       { label: '❌ Misinfo',            color: 'bg-pink-50 text-pink-700 border-pink-200' },
+  other:                { label: '⚠️ Other',              color: 'bg-gray-50 text-gray-600 border-gray-200' },
+};
+
+function ReportQueueTab() {
+  const [reports, setReports]   = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [statusFilter, setStatus] = useState('pending');
+  const [actingId, setActingId] = useState(null);
+
+  const load = useCallback(async (s) => {
+    setLoading(true);
+    try {
+      const { data } = await reportAPI.getQueue({ status: s, limit: 50 });
+      setReports(data.data || []);
+    } catch {}
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { load(statusFilter); }, [statusFilter]);
+
+  const resolve = async (id, action) => {
+    setActingId(id);
+    try {
+      await reportAPI.resolve(id, action);
+      setReports((prev) => prev.filter((r) => r._id !== id));
+    } catch {}
+    finally { setActingId(null); }
+  };
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex gap-1 bg-white border border-[#efefed] rounded-xl p-1">
+          {['pending', 'reviewed', 'dismissed'].map((s) => (
+            <button key={s} onClick={() => setStatus(s)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all ${
+                statusFilter === s ? 'bg-[#0e0e0d] text-white shadow-sm' : 'text-[#6b6b66] hover:text-[#111110]'
+              }`}>
+              {s.charAt(0).toUpperCase() + s.slice(1)}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-[#6b6b66]">{reports.length} report{reports.length !== 1 ? 's' : ''}</p>
+      </div>
+
+      <div className="bg-white border border-[#efefed] rounded-2xl overflow-hidden">
+        {loading ? (
+          <div className="p-4 space-y-3">{Array(5).fill(0).map((_,i) => <div key={i} className="h-16 bg-[#efefed] rounded-xl animate-pulse" />)}</div>
+        ) : reports.length === 0 ? (
+          <div className="text-center py-16 text-[#6b6b66]">
+            <p className="text-3xl mb-2">✅</p>
+            <p className="text-sm">No {statusFilter} reports — all clear!</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-[#efefed]">
+            {reports.map((r) => {
+              const reason = REPORT_REASON_LABEL[r.reason] || REPORT_REASON_LABEL.other;
+              return (
+                <div key={r._id} className="p-5 hover:bg-[#fafaf9]">
+                  <div className="flex items-start gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${reason.color}`}>
+                          {reason.label}
+                        </span>
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#f5f5f3] text-[#6b6b66] border border-[#e0e0dd] capitalize">
+                          {r.targetType}
+                        </span>
+                        <span className="text-xs text-[#a3a39e]">
+                          {new Date(r.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#444442] mb-1">
+                        <span className="font-semibold">Reporter:</span> {r.reporter?.name || r.reporter?.email || 'Unknown'}
+                      </p>
+                      <p className="text-xs text-[#444442] mb-1">
+                        <span className="font-semibold">Target ID:</span> <span className="font-mono text-[10px]">{String(r.targetId)}</span>
+                      </p>
+                      {r.details && (
+                        <p className="text-xs text-[#6b6b66] italic mt-1">"{r.details}"</p>
+                      )}
+                    </div>
+                    {statusFilter === 'pending' && (
+                      <div className="flex gap-2 flex-shrink-0">
+                        <button
+                          onClick={() => resolve(r._id, 'reviewed')}
+                          disabled={actingId === r._id}
+                          className="px-3 py-1.5 text-xs font-semibold bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50"
+                        >
+                          ✓ Reviewed
+                        </button>
+                        <button
+                          onClick={() => resolve(r._id, 'dismissed')}
+                          disabled={actingId === r._id}
+                          className="px-3 py-1.5 text-xs font-semibold bg-[#f5f5f3] text-[#6b6b66] border border-[#e0e0dd] rounded-lg hover:border-[#111110] hover:text-[#111110] transition disabled:opacity-50"
+                        >
+                          Dismiss
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 const TABS = [
   { id: 'overview',      label: '📊 Overview' },
+  { id: 'moderation',    label: '🛡 Moderation' },
+  { id: 'report-queue',  label: '⚑ Report Queue' },
   { id: 'users',         label: '👥 Users' },
   { id: 'contests',      label: '🏆 Contests' },
   { id: 'voting',        label: '🗳 Voting' },
   { id: 'announcements', label: '📢 Announcements' },
-  { id: 'reports',       label: '🚩 Reports' },
+  { id: 'reports',       label: '🚩 Reports (Legacy)' },
   { id: 'waitlist',      label: '✉️ Waitlist' },
 ];
 
@@ -1233,6 +1490,8 @@ export default function AdminPage() {
 
         {/* Content */}
         {tab === 'overview'      && <OverviewTab />}
+        {tab === 'moderation'    && <ModerationTab />}
+        {tab === 'report-queue'  && <ReportQueueTab />}
         {tab === 'users'         && <UsersTab />}
         {tab === 'contests'      && <ContestsTab />}
         {tab === 'voting'        && <VotingTab />}

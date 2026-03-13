@@ -33,6 +33,9 @@ const messageSchema = new mongoose.Schema(
         ref:  'User',
       },
     ],
+    // Phase 3: Messaging safety flags (for dispute resolution / admin review)
+    isFlagged:           { type: Boolean, default: false },
+    containsContactInfo: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

@@ -297,10 +297,103 @@ const sendLaunchNotification = async (email, name) => {
   console.log(`[EMAIL SENT] sendLaunchNotification to ${email}`);
 };
 
+// ── Phase 1: Email OTP Verification ───────────────────────────────────────────
+const sendEmailOTP = async (email, name, otp) => {
+  try {
+    const html = transactionalHtml(`
+      <p style="margin:0 0 8px;font-size:16px;font-weight:600;color:#111110;">Hi ${name},</p>
+      <p style="margin:0 0 20px;font-size:15px;color:#444444;line-height:1.6;">
+        Use the code below to verify your email address. It expires in <strong>10 minutes</strong>.
+      </p>
+      <div style="background:#f4f4f4;border:1px solid #e0e0e0;border-radius:8px;padding:20px 32px;text-align:center;margin:0 0 24px;">
+        <span style="font-size:36px;font-weight:700;letter-spacing:10px;color:#111110;font-family:monospace;">${otp}</span>
+      </div>
+      <p style="margin:0 0 8px;font-size:13px;color:#999999;line-height:1.6;">
+        If you didn't create a CREWUPFILMS account, you can safely ignore this email.
+      </p>
+      <p style="margin:0;font-size:13px;color:#999999;">Never share this code with anyone.</p>
+    `);
+    const text = `Hi ${name},\n\nYour CREWUPFILMS email verification code is: ${otp}\n\nThis code expires in 10 minutes.\n\nIf you didn't sign up, ignore this email.\n\n— CREWUPFILMS`;
+    await sendEmail(email, 'Your CREWUPFILMS verification code', html, text);
+    console.log(`[EMAIL SENT] sendEmailOTP to ${email}`);
+  } catch (error) {
+    console.error('[EMAIL ERROR] sendEmailOTP:', error.message);
+  }
+};
+
+// ── Phase 2: Moderation notification emails ────────────────────────────────────
+const sendProjectApproved = async (ownerEmail, ownerName, projectTitle, projectId) => {
+  try {
+    const siteUrl = process.env.CLIENT_URL || 'https://crewupfilms.com';
+    const link    = `${siteUrl}/projects/${projectId}`;
+    const html = transactionalHtml(`
+      <p style="margin:0 0 8px;font-size:16px;font-weight:600;color:#111110;">Hi ${ownerName},</p>
+      <p style="margin:0 0 20px;font-size:15px;color:#444444;line-height:1.6;">
+        Great news — your project <strong>"${projectTitle}"</strong> has been reviewed and approved. It's now live and accepting applications.
+      </p>
+      <a href="${link}" style="display:inline-block;background:#111110;color:#ffffff;padding:11px 24px;text-decoration:none;border-radius:6px;font-size:14px;font-weight:600;">View Project</a>
+    `);
+    const text = `Hi ${ownerName},\n\nYour project "${projectTitle}" has been approved and is now live.\n\nView it here: ${link}\n\n— CREWUPFILMS`;
+    await sendEmail(ownerEmail, `Your project "${projectTitle}" is now live`, html, text);
+    console.log(`[EMAIL SENT] sendProjectApproved to ${ownerEmail}`);
+  } catch (error) {
+    console.error('[EMAIL ERROR] sendProjectApproved:', error.message);
+  }
+};
+
+const sendProjectRejected = async (ownerEmail, ownerName, projectTitle, reason) => {
+  try {
+    const siteUrl = process.env.CLIENT_URL || 'https://crewupfilms.com';
+    const html = transactionalHtml(`
+      <p style="margin:0 0 8px;font-size:16px;font-weight:600;color:#111110;">Hi ${ownerName},</p>
+      <p style="margin:0 0 20px;font-size:15px;color:#444444;line-height:1.6;">
+        Your project <strong>"${projectTitle}"</strong> could not be approved at this time.
+      </p>
+      ${reason ? `<p style="margin:0 0 20px;font-size:14px;color:#666666;line-height:1.6;background:#fff8f8;padding:12px 16px;border-left:3px solid #f0a0a0;border-radius:0 4px 4px 0;">Reason: ${reason}</p>` : ''}
+      <p style="margin:0 0 24px;font-size:14px;color:#666666;line-height:1.6;">
+        Please review our <a href="${siteUrl}/legal/community-guidelines" style="color:#111110;">Community Guidelines</a> and resubmit with the necessary corrections.
+      </p>
+    `);
+    const text = `Hi ${ownerName},\n\nYour project "${projectTitle}" was not approved.${reason ? `\n\nReason: ${reason}` : ''}\n\nPlease review our guidelines and resubmit.\n\n— CREWUPFILMS`;
+    await sendEmail(ownerEmail, `Update on your project "${projectTitle}"`, html, text);
+    console.log(`[EMAIL SENT] sendProjectRejected to ${ownerEmail}`);
+  } catch (error) {
+    console.error('[EMAIL ERROR] sendProjectRejected:', error.message);
+  }
+};
+
+// ── Phase 4: Audit trail — notify applicants of project changes ────────────────
+const sendProjectEditedNotice = async (applicantEmail, applicantName, projectTitle, changes, projectId) => {
+  try {
+    const siteUrl = process.env.CLIENT_URL || 'https://crewupfilms.com';
+    const link    = `${siteUrl}/projects/${projectId}`;
+    const html = transactionalHtml(`
+      <p style="margin:0 0 8px;font-size:16px;font-weight:600;color:#111110;">Hi ${applicantName},</p>
+      <p style="margin:0 0 20px;font-size:15px;color:#444444;line-height:1.6;">
+        A project you applied to — <strong>"${projectTitle}"</strong> — has been updated by its creator.
+      </p>
+      ${changes ? `<p style="margin:0 0 20px;font-size:14px;color:#666666;line-height:1.6;background:#fffdf0;padding:12px 16px;border-left:3px solid #f0d060;border-radius:0 4px 4px 0;">What changed: ${changes}</p>` : ''}
+      <p style="margin:0 0 24px;font-size:14px;color:#666666;line-height:1.6;">
+        Please review the updated details before the shoot to make sure everything still works for you.
+      </p>
+      <a href="${link}" style="display:inline-block;background:#111110;color:#ffffff;padding:11px 24px;text-decoration:none;border-radius:6px;font-size:14px;font-weight:600;">View Updated Project</a>
+    `);
+    const text = `Hi ${applicantName},\n\nThe project "${projectTitle}" you applied to has been updated.${changes ? `\n\nWhat changed: ${changes}` : ''}\n\nView project: ${link}\n\n— CREWUPFILMS`;
+    await sendEmail(applicantEmail, `"${projectTitle}" has been updated`, html, text);
+    console.log(`[EMAIL SENT] sendProjectEditedNotice to ${applicantEmail}`);
+  } catch (error) {
+    console.error('[EMAIL ERROR] sendProjectEditedNotice:', error.message);
+  }
+};
+
 module.exports = {
   sendApplicationReceived,
   sendApplicationAccepted,
   sendApplicationDeclined,
   sendRoleFilled,
   sendLaunchNotification,
+  sendEmailOTP,
+  sendProjectApproved,
+  sendProjectRejected,
+  sendProjectEditedNotice,
 };

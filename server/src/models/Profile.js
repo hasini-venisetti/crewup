@@ -42,6 +42,7 @@ const profileSchema = new mongoose.Schema(
       default: 'available',
     },
     isMentor:        { type: Boolean, default: false },
+    mentorStatus:    { type: String, enum: ['open', 'paused', 'closed'], default: 'open' }, // mentor availability
     mentorFields:    { type: [String], default: [] },
     mentorBio:       { type: String, default: '', maxlength: 500 },
     mentorRate:      { type: Number, default: null },      // hourly rate
@@ -70,6 +71,34 @@ const profileSchema = new mongoose.Schema(
         createdAt:   { type: Date, default: Date.now },
       },
     ],
+
+    // ── Phase 4: Verified Creator Badge ──────────────────────────────────
+    isVerified: { type: Boolean, default: false },
+    verificationLinks: {
+      imdb:      { type: String, default: '' },
+      instagram: { type: String, default: '' },
+    },
+
+    // ── Phase 4: Completed project count (updated when project is released) ──
+    completedProjectsCount: { type: Number, default: 0 },
+
+    // ── Phase 5: Emergency Contact ────────────────────────────────────────
+    emergencyContact: {
+      name:         { type: String, default: '' },
+      phone:        { type: String, default: '' },
+      relationship: { type: String, default: '' },
+    },
+
+    // ── Phase 5: Safe Check-In ────────────────────────────────────────────
+    // Stores current/last check-in for meeting safety
+    safeCheckIn: {
+      active:       { type: Boolean, default: false },
+      meetingWith:  { type: String, default: '' },
+      location:     { type: String, default: '' },
+      scheduledAt:  { type: Date,   default: null },
+      checkInAt:    { type: Date,   default: null },
+      checkOutAt:   { type: Date,   default: null },
+    },
   },
   { timestamps: true }
 );

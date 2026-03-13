@@ -21,6 +21,12 @@ const conversationSchema = new mongoose.Schema(
       type:    Date,
       default: null,
     },
+    // 'active' = full open chat; 'pending' = waiting for request acceptance
+    status: {
+      type:    String,
+      enum:    ['active', 'pending'],
+      default: 'active',
+    },
   },
   { timestamps: true }
 );

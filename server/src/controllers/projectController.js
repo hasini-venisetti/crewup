@@ -1,3 +1,4 @@
+const User = require('../models/User');
 const Project = require('../models/Project');
 const Application = require('../models/Application');
 const Notification = require('../models/Notification');
@@ -10,8 +11,20 @@ const { logActivity } = require('./activityController');
 // @access  Private
 const createProject = async (req, res, next) => {
   try {
-    const { title, description, projectType, requiredRoles, isPaid, budget, location, deadline } =
-      req.body;
+    const {
+      title, description, projectType, requiredRoles, isPaid, budget, location, deadline,
+      experienceLevel, projectTags,
+      // Phase 2: new safety fields
+      productionType, auditionFormat, shootingLocationType, compensationDetails,
+    } = req.body;
+
+    // Safety guard: compensationDetails required when isPaid
+    if (isPaid && !compensationDetails?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please describe the compensation clearly (required for paid projects).',
+      });
+    }
 
     const project = await Project.create({
       title,
@@ -22,21 +35,41 @@ const createProject = async (req, res, next) => {
       budget,
       location,
       deadline,
-      createdBy: req.user._id,
+      experienceLevel,
+      projectTags,
+      productionType:       productionType       || 'indie',
+      auditionFormat:       auditionFormat       || 'not-applicable',
+      shootingLocationType: shootingLocationType || 'not-specified',
+      compensationDetails:  compensationDetails  || '',
+      moderationStatus:     'pending',   // all new projects start in the moderation queue
+      createdBy:            req.user._id,
     });
 
     await project.populate('createdBy', 'name username role profileImage');
+
+    // Notify the creator that their project is pending review
+    await Notification.create({
+      recipient: req.user._id,
+      type:      'platform_update',
+      title:     'Project submitted for review',
+      message:   `Your project "${project.title}" has been submitted and is pending moderation. It will be live shortly after review.`,
+      link:      `/projects/${project._id}`,
+    });
 
     // Log activity (fire-and-forget)
     logActivity({
       actor:      req.user._id,
       type:       'project_created',
-      title:      `created a new project: "${project.title}"`,
+      title:      `submitted a new project: "${project.title}"`,
       link:       `/projects/${project._id}`,
       projectRef: project._id,
     });
 
-    res.status(201).json({ success: true, message: 'Project created', data: project });
+    res.status(201).json({
+      success: true,
+      message: 'Project submitted for review. It will be live once approved by our team.',
+      data: project,
+    });
   } catch (error) {
     next(error);
   }
@@ -55,6 +88,8 @@ const getProjects = async (req, res, next) => {
     if (location) filter['location.country'] = new RegExp(location, 'i');
     if (isRemote === 'true') filter['location.isRemote'] = true;
     if (isPaid !== undefined) filter.isPaid = isPaid === 'true';
+    // Phase 2: Only show approved projects in public listing
+    filter.moderationStatus = 'approved';
 
     // Hide released projects — they belong on the Films page, not Projects
     filter.timelineStage = { $ne: 'released' };
@@ -113,15 +148,72 @@ const updateProject = async (req, res, next) => {
     if (!project) {
       return res.status(404).json({ success: false, message: 'Project not found' });
     }
-
     if (project.createdBy.toString() !== req.user._id.toString()) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
-    const updated = await Project.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    }).populate('createdBy', 'name username role profileImage');
+    // Phase 4: Build a summary of what changed for the audit trail
+    const TRACKED = ['title', 'description', 'location', 'isPaid', 'compensationDetails', 'deadline', 'auditionFormat', 'shootingLocationType'];
+    const changedFields = TRACKED.filter((f) => {
+      if (req.body[f] === undefined) return false;
+      return JSON.stringify(project[f]) !== JSON.stringify(req.body[f]);
+    });
+    const changeSummary = changedFields.length
+      ? changedFields.map((f) => f.replace(/([A-Z])/g, ' $1').toLowerCase()).join(', ')
+      : '';
+
+    // Don't allow owner to change moderationStatus — admin only
+    const { moderationStatus: _ms, ...safeBody } = req.body;
+
+    const updated = await Project.findByIdAndUpdate(
+      req.params.id,
+      {
+        ...safeBody,
+        ...(changeSummary && {
+          $push: {
+            editHistory: {
+              editedAt: new Date(),
+              editedBy: req.user._id,
+              summary:  changeSummary,
+            },
+          },
+        }),
+      },
+      { new: true, runValidators: true }
+    ).populate('createdBy', 'name username role profileImage');
+
+    // Phase 4: Notify all accepted applicants that the project was updated
+    if (changeSummary) {
+      try {
+        const acceptedApps = await Application.find({
+          project: project._id,
+          status: { $in: ['accepted', 'pending'] },
+        }).populate('applicant', 'name email');
+
+        for (const app of acceptedApps) {
+          if (app.applicant._id.toString() === req.user._id.toString()) continue;
+          // In-app notification
+          Notification.create({
+            recipient: app.applicant._id,
+            sender:    req.user._id,
+            type:      'platform_update',
+            title:     'Project updated',
+            message:   `"${project.title}" was updated. Changes: ${changeSummary}.`,
+            link:      `/projects/${project._id}`,
+          }).catch(() => {});
+          // Email (fire-and-forget)
+          if (app.applicant.email) {
+            emailService.sendProjectEditedNotice(
+              app.applicant.email,
+              app.applicant.name,
+              project.title,
+              changeSummary,
+              project._id
+            ).catch(() => {});
+          }
+        }
+      } catch (_) {}
+    }
 
     res.status(200).json({ success: true, message: 'Project updated', data: updated });
   } catch (error) {

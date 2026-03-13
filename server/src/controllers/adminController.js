@@ -230,4 +230,94 @@ const clearTestData = async (req, res, next) => {
   } catch (e) { next(e); }
 };
 
-module.exports = { getPlatformStats, getWeeklyAnalytics, getUsers, suspendUser, getTrendingFilms, sendAnnouncement, getReports, updateReportStatus, clearTestData };
+// ── Phase 2: Project Moderation ────────────────────────────────────────────────
+const emailService = require('../utils/emailService');
+
+// GET /api/admin/projects/pending — list projects awaiting moderation
+const getPendingProjects = async (req, res, next) => {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+    const skip = (Number(page) - 1) * Number(limit);
+    const [projects, total] = await Promise.all([
+      Project.find({ moderationStatus: 'pending' })
+        .populate('createdBy', 'name username email role profileImage isEmailVerified')
+        .sort({ createdAt: 1 }) // oldest first so nothing waits too long
+        .skip(skip)
+        .limit(Number(limit)),
+      Project.countDocuments({ moderationStatus: 'pending' }),
+    ]);
+    res.json({ success: true, data: projects, pagination: { total, page: Number(page), pages: Math.ceil(total / Number(limit)) } });
+  } catch (e) { next(e); }
+};
+
+// PATCH /api/admin/projects/:id/moderate — approve or reject
+const moderateProject = async (req, res, next) => {
+  try {
+    const { action, note } = req.body; // action: 'approve' | 'reject'
+    if (!['approve', 'reject'].includes(action)) {
+      return res.status(400).json({ success: false, message: "action must be 'approve' or 'reject'" });
+    }
+
+    const project = await Project.findById(req.params.id).populate('createdBy', 'name email');
+    if (!project) return res.status(404).json({ success: false, message: 'Project not found' });
+
+    project.moderationStatus = action === 'approve' ? 'approved' : 'rejected';
+    project.moderationNote   = note || '';
+    await project.save();
+
+    // Notify the project owner
+    await Notification.create({
+      recipient: project.createdBy._id,
+      type:      'platform_update',
+      title:     action === 'approve' ? '✅ Project approved' : '❌ Project not approved',
+      message:   action === 'approve'
+        ? `Your project "${project.title}" is now live and accepting applications.`
+        : `Your project "${project.title}" was not approved.${note ? ` Reason: ${note}` : ''}`,
+      link: `/projects/${project._id}`,
+    });
+
+    // Email (fire-and-forget)
+    if (project.createdBy?.email) {
+      if (action === 'approve') {
+        emailService.sendProjectApproved(project.createdBy.email, project.createdBy.name, project.title, project._id).catch(() => {});
+      } else {
+        emailService.sendProjectRejected(project.createdBy.email, project.createdBy.name, project.title, note).catch(() => {});
+      }
+    }
+
+    res.json({ success: true, message: `Project ${action}d`, data: project });
+  } catch (e) { next(e); }
+};
+
+// ── Phase 4: Grant / revoke Verified Creator badge ────────────────────────────
+const Profile = require('../models/Profile');
+
+// PATCH /api/admin/users/:id/verify
+const setVerifiedBadge = async (req, res, next) => {
+  try {
+    const { verified } = req.body; // true | false
+    const profile = await Profile.findOne({ user: req.params.id });
+    if (!profile) return res.status(404).json({ success: false, message: 'Profile not found' });
+    profile.isVerified = Boolean(verified);
+    await profile.save();
+
+    // Notify the user
+    if (verified) {
+      await Notification.create({
+        recipient: req.params.id,
+        type:      'platform_update',
+        title:     '✅ Verified Creator',
+        message:   "Congratulations! You've been granted the Verified Creator badge on CREWUPFILMS.",
+        link:      `/profile/${req.params.id}`,
+      });
+    }
+
+    res.json({ success: true, message: `Verified badge ${verified ? 'granted' : 'removed'}`, isVerified: profile.isVerified });
+  } catch (e) { next(e); }
+};
+
+module.exports = {
+  getPlatformStats, getWeeklyAnalytics, getUsers, suspendUser, getTrendingFilms,
+  sendAnnouncement, getReports, updateReportStatus, clearTestData,
+  getPendingProjects, moderateProject, setVerifiedBadge,
+};

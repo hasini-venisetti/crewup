@@ -6,8 +6,9 @@ import Link from 'next/link';
 import toast from 'react-hot-toast';
 import ProjectCard from '@/components/ui/ProjectCard';
 import { SkeletonGrid, SkeletonPage } from '@/components/ui/SkeletonCard';
-import { projectAPI, applicationAPI, followAPI, reviewAPI } from '@/lib/api';
+import { projectAPI, applicationAPI, followAPI, reviewAPI, mentorAPI, profileAPI } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
+import { computeCompletenessScore, getCompletenessColor } from '@/lib/profileCompleteness';
 
 const STATUS_CLASS = {
   pending:  'inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-[#f0eeff] text-[#4740CC] border border-[#c9c4ff]',
@@ -97,6 +98,9 @@ export default function DashboardPage() {
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [dataLoading, setDataLoading]       = useState(true);
   const [recLoading, setRecLoading]         = useState(false);
+  const [isMentor, setIsMentor]             = useState(false);
+  const [mentorApps, setMentorApps]         = useState([]);
+  const [mentorAppsLoading, setMentorAppsLoading] = useState(false);
 
   useEffect(() => { if (!authLoading && !user) router.push('/login'); }, [user, authLoading, router]);
 
@@ -141,7 +145,25 @@ export default function DashboardPage() {
     finally { setReviewsLoading(false); }
   }, [user]);
 
-  useEffect(() => { fetchAll(); fetchRecommended(); fetchFeed(); fetchReviews(); }, [fetchAll, fetchRecommended, fetchFeed, fetchReviews]);
+  const fetchMentorApps = useCallback(async () => {
+    if (!user) return;
+    setMentorAppsLoading(true);
+    try {
+      // Check if the user is a mentor
+      const profileRes = await profileAPI.getMe();
+      const prof = profileRes.data?.data;
+      if (prof?.isMentor) {
+        setIsMentor(true);
+        const { data } = await mentorAPI.getApplications();
+        setMentorApps(data.data || []);
+      } else {
+        setIsMentor(false);
+      }
+    } catch { /* silent */ }
+    finally { setMentorAppsLoading(false); }
+  }, [user]);
+
+  useEffect(() => { fetchAll(); fetchRecommended(); fetchFeed(); fetchReviews(); fetchMentorApps(); }, [fetchAll, fetchRecommended, fetchFeed, fetchReviews, fetchMentorApps]);
 
   const handleDecision = (applicationId, status) => {
     setIncomingApps((prev) => {
@@ -151,9 +173,14 @@ export default function DashboardPage() {
     });
   };
 
-  const allIncoming   = Object.values(incomingApps).flat();
-  const pendingCount  = allIncoming.filter((a) => a.status === 'pending').length;
-  const acceptedCount = myApplications.filter((a) => a.status === 'accepted').length;
+  const handleMentorDecision = (requestId, action) => {
+    setMentorApps((prev) => prev.filter((r) => r._id !== requestId));
+  };
+
+  const allIncoming        = Object.values(incomingApps).flat();
+  const pendingCount       = allIncoming.filter((a) => a.status === 'pending').length;
+  const acceptedCount      = myApplications.filter((a) => a.status === 'accepted').length;
+  const pendingMentorCount = mentorApps.filter((r) => r.status === 'pending').length;
 
   if (authLoading || dataLoading) return <div className="min-h-screen bg-[#fafaf9]"><SkeletonPage /></div>;
   if (!user) return null;
@@ -162,6 +189,7 @@ export default function DashboardPage() {
     { key: 'projects',    label: 'My Projects' },
     { key: 'incoming',    label: `Incoming${pendingCount > 0 ? ` (${pendingCount})` : ''}` },
     { key: 'applied',     label: 'My Applications' },
+    ...(isMentor ? [{ key: 'mentorship', label: `🎓 Mentorship${pendingMentorCount > 0 ? ` (${pendingMentorCount})` : ''}` }] : []),
     { key: 'following',   label: '👥 Following' },
     { key: 'ratings',     label: `⭐ Ratings${myReviews.length > 0 ? ` (${myReviews.length})` : ''}` },
     { key: 'recommended', label: '✦ For You' },
@@ -216,6 +244,9 @@ export default function DashboardPage() {
 
       <div className="max-w-[1100px] mx-auto px-3 sm:px-6 py-10">
 
+        {/* Profile completeness + email verification banner */}
+        <ProfileCompletenessBanner user={user} />
+
         {/* Tabs */}
         <div className="w-full overflow-x-auto mb-8 -mx-0">
           <div className="flex gap-1 bg-white border border-[#efefed] rounded-xl p-1 shadow-sm w-max min-w-full sm:w-fit">
@@ -262,6 +293,10 @@ export default function DashboardPage() {
                           className="flex-1 flex items-center justify-center gap-1 text-[10px] sm:text-xs font-semibold border border-[#e0e0dd] text-[#111110] py-2 sm:py-2.5 px-2 rounded-lg hover:border-[#0e0e0d] transition-colors">
                           👥 Team
                         </Link>
+                        <Link href={`/projects/${p._id}/applications`}
+                          className="flex-1 flex items-center justify-center gap-1 text-[10px] sm:text-xs font-semibold border border-[#e0e0dd] text-[#111110] py-2 sm:py-2.5 px-2 rounded-lg hover:border-[#6C63FF] hover:text-[#6C63FF] transition-colors">
+                          📬 Apps
+                        </Link>
                       </div>
                     )}
                   </div>
@@ -285,6 +320,10 @@ export default function DashboardPage() {
                         {project.projectType?.replace('-',' ')}
                       </span>
                       <span className="text-xs text-[#6b6b66]">{apps.length} application{apps.length!==1?'s':''}</span>
+                      <Link href={`/projects/${project._id}/applications`}
+                        className="text-xs font-semibold text-[#6C63FF] hover:underline">
+                        View All →
+                      </Link>
                     </div>
                   </div>
                   <div className="flex flex-col gap-3">
@@ -351,6 +390,38 @@ export default function DashboardPage() {
                   </div>
                 ))
             }
+          </div>
+        )}
+
+        {/* ── Mentorship Applications ── */}
+        {tab === 'mentorship' && (
+          <div className="flex flex-col gap-5">
+            {/* Mentor status quick-toggle */}
+            <div className="bg-white rounded-2xl border border-[#efefed] p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <p className="font-semibold text-[#111110] text-sm">Mentorship Availability</p>
+                <p className="text-xs text-[#6b6b66] mt-0.5">Control whether people can apply to you as a mentor.</p>
+              </div>
+              <MentorStatusToggle />
+            </div>
+
+            {mentorAppsLoading ? (
+              <div className="bg-white rounded-2xl border border-[#efefed] p-10 text-center text-[#a3a39e] text-sm">Loading applications…</div>
+            ) : mentorApps.length === 0 ? (
+              <EmptyState icon="🎓" title="No applications yet" body="When someone applies for mentorship with you, it will appear here." cta="View Your Profile" href={`/profile/${user._id || user.id}`} />
+            ) : (
+              <div className="bg-white rounded-2xl border border-[#efefed] p-6">
+                <div className="flex items-center justify-between mb-5 pb-5 border-b border-[#efefed]">
+                  <p className="font-bold text-[#111110]">Mentorship Applications</p>
+                  <span className="text-xs text-[#6b6b66]">{mentorApps.length} application{mentorApps.length !== 1 ? 's' : ''}</span>
+                </div>
+                <div className="flex flex-col gap-3">
+                  {mentorApps.map((req) => (
+                    <MentorApplicationCard key={req._id} req={req} onDecision={handleMentorDecision} />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -452,6 +523,172 @@ export default function DashboardPage() {
           </div>
         )}
 
+      </div>
+    </div>
+  );
+}
+
+/* ── ProfileCompletenessBanner ─────────────────────────────────────────── */
+function ProfileCompletenessBanner({ user }) {
+  const [profile, setProfile] = useState(null);
+
+  useEffect(() => {
+    profileAPI.getMe().then(({ data }) => setProfile(data?.data)).catch(() => {});
+  }, []);
+
+  if (!profile) return null;
+
+  const { score, missing, label } = computeCompletenessScore(profile, user);
+  const color = getCompletenessColor(score);
+
+  // Only show banner if score < 90 or email not verified
+  if (score >= 90 && user?.isEmailVerified) return null;
+
+  return (
+    <div className="mb-6 bg-white border border-[#efefed] rounded-2xl p-5 shadow-sm">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <p className="text-sm font-semibold text-[#111110]">Profile Completeness</p>
+          <p className="text-xs text-[#6b6b66]">{label} — {score}% complete</p>
+        </div>
+        <Link href="/profile/edit" className="text-xs font-semibold text-[#6C63FF] hover:underline">
+          Complete Profile →
+        </Link>
+      </div>
+      {/* Progress bar */}
+      <div className="h-2 bg-[#f0f0ee] rounded-full overflow-hidden mb-3">
+        <div
+          className="h-full rounded-full transition-all duration-500"
+          style={{ width: `${score}%`, backgroundColor: color }}
+        />
+      </div>
+      {/* Missing items */}
+      {missing.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {!user?.isEmailVerified && (
+            <Link href="/verify-email"
+              className="text-xs px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 font-medium hover:bg-amber-100 transition-colors">
+              ⚠️ Verify email
+            </Link>
+          )}
+          {missing.filter(m => m !== 'Verified email').slice(0, 4).map((m) => (
+            <span key={m} className="text-xs px-2.5 py-1 rounded-full bg-[#f5f5f3] border border-[#e0e0dd] text-[#6b6b66]">
+              + {m}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── MentorStatusToggle ────────────────────────────────────────────────── */
+function MentorStatusToggle() {
+  const [status, setStatus]   = useState('open');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    profileAPI.getMe()
+      .then(({ data }) => { if (data?.data?.mentorStatus) setStatus(data.data.mentorStatus); })
+      .catch(() => {});
+  }, []);
+
+  const toggle = async (val) => {
+    if (loading || val === status) return;
+    setLoading(true);
+    const prev = status;
+    setStatus(val);
+    try {
+      await mentorAPI.updateStatus(val);
+      toast.success(`Status updated to "${val}"`);
+    } catch {
+      setStatus(prev);
+      toast.error('Failed to update status.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const CFG = {
+    open:   { label: '🟢 Open',   cls: 'bg-green-500 text-white border-green-500' },
+    paused: { label: '⏸ Paused', cls: 'bg-yellow-400 text-white border-yellow-400' },
+    closed: { label: '🔴 Closed', cls: 'bg-red-500 text-white border-red-500' },
+  };
+
+  return (
+    <div className="flex gap-2 flex-shrink-0 flex-wrap">
+      {Object.entries(CFG).map(([key, { label, cls }]) => (
+        <button key={key} onClick={() => toggle(key)} disabled={loading}
+          className={`text-xs font-semibold px-3.5 py-2 rounded-lg border transition-all disabled:opacity-50 ${
+            status === key ? cls : 'border-[#e0e0dd] text-[#6b6b66] hover:border-[#111110] hover:text-[#111110]'
+          }`}>
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/* ── MentorApplicationCard ─────────────────────────────────────────────── */
+function MentorApplicationCard({ req, onDecision }) {
+  const router              = useRouter();
+  const [loading, setLoading] = useState('');
+
+  const decide = async (action) => {
+    setLoading(action);
+    try {
+      if (action === 'accept') {
+        const res    = await mentorAPI.acceptRequest(req._id);
+        const convId = res.data?.data?._id;
+        toast.success(`Accepted! Opening chat with ${req.sender?.name}…`);
+        onDecision(req._id, 'accepted');
+        router.push(convId ? `/messages?conv=${convId}` : '/messages');
+      } else {
+        await mentorAPI.declineRequest(req._id);
+        toast.success('Application declined.');
+        onDecision(req._id, 'declined');
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Something went wrong.');
+    } finally {
+      setLoading('');
+    }
+  };
+
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-start gap-4 p-5 bg-[#fafaf9] border border-[#efefed] rounded-xl hover:border-[#d0d0ce] transition-colors">
+      <Link href={`/profile/${req.sender?._id}`} className="flex items-start gap-3 flex-1 group">
+        <Avatar name={req.sender?.name} image={req.sender?.profileImage} />
+        <div className="min-w-0">
+          <div className="font-semibold text-sm text-[#111110] group-hover:underline">{req.sender?.name}</div>
+          <div className="text-xs text-[#6b6b66] mt-0.5">@{req.sender?.username} · <span className="capitalize">{req.sender?.role?.replace('-',' ')}</span></div>
+          {req.message && (
+            <p className="text-xs text-[#6b6b66] mt-2 leading-relaxed italic line-clamp-2">"{req.message}"</p>
+          )}
+          <div className="text-xs text-[#a3a39e] mt-1.5">{new Date(req.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>
+        </div>
+      </Link>
+      <div className="flex items-center gap-2 flex-shrink-0 self-start sm:self-center">
+        {req.status === 'pending' ? (
+          <>
+            <button onClick={() => decide('accept')} disabled={!!loading}
+              className="text-xs font-bold px-3.5 py-2 rounded-lg bg-[#6C63FF] text-white hover:bg-[#5750D4] transition-colors disabled:opacity-40">
+              {loading === 'accept' ? '…' : 'Accept & Chat'}
+            </button>
+            <button onClick={() => decide('decline')} disabled={!!loading}
+              className="text-xs font-bold px-3.5 py-2 rounded-lg bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 transition-colors disabled:opacity-40">
+              {loading === 'decline' ? '…' : 'Decline'}
+            </button>
+          </>
+        ) : (
+          <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full ${
+            req.status === 'accepted'
+              ? 'bg-green-50 text-green-700 border border-green-200'
+              : 'bg-red-50 text-red-700 border border-red-200'
+          }`}>
+            {req.status === 'accepted' ? '✅' : '❌'} {req.status}
+          </span>
+        )}
       </div>
     </div>
   );

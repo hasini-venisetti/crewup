@@ -109,9 +109,11 @@ export default function SignupPage() {
   const [formData, setFormData] = useState({
     name: '', role: '',
     location: { city: '', country: '' },
-    skills: [], username: '', email: '', password: ''
+    skills: [], username: '', email: '', password: '',
+    dateOfBirth: '',
   });
   const [skillInput, setSkillInput] = useState('');
+  const [otherRoleText, setOtherRoleText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [usernameError, setUsernameError] = useState('');
@@ -162,10 +164,13 @@ export default function SignupPage() {
     if (err) { toast.error(err); return; }
     setIsLoading(true);
     try {
+      const resolvedRole = formData.role === 'other' && otherRoleText.trim()
+        ? otherRoleText.trim().toLowerCase()
+        : (formData.role || 'other');
       const { data } = await authAPI.googleAuth({
         idToken:  googleIdToken,
         username: formData.username,
-        role:     formData.role || 'other',
+        role:     resolvedRole,
         location: formData.location,
         skills:   formData.skills,
       });
@@ -200,6 +205,9 @@ export default function SignupPage() {
       setFormData((prev) => ({ ...prev, username: suggested }));
     }
     if (currentStep === 2 && !formData.role) { toast.error('Please select a role'); return; }
+    if (currentStep === 2 && formData.role === 'other' && !otherRoleText.trim()) {
+      toast.error('Please describe your role'); return;
+    }
     if (currentStep === 3 && (!formData.location.city.trim() || !formData.location.country.trim())) {
       toast.error('Please enter city and country'); return;
     }
@@ -225,14 +233,18 @@ export default function SignupPage() {
 
     setIsLoading(true);
     try {
+      const resolvedRole = formData.role === 'other' && otherRoleText.trim()
+        ? otherRoleText.trim().toLowerCase()
+        : (formData.role || 'other');
       await register({
         name: formData.name, username: formData.username,
         email: formData.email, password: formData.password,
-        role: formData.role || 'other',
+        role: resolvedRole,
         location: formData.location, skills: formData.skills,
+        dateOfBirth: formData.dateOfBirth || undefined,
       });
-      toast.success("Account created! Let's build your profile 🎬");
-      router.push('/dashboard');
+      toast.success("Account created! Verify your email to get started 🎬");
+      router.push('/verify-email');
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Signup failed. Please try again.');
     } finally {
@@ -312,10 +324,13 @@ export default function SignupPage() {
               {/* Step 2 — Role */}
               {currentStep === 2 && (
                 <div className="form-anim" style={{ animationDelay: '0.16s' }}>
-                  <div className="grid grid-cols-2 gap-2.5 mb-8">
+                  <div className="grid grid-cols-2 gap-2.5 mb-4">
                     {roleOptions.map((role) => (
                       <button key={role.label}
-                        onClick={() => setFormData({ ...formData, role: role.value })}
+                        onClick={() => {
+                          setFormData({ ...formData, role: role.value });
+                          if (role.value !== 'other') setOtherRoleText('');
+                        }}
                         className={`py-3 px-4 text-sm font-medium transition-colors text-left ${
                           formData.role === role.value
                             ? 'bg-[#111110] text-white'
@@ -325,6 +340,23 @@ export default function SignupPage() {
                       </button>
                     ))}
                   </div>
+                  {formData.role === 'other' && (
+                    <div className="mb-8">
+                      <label className="block text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-2">
+                        Describe your role
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Lighting Technician, Stunt Coordinator…"
+                        className="field-input"
+                        value={otherRoleText}
+                        onChange={(e) => setOtherRoleText(e.target.value)}
+                        maxLength={50}
+                        autoFocus
+                      />
+                    </div>
+                  )}
+                  {formData.role !== 'other' && <div className="mb-4" />}
                 </div>
               )}
 
@@ -397,7 +429,19 @@ export default function SignupPage() {
                   <input type="password" placeholder="Min. 8 characters" className="field-input mb-2"
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })} />
-                  <p className="text-xs text-[#a3a39e] mb-8">At least 8 characters. Never shared with anyone.</p>
+                  <p className="text-xs text-[#a3a39e] mb-5">At least 8 characters. Never shared with anyone.</p>
+
+                  <label className="block text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-2">
+                    Date of Birth <span className="text-[#a3a39e] normal-case">· required for safety</span>
+                  </label>
+                  <input
+                    type="date"
+                    className="field-input mb-1"
+                    value={formData.dateOfBirth}
+                    max={new Date().toISOString().split('T')[0]}
+                    onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                  />
+                  <p className="text-xs text-[#a3a39e] mb-8">Used to protect minors on the platform. Never shown publicly.</p>
                 </div>
               )}
 

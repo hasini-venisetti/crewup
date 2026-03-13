@@ -3,10 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { profileAPI, reviewAPI, followAPI, projectAPI, filmAPI, notificationAPI } from '@/lib/api';
+import { profileAPI, reviewAPI, followAPI, projectAPI, filmAPI, notificationAPI, messageRequestAPI, mentorAPI } from '@/lib/api';
 import api from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import FollowButton from '@/components/ui/FollowButton';
+import ReportModal  from '@/components/ui/ReportModal';
 import { X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -28,7 +30,7 @@ const EXP_LABEL  = { beginner: 'Beginner', intermediate: 'Intermediate', advance
 
 export default function ProfilePage() {
   const { id }   = useParams();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router   = useRouter();
 
   const [profile, setProfile]           = useState(null);
@@ -36,10 +38,15 @@ export default function ProfilePage() {
   const [reviews, setReviews]           = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(true);
   const [avgRating, setAvgRating]       = useState(null);
-  const [messaging, setMessaging]       = useState(false);
-  const [isFollowing, setIsFollowing]   = useState(false);
+  const [messaging, setMessaging]         = useState(false);
+  // message-request state: 'none' | 'pending' | 'accepted' | 'connected' | 'received'
+  const [msgStatus,    setMsgStatus]      = useState('none');
+  const [msgRequestId, setMsgRequestId]   = useState(null);
+  const [msgConvId,    setMsgConvId]      = useState(null);
+  const [msgModal,     setMsgModal]       = useState(false);
+  const [msgText,      setMsgText]        = useState('');
+  // Follow counts — updated by <FollowButton> via onCountChange callback
   const [followCounts, setFollowCounts] = useState({ followers: 0, following: 0 });
-  const [followLoading, setFollowLoading] = useState(false);
   const [showFollowersModal, setShowFollowersModal] = useState(false);
   const [showFollowingModal, setShowFollowingModal] = useState(false);
   const [followersList, setFollowersList] = useState([]);
@@ -48,37 +55,86 @@ export default function ProfilePage() {
   const [loadingFollowing, setLoadingFollowing] = useState(false);
   const [films, setFilms]                       = useState([]);
   const [filmsLoading, setFilmsLoading]         = useState(true);
-  // Film interactions
-  const [filmLikes, setFilmLikes]               = useState({});   // { [filmId]: { count, isLiked } }
-  const [filmBookmarks, setFilmBookmarks]       = useState({});   // { [filmId]: bool }
-  const [commentFilm, setCommentFilm]           = useState(null); // film object for comment modal
-  const [reportFilm, setReportFilm]             = useState(null); // film object for report modal
-  const [filmComments, setFilmComments]         = useState({});   // { [filmId]: comments[] }
+  const [filmLikes, setFilmLikes]               = useState({});
+  const [filmBookmarks, setFilmBookmarks]       = useState({});
+  const [commentFilm, setCommentFilm]           = useState(null);
+  const [reportFilm, setReportFilm]             = useState(null);
+  const [filmComments, setFilmComments]         = useState({});
   const [commentText, setCommentText]           = useState('');
   const [commentPosting, setCommentPosting]     = useState(false);
   const [reportReason, setReportReason]         = useState('');
   const [reportDetails, setReportDetails]       = useState('');
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [reportDone, setReportDone]             = useState(false);
-  const [copied, setCopied]                     = useState({});   // { [filmId]: bool }
-  const [showShareMenu, setShowShareMenu]       = useState({});   // { [filmId]: bool }
+  const [copied, setCopied]                     = useState({});
+  const [showShareMenu, setShowShareMenu]       = useState({});
+  const [mentorStatusVal, setMentorStatusVal]   = useState('open'); // mentor's own status toggle
+  const [mentorStatusLoading, setMentorStatusLoading] = useState(false);
 
-  // Invite to project
   const [myProjects, setMyProjects]             = useState([]);
   const [showInviteMenu, setShowInviteMenu]     = useState(false);
   const [inviting, setInviting]                 = useState(false);
-  const [invitedMap, setInvitedMap]             = useState({});   // { [projectId]: roleName }
-  const [expandedProject, setExpandedProject]  = useState(null); // projectId showing role picker
+  const [invitedMap, setInvitedMap]             = useState({});
+  const [expandedProject, setExpandedProject]  = useState(null);
+  const [showReportModal, setShowReportModal]   = useState(false);
 
-  const handleMessage = async () => {
+  // Load message-request status when viewing another user's profile
+  useEffect(() => {
+    if (!user || !id) return;
+    if (String(user._id || user.id) === String(id)) return;
+    const token = typeof window !== 'undefined' ? localStorage.getItem('crewup_token') : null;
+    if (!token) return;
+
+    messageRequestAPI.getStatus(id)
+      .then(({ data }) => {
+        const d = data?.data;
+        if (!d) return;
+        setMsgStatus(d.status);
+        if (d.conversationId) setMsgConvId(d.conversationId);
+        if (d.requestId)      setMsgRequestId(d.requestId);
+      })
+      .catch(() => {});
+  }, [id, user]);
+
+  const handleMessageClick = () => {
     if (!user) { router.push('/login'); return; }
+    if (msgStatus === 'connected') {
+      // Already connected — go straight to chat
+      router.push(msgConvId ? `/messages?conv=${msgConvId}` : '/messages');
+      return;
+    }
+    // Otherwise open the request modal
+    setMsgText('');
+    setMsgModal(true);
+  };
+
+  const handleSendMsgRequest = async () => {
+    if (messaging) return;
     setMessaging(true);
     try {
-      const { data } = await api.post('/conversations', { userId: id });
-      const convId = data.data?._id;
-      router.push(convId ? `/messages?conv=${convId}` : '/messages');
-    } catch { router.push('/messages'); }
-    finally { setMessaging(false); }
+      const res = await messageRequestAPI.send(id, msgText.trim());
+      if (res.data?.alreadyConnected) {
+        setMsgStatus('connected');
+        setMsgConvId(res.data.data?._id);
+        setMsgModal(false);
+        router.push(res.data.data?._id ? `/messages?conv=${res.data.data._id}` : '/messages');
+        return;
+      }
+      setMsgStatus('pending');
+      setMsgModal(false);
+      toast.success('Message request sent!');
+    } catch (err) {
+      const errCode = err?.response?.data?.code;
+      const msg     = err?.response?.data?.message || 'Failed to send request.';
+      if (errCode === 'MINOR_PROTECTION') {
+        toast.error(msg, { duration: 8000, icon: '🔒' });
+        setMsgModal(false);
+      } else {
+        toast.error(msg);
+      }
+    } finally {
+      setMessaging(false);
+    }
   };
 
   const handleInvite = async (project, role) => {
@@ -100,36 +156,6 @@ export default function ProfilePage() {
       toast.error('Failed to send invite. Please try again.');
     } finally {
       setInviting(false);
-    }
-  };
-
-  const handleFollowToggle = async () => {
-    if (!user) { router.push('/login'); return; }
-    if (followLoading) return;
-
-    setFollowLoading(true);
-    try {
-      if (isFollowing) {
-        await followAPI.unfollow(id);
-        setIsFollowing(false);
-        setFollowCounts((c) => ({ ...c, followers: Math.max(0, c.followers - 1) }));
-      } else {
-        await followAPI.follow(id);
-        setIsFollowing(true);
-        setFollowCounts((c) => ({ ...c, followers: c.followers + 1 }));
-      }
-    } catch (error) {
-      const status = error.response?.status;
-      if (status === 409) {
-        // DB says already following — sync UI without showing error
-        setIsFollowing(true);
-      } else if (status === 404) {
-        toast.error('User not found.');
-      } else {
-        toast.error('Something went wrong. Please try again.');
-      }
-    } finally {
-      setFollowLoading(false);
     }
   };
 
@@ -169,10 +195,11 @@ export default function ProfilePage() {
     loadFollowing();
   };
 
+  // Load profile (counts are handled by the follow-status useEffect below)
   useEffect(() => {
     profileAPI.getById(id)
-      .then(({ data }) => {
-        setProfile(data.data);
+      .then((profileRes) => {
+        setProfile(profileRes.data.data);
         reviewAPI.getForUser(id)
           .then(r => { setReviews(r.data.data || []); setAvgRating(r.data.averageRating); })
           .catch(() => {})
@@ -180,12 +207,11 @@ export default function ProfilePage() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-    followAPI.getCounts(id).then(({ data }) => setFollowCounts(data.data)).catch(() => {});
+
     projectAPI.getUserFilms(id)
       .then(({ data }) => {
         const list = data.data || [];
         setFilms(list);
-        // Load like + bookmark statuses for all films
         list.forEach((film) => {
           filmAPI.getLikeStatus(film._id)
             .then(({ data: d }) => setFilmLikes((prev) => ({ ...prev, [film._id]: { count: d.likeCount, isLiked: d.liked } })))
@@ -199,29 +225,19 @@ export default function ProfilePage() {
       .finally(() => setFilmsLoading(false));
   }, [id]);
 
+  // Load public follow counts on page mount — FollowButton manages its own isFollowing state
   useEffect(() => {
-    if (!user || !id) return;
-    const myId = String(user._id || user.id);
-    if (myId === String(id)) return; // viewing own profile
-    followAPI.getStatus(id)
-      .then(({ data }) => {
-        if (data?.data != null) setIsFollowing(data.data.following);
-      })
-      .catch(() => {
-        // Retry once after 1 s in case auth token wasn't ready yet
-        setTimeout(() => {
-          followAPI.getStatus(id)
-            .then(({ data }) => { if (data?.data != null) setIsFollowing(data.data.following); })
-            .catch(() => {});
-        }, 1000);
-      });
-  }, [id, user]);
+    if (!id) return;
+    followAPI.getCounts(id)
+      .then(({ data }) => { if (data?.data) setFollowCounts(data.data); })
+      .catch(() => {});
+  }, [id]);
 
   // Load current user's owned projects for "Invite to Project"
   useEffect(() => {
     if (!user || !id) return;
     const myId = user._id || user.id;
-    if (myId === id) return; // viewing own profile
+    if (myId === id) return;
     projectAPI.getMine()
       .then(({ data }) => {
         const owned = (data.data || []).filter(
@@ -235,7 +251,12 @@ export default function ProfilePage() {
       .catch(() => {});
   }, [id, user]);
 
-  if (loading) return <LoadingSpinner size="lg" className="min-h-screen" />;
+  // Sync mentorStatus from loaded profile into local state
+  useEffect(() => {
+    if (profile?.mentorStatus) setMentorStatusVal(profile.mentorStatus);
+  }, [profile?.mentorStatus]);
+
+  if (loading || authLoading) return <LoadingSpinner size="lg" className="min-h-screen" />;
   if (!profile) return (
     <div className="min-h-screen bg-[#fafaf9] flex items-center justify-center">
       <div className="text-center">
@@ -246,9 +267,8 @@ export default function ProfilePage() {
     </div>
   );
 
-  const { user: creator, bio, skills, location, portfolioLinks, experienceLevel, availability, socialLinks, portfolio, availabilitySlots, isMentor, mentorFields, mentorBio, mentorRate, mentorCurrency } = profile;
+  const { user: creator, bio, skills, location, portfolioLinks, experienceLevel, availability, socialLinks, portfolio, availabilitySlots, isMentor, mentorStatus, mentorFields, mentorBio, mentorRate, mentorCurrency, isVerified } = profile;
 
-  // Filter to only future/active availability slots and sort by start date
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const upcomingSlots = (availabilitySlots || [])
@@ -260,6 +280,22 @@ export default function ProfilePage() {
   const isSlotActive = (s) => new Date(s.startDate) <= today && new Date(s.endDate) >= today;
   const isOwnProfile = user && (String(user._id || user.id) === String(id));
   const avail = AVAIL_CONFIG[availability] || AVAIL_CONFIG['available'];
+
+  const handleMentorStatus = async (newStatus) => {
+    if (mentorStatusLoading || newStatus === mentorStatusVal) return;
+    setMentorStatusLoading(true);
+    const prev = mentorStatusVal;
+    setMentorStatusVal(newStatus); // optimistic
+    try {
+      await mentorAPI.updateStatus(newStatus);
+      toast.success(`Mentorship status set to "${newStatus}"`);
+    } catch {
+      setMentorStatusVal(prev);
+      toast.error('Failed to update mentor status.');
+    } finally {
+      setMentorStatusLoading(false);
+    }
+  };
   const hasSocials = socialLinks && Object.values(socialLinks).some(Boolean);
 
   return (
@@ -286,7 +322,6 @@ export default function ProfilePage() {
               )}
               {!isOwnProfile && (
                 <>
-                  {/* Invite to Project — only shown to project owners */}
                   {myProjects.length > 0 && (
                     <div className="relative">
                       <button
@@ -304,12 +339,13 @@ export default function ProfilePage() {
                           </div>
                           <div className="max-h-72 overflow-y-auto">
                             {myProjects.map((proj) => {
-                              // check if profile user is already on this project's team
                               const isOnTeam = (proj.teamMembers || []).some(
                                 (m) => (m.user?._id || m.user) === id
                               );
-                              // open roles = required minus filled
-                              const filledRoleNames = (proj.filledRoles || []).map((f) => f.role);
+                              const filledRoleNames = [
+                                ...(proj.filledRoles || []).map((f) => f.role),
+                                ...(proj.teamMembers || []).map((m) => m.role).filter(Boolean),
+                              ];
                               const openRoles = (proj.requiredRoles || []).filter(
                                 (r) => !filledRoleNames.includes(r)
                               );
@@ -318,7 +354,6 @@ export default function ProfilePage() {
 
                               return (
                                 <div key={proj._id} className="border-b border-white/5 last:border-0">
-                                  {/* Project row */}
                                   <button
                                     onClick={() => {
                                       if (isOnTeam || sentRole || openRoles.length === 0) return;
@@ -350,7 +385,6 @@ export default function ProfilePage() {
                                     {sentRole  && <span className="text-[11px] text-green-400 flex-shrink-0">✓ Sent</span>}
                                   </button>
 
-                                  {/* Role picker — expands below the project row */}
                                   {isExpanded && openRoles.length > 0 && (
                                     <div className="bg-black/30 border-t border-white/5 px-4 py-2">
                                       <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2">Pick a role to invite for</p>
@@ -375,24 +409,40 @@ export default function ProfilePage() {
                         </div>
                       )}
 
-                      {/* Click-outside overlay */}
                       {showInviteMenu && (
                         <div className="fixed inset-0 z-40" onClick={() => { setShowInviteMenu(false); setExpandedProject(null); }} />
                       )}
                     </div>
                   )}
 
-                  <button onClick={handleMessage} disabled={messaging}
-                    className="text-xs sm:text-sm font-semibold px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg border border-white/20 text-white/70 hover:border-white/40 hover:text-white transition-all disabled:opacity-50">
-                    {messaging ? 'Opening…' : '💬 Message'}
-                  </button>
-                  <button onClick={handleFollowToggle} disabled={followLoading}
+                  <button
+                    onClick={handleMessageClick}
+                    disabled={messaging || msgStatus === 'pending'}
                     className={`text-xs sm:text-sm font-semibold px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg transition-all disabled:opacity-50 ${
-                      isFollowing
-                        ? 'border border-white/20 text-white/60 hover:border-red-500/50 hover:text-red-400'
-                        : 'bg-[#6C63FF] hover:bg-[#7C75FF] text-white shadow-lg shadow-[#6C63FF]/20'
-                    }`}>
-                    {followLoading ? '…' : isFollowing ? '✓ Following' : '+ Follow'}
+                      msgStatus === 'connected'
+                        ? 'border border-white/20 text-white/70 hover:border-white/40 hover:text-white'
+                        : msgStatus === 'pending'
+                        ? 'border border-white/10 text-white/30 cursor-not-allowed'
+                        : 'border border-white/20 text-white/70 hover:border-white/40 hover:text-white'
+                    }`}
+                  >
+                    {msgStatus === 'connected'
+                      ? '💬 Message'
+                      : msgStatus === 'pending'
+                      ? '⏳ Request Sent'
+                      : '💬 Message'
+                    }
+                  </button>
+                  <FollowButton
+                    userId={id}
+                    onCountChange={(count) => setFollowCounts((c) => ({ ...c, followers: count }))}
+                  />
+                  <button
+                    onClick={() => setShowReportModal(true)}
+                    title="Report this user"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-white/20 text-white/60 hover:text-red-400 hover:border-red-400/40 text-xs font-semibold transition-colors"
+                  >
+                    ⚑ Report
                   </button>
                 </>
               )}
@@ -401,7 +451,6 @@ export default function ProfilePage() {
 
           {/* Profile header */}
           <div className="flex flex-col sm:flex-row sm:items-start gap-6">
-            {/* Avatar */}
             <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-[#c9c4ff] to-[#e4e1ff] flex items-center justify-center text-3xl font-bold text-[#3730A3] flex-shrink-0 overflow-hidden">
               {creator?.profileImage
                 ? <img src={creator.profileImage} alt={creator.name} className="w-24 h-24 object-cover" />
@@ -412,6 +461,11 @@ export default function ProfilePage() {
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-start gap-3 mb-2">
                 <h1 className="text-2xl sm:text-3xl font-[Playfair_Display] text-white">{creator?.name}</h1>
+                {isVerified && (
+                  <span title="Verified Creator" className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-500/20 border border-blue-400/40 text-blue-300">
+                    ✅ Verified
+                  </span>
+                )}
                 <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border ${avail.badge}`}>
                   <span className={`w-2 h-2 rounded-full ${avail.dot}`} />
                   {avail.label}
@@ -424,13 +478,13 @@ export default function ProfilePage() {
               </p>
 
               <div className="flex items-center gap-4 mb-2">
-                <button 
+                <button
                   onClick={handleShowFollowers}
                   className="text-xs text-white/40 hover:text-white/70 transition-colors cursor-pointer"
                 >
                   <span className="font-semibold text-white/70">{followCounts.followers}</span> followers
                 </button>
-                <button 
+                <button
                   onClick={handleShowFollowing}
                   className="text-xs text-white/40 hover:text-white/70 transition-colors cursor-pointer"
                 >
@@ -498,7 +552,6 @@ export default function ProfilePage() {
               </p>
             </div>
 
-            {/* Availability Slots */}
             {upcomingSlots.length > 0 && (
               <div className="bg-white rounded-xl border border-[#efefed] p-6">
                 <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#a3a39e] mb-4">📅 Availability</h2>
@@ -531,24 +584,64 @@ export default function ProfilePage() {
               </div>
             )}
 
-            {/* Mentor card */}
-            {isMentor && mentorFields?.length > 0 && (
-              <div className="bg-[#f0eeff] rounded-xl border border-[#c9c4ff] p-6">
-                <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#5750D4] mb-3">🎓 Open to Mentoring</h2>
-                {mentorBio && <p className="text-xs text-[#4b4b47] mb-3 leading-relaxed">{mentorBio}</p>}
-                <div className="flex flex-wrap gap-1.5 mb-3">
-                  {mentorFields.map((f) => (
-                    <span key={f} className="text-[11px] px-2.5 py-1 bg-[#e4e0ff] text-[#4740CC] rounded-full font-medium">{f}</span>
-                  ))}
+            {isMentor && mentorFields?.length > 0 && (() => {
+              const mStatus = isOwnProfile ? mentorStatusVal : (mentorStatus || 'open');
+              const STATUS_CFG = {
+                open:   { label: 'Open',   dot: 'bg-green-500',  badge: 'bg-green-50 text-green-700 border-green-200' },
+                paused: { label: 'Paused', dot: 'bg-yellow-400', badge: 'bg-yellow-50 text-yellow-700 border-yellow-200' },
+                closed: { label: 'Closed', dot: 'bg-red-500',    badge: 'bg-red-50 text-red-700 border-red-200' },
+              };
+              const sc = STATUS_CFG[mStatus] || STATUS_CFG.open;
+              return (
+                <div className="bg-[#f0eeff] rounded-xl border border-[#c9c4ff] p-6">
+                  {/* Header row */}
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#5750D4]">🎓 Mentoring</h2>
+                    <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border ${sc.badge}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />
+                      {sc.label}
+                    </span>
+                  </div>
+
+                  {mentorBio && <p className="text-xs text-[#4b4b47] mb-3 leading-relaxed">{mentorBio}</p>}
+                  <div className="flex flex-wrap gap-1.5 mb-3">
+                    {mentorFields.map((f) => (
+                      <span key={f} className="text-[11px] px-2.5 py-1 bg-[#e4e0ff] text-[#4740CC] rounded-full font-medium">{f}</span>
+                    ))}
+                  </div>
+                  {mentorRate !== null && mentorRate !== undefined && (
+                    <p className="text-xs font-semibold text-[#3730A3] mb-3">
+                      {mentorRate === 0 ? 'Free' : `₹${mentorRate.toLocaleString('en-IN')} / hr`}
+                      {mentorRate > 0 && mentorCurrency && mentorCurrency !== 'INR' && ` (${mentorCurrency})`}
+                    </p>
+                  )}
+
+                  {/* Own profile: status toggle buttons */}
+                  {isOwnProfile && (
+                    <div className="flex gap-2 mt-2 pt-3 border-t border-[#ddd8ff]">
+                      {[
+                        { key: 'open',   label: '🟢 Open',   tip: 'Taking new mentees' },
+                        { key: 'paused', label: '⏸ Paused', tip: 'Temporarily unavailable' },
+                        { key: 'closed', label: '🔴 Closed', tip: 'Not taking applications' },
+                      ].map(({ key, label }) => (
+                        <button
+                          key={key}
+                          onClick={() => handleMentorStatus(key)}
+                          disabled={mentorStatusLoading}
+                          className={`text-[11px] font-semibold px-3 py-1.5 rounded-lg transition-all disabled:opacity-50 ${
+                            mentorStatusVal === key
+                              ? 'bg-[#5750D4] text-white shadow-sm'
+                              : 'bg-white border border-[#c9c4ff] text-[#5750D4] hover:bg-[#e4e0ff]'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                {mentorRate && (
-                  <p className="text-xs font-semibold text-[#3730A3]">
-                    ₹{mentorRate.toLocaleString('en-IN')} / hr
-                    {mentorCurrency && mentorCurrency !== 'INR' && ` (${mentorCurrency})`}
-                  </p>
-                )}
-              </div>
-            )}
+              );
+            })()}
           </div>
 
           {/* Portfolio */}
@@ -615,7 +708,6 @@ export default function ProfilePage() {
               )}
             </div>
 
-            {/* Loading skeletons */}
             {filmsLoading ? (
               <div className="space-y-3">
                 {[1, 2].map((i) => (
@@ -696,7 +788,6 @@ export default function ProfilePage() {
                     <div key={film._id}
                       className="group flex gap-0 bg-white border border-[#efefed] rounded-2xl overflow-hidden hover:border-[#c9c4ff] hover:shadow-[0_4px_24px_rgba(108,99,255,0.08)] transition-all duration-300">
 
-                      {/* Thumbnail — left */}
                       <a href={film.youtubeLink} target="_blank" rel="noopener noreferrer"
                         className="relative flex-shrink-0 w-44 sm:w-52 overflow-hidden bg-[#0e0e0d]">
                         {film.thumbnail ? (
@@ -705,7 +796,6 @@ export default function ProfilePage() {
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-4xl opacity-20">🎬</div>
                         )}
-                        {/* Play overlay */}
                         <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                           <div className="w-10 h-10 rounded-full bg-white/95 flex items-center justify-center shadow-lg">
                             <span className="text-[#6C63FF] text-base ml-0.5">▶</span>
@@ -713,9 +803,7 @@ export default function ProfilePage() {
                         </div>
                       </a>
 
-                      {/* Info — right */}
                       <div className="flex flex-col flex-1 min-w-0 p-4">
-                        {/* Title + badge */}
                         <div className="flex items-start gap-2 mb-1">
                           <p className="font-semibold text-sm text-[#111110] truncate flex-1 leading-snug">{film.title}</p>
                           {film.projectType && (
@@ -725,14 +813,12 @@ export default function ProfilePage() {
                           )}
                         </div>
 
-                        {/* Role */}
                         {film.userRole && (
                           <p className="text-xs text-[#a3a39e] mb-auto">
                             Role: <span className="font-medium text-[#6b6b66]">{film.userRole}</span>
                           </p>
                         )}
 
-                        {/* Stats row */}
                         <div className="flex items-center gap-2 mt-3">
                           {likeData.count > 0 && (
                             <span className="flex items-center gap-1 text-[11px] text-[#a3a39e]">
@@ -748,10 +834,7 @@ export default function ProfilePage() {
                           )}
                         </div>
 
-                        {/* ── Action bar ── */}
                         <div className="flex items-center gap-1 mt-3 pt-3 border-t border-[#f0f0ee]">
-
-                          {/* Like */}
                           <button onClick={handleLike}
                             className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
                               likeData.isLiked
@@ -766,7 +849,6 @@ export default function ProfilePage() {
                             <span>{likeData.isLiked ? 'Liked' : 'Like'}</span>
                           </button>
 
-                          {/* Comment */}
                           <button onClick={openComments}
                             className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#a3a39e] hover:text-[#6C63FF] hover:bg-[#f0eeff] transition-all">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -775,7 +857,6 @@ export default function ProfilePage() {
                             <span>Comment</span>
                           </button>
 
-                          {/* Share — dropdown */}
                           <div className="relative">
                             <button
                               onClick={() => setShowShareMenu((prev) => ({ ...prev, [film._id]: !prev[film._id] }))}
@@ -822,7 +903,6 @@ export default function ProfilePage() {
                             )}
                           </div>
 
-                          {/* Bookmark */}
                           <button onClick={handleBookmark} title={isBookmarked ? 'Remove bookmark' : 'Save film'}
                             className={`ml-auto flex items-center justify-center w-7 h-7 rounded-lg transition-all ${
                               isBookmarked
@@ -836,7 +916,6 @@ export default function ProfilePage() {
                             </svg>
                           </button>
 
-                          {/* Report */}
                           <button onClick={() => { setReportFilm(film); setReportReason(''); setReportDetails(''); setReportDone(false); }}
                             title="Report"
                             className="flex items-center justify-center w-7 h-7 rounded-lg text-[#d0d0cc] hover:text-red-400 hover:bg-red-50 transition-all">
@@ -858,7 +937,6 @@ export default function ProfilePage() {
         {commentFilm && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl w-full max-w-lg flex flex-col" style={{ maxHeight: '80vh' }}>
-              {/* Header */}
               <div className="flex items-center justify-between px-6 py-4 border-b border-[#efefed] flex-shrink-0">
                 <div>
                   <h3 className="font-semibold text-[#111110] text-sm">Comments</h3>
@@ -868,7 +946,6 @@ export default function ProfilePage() {
                   className="w-8 h-8 rounded-full bg-[#f7f7f6] hover:bg-[#efefed] flex items-center justify-center text-[#6b6b66] transition-colors text-lg">×</button>
               </div>
 
-              {/* List */}
               <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
                 {!filmComments[commentFilm._id] ? (
                   <div className="space-y-3">{[1,2,3].map((i) => <div key={i} className="h-12 bg-[#f7f7f6] rounded-xl animate-pulse" />)}</div>
@@ -907,7 +984,6 @@ export default function ProfilePage() {
                 )}
               </div>
 
-              {/* Add comment */}
               {user ? (
                 <form onSubmit={async (e) => {
                   e.preventDefault();
@@ -1033,7 +1109,7 @@ export default function ProfilePage() {
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#e4e1ff] to-[#f0eeff] flex items-center justify-center text-sm font-bold text-[#3730A3] shrink-0 overflow-hidden">
                         {r.reviewer?.profileImage
-                          ? <img src={r.reviewer.profileImage} alt="" className="w-full h-full object-cover" />
+                          ? <img src={r.reviewer.profileImage} alt="" className="w-full h-full object=cover" />
                           : r.reviewer?.name?.[0]}
                       </div>
                       <div>
@@ -1074,10 +1150,7 @@ export default function ProfilePage() {
           <div className="w-full max-w-md bg-white rounded-2xl shadow-xl max-h-[80vh] overflow-hidden">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">Followers</h3>
-              <button
-                onClick={() => setShowFollowersModal(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
+              <button onClick={() => setShowFollowersModal(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                 <X size={20} className="text-gray-500" />
               </button>
             </div>
@@ -1091,12 +1164,8 @@ export default function ProfilePage() {
               ) : followersList.length > 0 ? (
                 <div className="space-y-2">
                   {followersList.map((follower) => (
-                    <Link
-                      key={follower._id}
-                      href={`/profile/${follower._id}`}
-                      onClick={() => setShowFollowersModal(false)}
-                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
-                    >
+                    <Link key={follower._id} href={`/profile/${follower._id}`} onClick={() => setShowFollowersModal(false)}
+                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
                       <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center text-sm font-semibold">
                         {follower.name?.[0] || '?'}
                       </div>
@@ -1108,9 +1177,7 @@ export default function ProfilePage() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">No followers yet</p>
-                </div>
+                <div className="text-center py-8"><p className="text-gray-500">No followers yet</p></div>
               )}
             </div>
           </div>
@@ -1123,10 +1190,7 @@ export default function ProfilePage() {
           <div className="w-full max-w-md bg-white rounded-2xl shadow-xl max-h-[80vh] overflow-hidden">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">Following</h3>
-              <button
-                onClick={() => setShowFollowingModal(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
+              <button onClick={() => setShowFollowingModal(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                 <X size={20} className="text-gray-500" />
               </button>
             </div>
@@ -1140,12 +1204,8 @@ export default function ProfilePage() {
               ) : followingList.length > 0 ? (
                 <div className="space-y-2">
                   {followingList.map((following) => (
-                    <Link
-                      key={following._id}
-                      href={`/profile/${following._id}`}
-                      onClick={() => setShowFollowingModal(false)}
-                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
-                    >
+                    <Link key={following._id} href={`/profile/${following._id}`} onClick={() => setShowFollowingModal(false)}
+                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
                       <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center text-sm font-semibold">
                         {following.name?.[0] || '?'}
                       </div>
@@ -1157,13 +1217,77 @@ export default function ProfilePage() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">Not following anyone yet</p>
-                </div>
+                <div className="text-center py-8"><p className="text-gray-500">Not following anyone yet</p></div>
               )}
             </div>
           </div>
         </div>
+      )}
+      {/* ── Message Request Modal ──────────────────────────────── */}
+      {msgModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-[#efefed]">
+              <div>
+                <h3 className="font-bold text-[#0e0e0d] text-base">Send Message Request</h3>
+                <p className="text-xs text-[#6b6b66] mt-0.5">
+                  to <span className="font-semibold text-[#0e0e0d]">{creator?.name}</span>
+                </p>
+              </div>
+              <button
+                onClick={() => setMsgModal(false)}
+                className="w-8 h-8 rounded-full bg-[#f7f7f6] hover:bg-[#efefed] flex items-center justify-center text-[#6b6b66] text-lg transition-colors"
+              >
+                ×
+              </button>
+            </div>
+            <div className="px-6 py-5">
+              <p className="text-xs text-[#6b6b66] mb-4 leading-relaxed">
+                <span className="font-semibold text-[#0e0e0d]">{creator?.name}</span> will get a request notification.
+                They can accept or decline before you can chat.
+              </p>
+              <label className="block text-xs font-semibold text-[#6b6b66] uppercase tracking-[0.1em] mb-2">
+                Intro message <span className="normal-case font-normal text-[#a3a39e]">(optional)</span>
+              </label>
+              <textarea
+                value={msgText}
+                onChange={(e) => setMsgText(e.target.value)}
+                placeholder={`Hi ${creator?.name?.split(' ')[0] || 'there'}, I'd love to connect with you…`}
+                rows={3}
+                maxLength={300}
+                className="w-full rounded-xl border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm resize-none focus:outline-none focus:border-[#6C63FF] transition"
+              />
+              <p className="text-[11px] text-[#a3a39e] text-right mt-1">{msgText.length}/300</p>
+            </div>
+            <div className="flex items-center gap-3 px-6 pb-6">
+              <button
+                onClick={() => setMsgModal(false)}
+                className="flex-1 py-2.5 rounded-xl border border-[#e0e0dd] text-sm font-semibold text-[#6b6b66] hover:border-[#0e0e0d] hover:text-[#0e0e0d] transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSendMsgRequest}
+                disabled={messaging}
+                className="flex-1 py-2.5 rounded-xl bg-[#6C63FF] hover:bg-[#5750D4] text-white text-sm font-semibold transition disabled:opacity-60 flex items-center justify-center gap-2"
+              >
+                {messaging ? (
+                  <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Sending…</>
+                ) : 'Send Request'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* One-tap Report Modal */}
+      {showReportModal && (
+        <ReportModal
+          targetType="user"
+          targetId={creator?._id || id}
+          targetLabel={creator?.name || 'this user'}
+          onClose={() => setShowReportModal(false)}
+        />
       )}
     </div>
   );

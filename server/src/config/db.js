@@ -33,18 +33,25 @@ const connectDB = async () => {
       }
     } catch (_) {}
 
-    // Drop the old non-sparse unique index on follows so Mongoose recreates
-    // it as sparse — null-value docs no longer block new inserts
+    // Drop ALL non-_id unique indexes on the follows collection so Mongoose
+    // recreates only the correct { follower, following } sparse unique index.
+    // This handles the old requester/recipient index that silently blocks inserts.
     try {
+      const Follow = require('../models/Follow');
       const followIndexes = await db.collection('follows').indexes();
       for (const idx of followIndexes) {
+        if (idx.name === '_id_') continue; // never drop _id index
         const fields = Object.keys(idx.key || {});
-        if (fields.includes('follower') && fields.includes('following') && idx.unique && !idx.sparse) {
-          await db.collection('follows').dropIndex(idx.name);
-          console.log(`🔧 Dropped non-sparse follow index — will be recreated as sparse on next start`);
-        }
+        // Drop ANY non-_id index (old requester/recipient, old follower/following, everything)
+        await db.collection('follows').dropIndex(idx.name);
+        console.log(`🔧 Dropped old follow index "${idx.name}" (fields: ${fields.join(',')})`);
       }
-    } catch (_) {}
+      // Let Mongoose sync (create) the correct indexes as defined in the schema
+      await Follow.syncIndexes();
+      console.log('✅ Follow indexes synced to current schema');
+    } catch (syncErr) {
+      console.warn('⚠️  Follow index sync warning:', syncErr.message);
+    }
   } catch (error) {
     console.error(`❌ MongoDB Connection Error: ${error.message}`);
     process.exit(1);

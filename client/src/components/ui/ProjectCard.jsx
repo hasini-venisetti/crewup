@@ -1,6 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
+import ReportModal from '@/components/ui/ReportModal';
 
 const TYPE_CONFIG = {
   'short-film':   { label: 'Short Film',   color: '#7C3AED', bg: '#F5F3FF' },
@@ -22,6 +24,7 @@ const LEVEL_CONFIG = {
 };
 
 export default function ProjectCard({ project }) {
+  const [showReport, setShowReport] = useState(false);
   const {
     _id, title, description, createdBy, projectType,
     requiredRoles, location, isPaid, createdAt,
@@ -44,6 +47,7 @@ export default function ProjectCard({ project }) {
   const initials   = createdBy?.name?.[0]?.toUpperCase() || '?';
 
   return (
+    <>
     <Link href={`/projects/${_id}`} className="block group h-full">
       <article className={`relative bg-white rounded-2xl overflow-hidden flex flex-col h-full transition-all duration-200
         ${isReleased
@@ -142,7 +146,27 @@ export default function ProjectCard({ project }) {
           </div>
 
         </div>
+
+        {/* ── One-tap Report button (top-right corner, only visible on hover) ── */}
+        <button
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowReport(true); }}
+          title="Report this project"
+          className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-semibold text-[#8b8b86] hover:text-red-500 px-2 py-1 rounded-lg bg-white/80 border border-[#e0e0dd] hover:border-red-300 z-10"
+        >
+          ⚑
+        </button>
+
       </article>
     </Link>
+
+    {showReport && (
+      <ReportModal
+        targetType="project"
+        targetId={_id}
+        targetLabel={title}
+        onClose={() => setShowReport(false)}
+      />
+    )}
+    </>
   );
 }

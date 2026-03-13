@@ -8,81 +8,47 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// Attach token to every request
+// Attach JWT token to every request
 api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem('crewup_token');
-    const user = localStorage.getItem('crewup_user');
-    
-    // Debug authentication state
-    if (config.url?.includes('/follow/')) {
-      console.log('Auth Debug:', {
-        hasToken: !!token,
-        tokenPreview: token ? `${token.substring(0, 20)}...` : 'none',
-        hasUser: !!user,
-        userPreview: user ? JSON.parse(user)?.name : 'none'
-      });
-    }
-    
     if (token) config.headers.Authorization = `Bearer ${token}`;
-  }
-  // Debug follow requests
-  if (config.url?.includes('/follow/')) {
-    console.log('Follow API Request:', {
-      method: config.method,
-      url: config.url,
-      headers: config.headers,
-      data: config.data
-    });
   }
   return config;
 });
 
-// Handle 401 globally
+// Handle 401 globally — redirect to login
 api.interceptors.response.use(
-  (res) => {
-    // Debug follow responses
-    if (res.config?.url?.includes('/follow/')) {
-      console.log('Follow API Response:', {
-        status: res.status,
-        data: res.data,
-        url: res.config.url
-      });
+  (res) => res,
+  (error) => {
+    if (error.response?.status === 401) {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('crewup_token');
+        localStorage.removeItem('crewup_user');
+        window.location.href = '/login';
+      }
     }
-    return res;
-  },
-  (err) => {
-    // Debug follow errors
-    if (err.config?.url?.includes('/follow/')) {
-      console.log('Follow API Error:', {
-        status: err.response?.status,
-        data: err.response?.data,
-        message: err.message,
-        url: err.config?.url
-      });
-    }
-    if (err.response?.status === 401 && typeof window !== 'undefined') {
-      localStorage.removeItem('crewup_token');
-      localStorage.removeItem('crewup_user');
-      window.location.href = '/login';
-    }
-    return Promise.reject(err);
+    return Promise.reject(error);
   }
 );
 
 /* ── Auth ── */
 export const authAPI = {
-  register:   (data)    => api.post('/auth/register', data),
-  login:      (data)    => api.post('/auth/login', data),
-  me:         ()        => api.get('/auth/me'),
-  googleAuth: (data)    => api.post('/auth/google', data),
+  register:        (data)   => api.post('/auth/register', data),
+  login:           (data)   => api.post('/auth/login', data),
+  me:              ()       => api.get('/auth/me'),
+  googleAuth:      (data)   => api.post('/auth/google', data),
+  // Phase 1: Email OTP verification
+  sendEmailOTP:    ()       => api.post('/auth/send-email-otp'),
+  verifyEmail:     (code)   => api.post('/auth/verify-email', { code }),
 };
 
 /* ── Profile ── */
 export const profileAPI = {
-  getById:  (id)   => api.get(`/profile/${id}`),
-  getMe:    ()     => api.get('/profile/me'),
-  update:   (data) => api.put('/profile/update', data),
+  getById:       (id)        => api.get(`/profile/${id}`),
+  getMe:         ()          => api.get('/profile/me'),
+  update:        (data)      => api.put('/profile/update', data),
+  uploadPicture: (imageData) => api.patch('/profile/picture', { imageData }),
 };
 
 /* ── Projects ── */
@@ -209,15 +175,19 @@ export const scheduleAPI = {
   delete:  (projectId, eid)        => api.delete(`/projects/${projectId}/schedule/${eid}`),
 };
 
-/* ── Follow API (simple one-click, no approval needed) ── */
+/* ── Follow API ── */
 export const followAPI = {
-  follow:       (userId)       => api.post(`/follow/${userId}`),
-  unfollow:     (userId)       => api.delete(`/follow/${userId}`),
-  getStatus:     (userId)       => api.get(`/follow/status/${userId}`),
-  getCounts:    (userId)       => api.get(`/follow/counts/${userId}`),
-  getFollowers:  (userId)       => api.get(`/follow/followers/${userId}`),
-  getFollowing:  (userId)       => api.get(`/follow/following/${userId}`),
-  getFeed:       (page = 1)     => api.get('/follow/feed', { params: { page } }),
+  follow:       (userId)   => api.post(`/follow/${userId}`),
+  unfollow:     (userId)   => api.delete(`/follow/${userId}`),
+  // New — follow status + counts in one request
+  getStatus:    (userId)   => api.get(`/follow/status/${userId}`),
+  // Legacy alias (kept for backward compat)
+  getInfo:      (userId)   => api.get(`/follow/status/${userId}`),
+  // Public endpoints (no auth needed)
+  getCounts:    (userId)   => api.get(`/follow/counts/${userId}`),
+  getFollowers: (userId)   => api.get(`/follow/followers/${userId}`),
+  getFollowing: (userId)   => api.get(`/follow/following/${userId}`),
+  getFeed:      (page = 1) => api.get('/follow/feed', { params: { page } }),
 };
 
 /* ── Waitlist API ── */
@@ -229,8 +199,13 @@ export const waitlistAPI = {
 
 /* ── Mentor API ── */
 export const mentorAPI = {
-  getAll:       (params) => api.get('/mentors', { params }),
-  updateSettings: (data) => api.patch('/mentors/settings', data),
+  getAll:           (params)                 => api.get('/mentors', { params }),
+  updateSettings:   (data)                   => api.patch('/mentors/settings', data),
+  updateStatus:     (mentorStatus)           => api.patch('/mentors/settings', { mentorStatus }),
+  apply:            (mentorUserId, message)  => api.post(`/mentors/${mentorUserId}/apply`, { message }),
+  getApplications:  ()                       => api.get('/message-requests'),          // incoming pending requests (as mentor)
+  acceptRequest:    (requestId)              => api.patch(`/mentors/requests/${requestId}/accept`),
+  declineRequest:   (requestId)             => api.patch(`/message-requests/${requestId}/decline`),
 };
 
 /* ── Launch Waitlist ── */
@@ -245,15 +220,29 @@ export const launchWaitlistAPI = {
 
 /* ── Admin ── */
 export const adminAPI = {
-  getStats:           ()              => api.get('/admin/stats'),
-  getAnalytics:       ()              => api.get('/admin/analytics'),
-  getUsers:           (params)        => api.get('/admin/users', { params }),
-  suspendUser:        (id, suspend)   => api.patch(`/admin/users/${id}/suspend`, { suspend }),
-  announce:           (data)          => api.post('/admin/announce', data),
-  getTrending:        ()              => api.get('/admin/trending-films'),
-  getReports:         (params)        => api.get('/admin/reports', { params }),
-  updateReportStatus: (id, status)    => api.patch(`/admin/reports/${id}`, { status }),
-  clearTestData:      ()              => api.delete('/admin/clear-test-data'),
+  getStats:            ()                => api.get('/admin/stats'),
+  getAnalytics:        ()                => api.get('/admin/analytics'),
+  getUsers:            (params)          => api.get('/admin/users', { params }),
+  suspendUser:         (id, suspend)     => api.patch(`/admin/users/${id}/suspend`, { suspend }),
+  announce:            (data)            => api.post('/admin/announce', data),
+  getTrending:         ()                => api.get('/admin/trending-films'),
+  getReports:          (params)          => api.get('/admin/reports', { params }),
+  updateReportStatus:  (id, status)      => api.patch(`/admin/reports/${id}`, { status }),
+  clearTestData:       ()                => api.delete('/admin/clear-test-data'),
+  // Phase 2: Project moderation
+  getPendingProjects:  (params)          => api.get('/admin/projects/pending', { params }),
+  moderateProject:     (id, action, note) => api.patch(`/admin/projects/${id}/moderate`, { action, note }),
+  // Phase 4: Verified Creator badge
+  setVerifiedBadge:    (id, verified)    => api.patch(`/admin/users/${id}/verify`, { verified }),
+};
+
+/* ── Reports ── */
+export const reportAPI = {
+  submit:       (data)   => api.post('/reports', data),
+  mine:         ()       => api.get('/reports/mine'),
+  // Admin
+  getQueue:     (params) => api.get('/admin/report-queue', { params }),
+  resolve:      (id, action, note) => api.patch(`/admin/report-queue/${id}/resolve`, { action, note }),
 };
 
 /* ── Contests ── */
@@ -304,6 +293,16 @@ export const filmAPI = {
 export const activityAPI = {
   getFeed:         (page = 1, limit = 20) => api.get(`/activity/feed?page=${page}&limit=${limit}`),
   getUserActivity: (userId, page = 1)     => api.get(`/activity/user/${userId}?page=${page}`),
+};
+
+/* ── Message Requests ── */
+export const messageRequestAPI = {
+  send:        (recipientId, message = '') => api.post('/message-requests', { recipientId, message }),
+  getIncoming: ()                          => api.get('/message-requests'),
+  getSent:     ()                          => api.get('/message-requests/sent'),
+  getStatus:   (userId)                    => api.get(`/message-requests/status/${userId}`),
+  accept:      (requestId)                 => api.patch(`/message-requests/${requestId}/accept`),
+  decline:     (requestId)                 => api.patch(`/message-requests/${requestId}/decline`),
 };
 
 export default api;

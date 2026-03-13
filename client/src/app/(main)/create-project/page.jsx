@@ -16,6 +16,29 @@ const TYPES = [
   { value: 'photography', label: 'Photography' },{ value: 'music', label: 'Music' },
   { value: 'other', label: 'Other' },
 ];
+
+// Phase 2: Safety fields
+const PRODUCTION_TYPES = [
+  { value: 'student',    label: '🎓 Student',    desc: 'Student or academic production' },
+  { value: 'indie',      label: '🎬 Indie',       desc: 'Independent / self-funded' },
+  { value: 'commercial', label: '💼 Commercial',  desc: 'Brand, agency, or corporate' },
+  { value: 'broadcast',  label: '📺 Broadcast',   desc: 'TV, streaming, or broadcast' },
+  { value: 'other',      label: '📦 Other',       desc: 'Doesn\'t fit above categories' },
+];
+const AUDITION_FORMATS = [
+  { value: 'not-applicable',   label: 'Not applicable (non-actor roles)' },
+  { value: 'online',           label: '💻 Online / Video call' },
+  { value: 'studio',           label: '🏢 At a registered studio' },
+  { value: 'production-office', label: '🏛 At a production office' },
+  { value: 'flexible',         label: '🔄 Flexible / TBD' },
+];
+const SHOOTING_LOCATION_TYPES = [
+  { value: 'not-specified',   label: 'Not specified yet' },
+  { value: 'studio',          label: '🏢 Studio' },
+  { value: 'public-location', label: '🌆 Public location' },
+  { value: 'remote',          label: '🌐 Fully remote' },
+  { value: 'flexible',        label: '🔄 Mix / Flexible' },
+];
 const PROJECT_TAGS = [
   { value: 'learning-project',       label: '📚 Learning Project',    desc: 'Great for newcomers to practice' },
   { value: 'practice-collaboration', label: '🤝 Practice Collab',     desc: 'Low-stakes team building' },
@@ -38,8 +61,13 @@ export default function CreateProjectPage() {
 
   const [form, setForm] = useState({
     title: '', description: '', projectType: '', requiredRoles: [],
-    isPaid: false, budget: '', location: { city: '', country: '', isRemote: false },
+    isPaid: false, budget: '', compensationDetails: '',
+    location: { city: '', country: '', isRemote: false },
     deadline: '', experienceLevel: 'any', projectTags: [],
+    // Phase 2: Safety fields
+    productionType: 'indie',
+    auditionFormat: 'not-applicable',
+    shootingLocationType: 'not-specified',
   });
 
   const set = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
@@ -65,15 +93,19 @@ export default function CreateProjectPage() {
     if (!form.description.trim()) return toast.error('Description is required');
     if (!form.projectType) return toast.error('Select a project type');
     if (form.requiredRoles.length === 0) return toast.error('Add at least one role');
+    // Phase 2: Safety validations
+    if (form.isPaid && !form.compensationDetails.trim()) return toast.error('Please describe the compensation clearly');
+    if (!form.location.isRemote && (!form.location.city.trim() || !form.location.country.trim())) return toast.error('Please enter the shooting city and country');
     setLoading(true);
     try {
       const payload = {
         ...form,
         deadline: form.deadline || undefined,
         budget: form.isPaid ? form.budget : '',
+        compensationDetails: form.isPaid ? form.compensationDetails : '',
       };
       const { data } = await projectAPI.create(payload);
-      toast.success('Project posted!');
+      toast.success('Project submitted! It will be live after our team reviews it.');
       router.push(`/projects/${data.data._id}`);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to create project');
@@ -336,15 +368,38 @@ export default function CreateProjectPage() {
             </div>
 
             {form.isPaid && (
-              <div>
-                <label className="text-sm text-[#6b6b66] block mb-2 font-medium">Budget / Compensation</label>
-                <input
-                  type="text"
-                  className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF]"
-                  placeholder="e.g. ₹5,000 per day, Revenue share, Negotiable"
-                  value={form.budget}
-                  onChange={(e) => set('budget', e.target.value)}
-                />
+              <div className="flex flex-col gap-3">
+                <div>
+                  <label className="text-sm text-[#6b6b66] block mb-2 font-medium">Budget / Compensation</label>
+                  <input
+                    type="text"
+                    className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF]"
+                    placeholder="e.g. ₹5,000 per day, Revenue share, Negotiable"
+                    value={form.budget}
+                    onChange={(e) => set('budget', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-[#6b6b66] block mb-2 font-medium">
+                    Compensation Details * <span className="text-[#a3a39e] font-normal">(required for paid projects)</span>
+                  </label>
+                  <textarea
+                    className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] min-h-[80px] resize-none"
+                    placeholder="Be specific: e.g. ₹3,000/day for 2 shooting days, paid within 7 days of wrap. Travel and meals covered."
+                    value={form.compensationDetails}
+                    onChange={(e) => set('compensationDetails', e.target.value)}
+                    maxLength={300}
+                    required
+                  />
+                  <p className="text-xs text-[#a3a39e] mt-1">{form.compensationDetails.length}/300</p>
+                </div>
+                {/* Scam notice */}
+                <div className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                  <span className="text-amber-500 text-base flex-shrink-0">⚠️</span>
+                  <p className="text-xs text-amber-700 leading-relaxed">
+                    <strong>Reminder:</strong> Never ask collaborators to pay fees, deposits, or any upfront costs. Legitimate productions always pay their crew — never the other way around.
+                  </p>
+                </div>
               </div>
             )}
 
@@ -397,13 +452,91 @@ export default function CreateProjectPage() {
             </div>
           </section>
 
+          {/* ── Safety & Casting Details (Phase 2) ── */}
+          <section className="bg-white rounded-2xl border border-[#efefed] p-7 shadow-sm flex flex-col gap-6">
+            <div>
+              <h2 className="font-bold text-[#111110] text-base mb-1">Safety & Casting Details</h2>
+              <p className="text-xs text-[#a3a39e]">Required to keep CREWUPFILMS safe for everyone.</p>
+            </div>
+
+            {/* Production Type */}
+            <div>
+              <label className="text-sm text-[#6b6b66] block mb-3 font-medium">Production Type *</label>
+              <div className="grid grid-cols-2 gap-2">
+                {PRODUCTION_TYPES.map((t) => (
+                  <button
+                    key={t.value}
+                    type="button"
+                    onClick={() => set('productionType', t.value)}
+                    className={`text-left p-3 border rounded-xl transition-all ${
+                      form.productionType === t.value
+                        ? 'border-[#0e0e0d] bg-[#0e0e0d] text-white'
+                        : 'border-[#e0e0dd] bg-white text-[#111110] hover:border-[#0e0e0d]'
+                    }`}
+                  >
+                    <p className={`text-sm font-semibold ${form.productionType === t.value ? 'text-white' : 'text-[#111110]'}`}>{t.label}</p>
+                    <p className={`text-xs mt-0.5 ${form.productionType === t.value ? 'text-white/70' : 'text-[#a3a39e]'}`}>{t.desc}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Audition Format */}
+            <div>
+              <label className="text-sm text-[#6b6b66] block mb-2 font-medium">Audition Format *</label>
+              <select
+                className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm text-[#111110] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF]"
+                value={form.auditionFormat}
+                onChange={(e) => set('auditionFormat', e.target.value)}
+              >
+                {AUDITION_FORMATS.map((f) => (
+                  <option key={f.value} value={f.value}>{f.label}</option>
+                ))}
+              </select>
+              {(form.auditionFormat === 'online') && (
+                <p className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2 mt-2">
+                  ✅ Online auditions are the safest option. Applicants will appreciate it.
+                </p>
+              )}
+            </div>
+
+            {/* Shooting Location Type */}
+            <div>
+              <label className="text-sm text-[#6b6b66] block mb-2 font-medium">Shooting Location Type *</label>
+              <select
+                className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm text-[#111110] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF]"
+                value={form.shootingLocationType}
+                onChange={(e) => set('shootingLocationType', e.target.value)}
+              >
+                {SHOOTING_LOCATION_TYPES.map((t) => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+              {/* Hard block: private residences not allowed */}
+              <p className="text-xs text-[#a3a39e] mt-2">
+                ⚠️ <strong className="text-[#6b6b66]">Private residences are not allowed</strong> as audition or shooting locations. All in-person meetings must be at registered studios, production offices, or public locations.
+              </p>
+            </div>
+          </section>
+
+          {/* Moderation notice */}
+          <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded-2xl">
+            <span className="text-blue-500 text-lg flex-shrink-0">🛡️</span>
+            <div>
+              <p className="text-sm font-semibold text-blue-900 mb-1">Your project will be reviewed before going live</p>
+              <p className="text-xs text-blue-700 leading-relaxed">
+                All new projects go through a quick safety review by our team. Most projects are approved within a few hours. You'll receive a notification once your project is live.
+              </p>
+            </div>
+          </div>
+
           {/* Submit */}
           <button
             type="submit"
             disabled={loading}
             className="bg-[#6C63FF] text-white rounded-xl py-4 text-base font-bold w-full hover:bg-[#5750D4] disabled:opacity-50 transition-colors"
           >
-            {loading ? 'Posting...' : 'Post Project →'}
+            {loading ? 'Submitting...' : 'Submit Project for Review →'}
           </button>
         </form>
       </div>

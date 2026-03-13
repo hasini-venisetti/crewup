@@ -24,14 +24,16 @@ const teamFileRoutes       = require('./routes/teamFileRoutes');
 const reviewRoutes         = require('./routes/reviewRoutes');
 const scheduleRoutes       = require('./routes/scheduleRoutes');
 const waitlistRoutes       = require('./routes/waitlistRoutes');
-const mentorRoutes         = require('./routes/mentorRoutes');
-const followRoutes         = require('./routes/followRoutes');
+const mentorRoutes          = require('./routes/mentorRoutes');
+const followRoutes          = require('./routes/followRoutes');
+const messageRequestRoutes  = require('./routes/messageRequestRoutes');
 const crewMatchRoutes         = require('./routes/crewMatchRoutes');
 const filmInteractionRoutes   = require('./routes/filmInteractionRoutes');
 const adminRoutes             = require('./routes/adminRoutes');
 const contestRoutes           = require('./routes/contestRoutes');
 const launchWaitlistRoutes    = require('./routes/launchWaitlistRoutes');
 const activityRoutes          = require('./routes/activityRoutes');
+const reportRoutes            = require('./routes/reportRoutes');
 const socketHandler        = require('./socket/socketHandler');
 
 // Connect to MongoDB
@@ -118,12 +120,14 @@ app.use('/api/projects/:id/schedule',  scheduleRoutes);
 app.use('/api/projects/:id/waitlist',  waitlistRoutes);
 app.use('/api/mentors',                mentorRoutes);
 app.use('/api/follow',                 followRoutes);
+app.use('/api/message-requests',       messageRequestRoutes);
 app.use('/api/projects/:id',           crewMatchRoutes);
 app.use('/api/films',                  filmInteractionRoutes);
 app.use('/api/admin',                  adminRoutes);
 app.use('/api/contests',               contestRoutes);
 app.use('/api/launch-waitlist',        launchWaitlistRoutes);
 app.use('/api/activity',               activityRoutes);
+app.use('/api/reports',                reportRoutes);
 
 // ── 404 + global error handler ───────────────────────────────────────────
 app.use((req, res) => {

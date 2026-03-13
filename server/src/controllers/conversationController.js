@@ -1,7 +1,39 @@
-const Conversation = require('../models/Conversation');
-const Message      = require('../models/Message');
-const ProjectChat  = require('../models/ProjectChat');
-const Project      = require('../models/Project');
+const Conversation     = require('../models/Conversation');
+const Message          = require('../models/Message');
+const ProjectChat      = require('../models/ProjectChat');
+const Project          = require('../models/Project');
+const MessageRequest   = require('../models/MessageRequest');
+const User             = require('../models/User');
+
+// ── Phase 3: Messaging Safety ──────────────────────────────────────────────────
+// Patterns to detect: phone numbers, email addresses, external contact info
+const CONTACT_INFO_PATTERN = /(\+?\d[\d\s\-().]{7,}\d|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g;
+
+// Patterns to detect payment/scam requests
+const SCAM_KEYWORDS = [
+  /pay\s*(?:me|us|upfront|first|now|deposit)/i,
+  /send\s*(?:me|us)?\s*(?:money|cash|payment|transfer)/i,
+  /(?:western\s*union|moneygram|wire\s*transfer|bitcoin|crypto)/i,
+  /registration\s*fee/i,
+  /audition\s*fee/i,
+  /casting\s*fee/i,
+  /advance\s*payment/i,
+  /upfront\s*(?:fee|payment|cost)/i,
+  /pay\s*(?:to|for)\s*(?:join|apply|audition)/i,
+];
+
+function filterContactInfo(text) {
+  // Replace phone/email with a notice — store original text is still saved for dispute resolution
+  return text.replace(CONTACT_INFO_PATTERN, '[contact info removed]');
+}
+
+function detectScamKeywords(text) {
+  return SCAM_KEYWORDS.some((pattern) => pattern.test(text));
+}
+
+function hasContactInfo(text) {
+  return CONTACT_INFO_PATTERN.test(text);
+}
 
 /* ─────────────────────────────────────────────────────────────────────────
    PRIVATE (1:1) CONVERSATIONS
@@ -40,18 +72,38 @@ const startConversation = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Cannot start a conversation with yourself' });
     }
 
-    // Return existing conversation if one already exists between the two users
+    // Check for an existing active conversation first
     let conversation = await Conversation.findOne({
       members: { $all: [req.user._id, recipientId] },
+      status: 'active',
     }).populate('members', 'name username role profileImage');
 
-    if (!conversation) {
-      conversation = await Conversation.create({
-        members: [req.user._id, recipientId],
-      });
-      conversation = await Conversation.findById(conversation._id)
-        .populate('members', 'name username role profileImage');
+    if (conversation) {
+      return res.status(200).json({ success: true, data: conversation });
     }
+
+    // Require an accepted message request before creating a new conversation
+    const accepted = await MessageRequest.findOne({
+      $or: [
+        { sender: req.user._id, recipient: recipientId, status: 'accepted' },
+        { sender: recipientId, recipient: req.user._id, status: 'accepted' },
+      ],
+    }).lean();
+
+    if (!accepted) {
+      return res.status(403).json({
+        success: false,
+        message: 'Send a message request first. You can chat once they accept.',
+      });
+    }
+
+    // Create the conversation
+    conversation = await Conversation.create({
+      members: [req.user._id, recipientId],
+      status: 'active',
+    });
+    conversation = await Conversation.findById(conversation._id)
+      .populate('members', 'name username role profileImage');
 
     res.status(200).json({ success: true, data: conversation });
   } catch (error) {
@@ -105,21 +157,58 @@ const sendMessage = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
+    // ── Minor Protection: if any other member is a minor, sender must be verified ──
+    const otherMemberIds = conversation.members
+      .map(String)
+      .filter((id) => id !== String(req.user._id));
+
+    if (otherMemberIds.length > 0 && !req.user.isEmailVerified) {
+      const minorInConv = await User.exists({
+        _id: { $in: otherMemberIds },
+        isMinor: true,
+      });
+      if (minorInConv) {
+        return res.status(403).json({
+          success: false,
+          message: 'You must verify your email before sending messages to users under 18.',
+          code: 'MINOR_PROTECTION',
+        });
+      }
+    }
+
+    // Phase 3: Safety checks
+    const isScam = detectScamKeywords(text);
+    const hasContact = hasContactInfo(text);
+    // Filter contact info from the stored text
+    const safeText = filterContactInfo(text);
+
     const message = await Message.create({
       sender:         req.user._id,
       conversationId,
-      text,
+      text:           safeText,
+      // Store flags for dispute resolution (not shown to users)
+      isFlagged:      isScam,
+      containsContactInfo: hasContact,
     });
 
     await message.populate('sender', 'name username profileImage');
 
     // Update conversation preview
     await Conversation.findByIdAndUpdate(conversationId, {
-      lastMessage:   text,
+      lastMessage:   safeText.slice(0, 100),
       lastMessageAt: new Date(),
     });
 
-    res.status(201).json({ success: true, data: message });
+    // Return the message + a warning flag if scam keywords detected
+    res.status(201).json({
+      success: true,
+      data: message,
+      warning: isScam
+        ? 'This message was flagged as potentially suspicious. Legitimate productions never ask you to send money.'
+        : hasContact
+        ? 'Contact information has been removed from this message. Keep all communication within CREWUPFILMS.'
+        : null,
+    });
   } catch (error) {
     next(error);
   }

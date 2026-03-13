@@ -1,23 +1,43 @@
 const https                = require('https');
+const crypto               = require('crypto');
 const { validationResult } = require('express-validator');
 const User                 = require('../models/User');
 const Profile              = require('../models/Profile');
 const generateToken        = require('../utils/generateToken');
+const { sendEmailOTP }     = require('../utils/emailService');
 
 /* ── helpers ──────────────────────────────────────────────────────────── */
 function userPayload(user) {
   return {
-    id:           user._id,
-    uid:          user.uid,
-    name:         user.name,
-    username:     user.username,
-    email:        user.email,
-    role:         user.role,
-    profileImage: user.profileImage,
-    isAdmin:      user.isAdmin      || false,
-    isSuspended:  user.isSuspended  || false,
-    authProvider: user.authProvider || 'local',
+    id:              user._id,
+    uid:             user.uid,
+    name:            user.name,
+    username:        user.username,
+    email:           user.email,
+    role:            user.role,
+    profileImage:    user.profileImage,
+    isAdmin:         user.isAdmin         || false,
+    isSuspended:     user.isSuspended     || false,
+    authProvider:    user.authProvider    || 'local',
+    isEmailVerified: user.isEmailVerified || false,
+    isMinor:         user.isMinor         || false,
+    phone:           user.phone           || { number: '', isVerified: false },
   };
+}
+
+// Generate a 6-digit numeric OTP
+function generateOTP() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+// Compute isMinor from dateOfBirth
+function computeIsMinor(dob) {
+  if (!dob) return false;
+  const birthDate = new Date(dob);
+  const today = new Date();
+  const age = today.getFullYear() - birthDate.getFullYear()
+    - (today < new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate()) ? 1 : 0);
+  return age < 18;
 }
 
 // Verify Google id_token via Google's tokeninfo endpoint (no extra packages needed)
@@ -47,7 +67,7 @@ const register = async (req, res, next) => {
     if (!errors.isEmpty())
       return res.status(400).json({ success: false, errors: errors.array() });
 
-    const { name, username, email, password, role } = req.body;
+    const { name, username, email, password, role, dateOfBirth } = req.body;
 
     const existingUser = await User.findOne({ $or: [{ email }, { username }] });
     if (existingUser) {
@@ -55,11 +75,80 @@ const register = async (req, res, next) => {
       return res.status(409).json({ success: false, message: `${field} already in use` });
     }
 
-    const user = await User.create({ name, username, email, password, role });
+    const isMinor = computeIsMinor(dateOfBirth);
+    const otp = generateOTP();
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    const user = await User.create({
+      name, username, email, password, role,
+      dateOfBirth: dateOfBirth || null,
+      isMinor,
+      isEmailVerified: false,
+      emailOTP: { code: otp, expiresAt: otpExpiry },
+    });
     await Profile.create({ user: user._id });
 
+    // Send OTP email (fire-and-forget — don't block signup)
+    sendEmailOTP(email, name, otp).catch(() => {});
+
     const token = generateToken(user._id);
-    res.status(201).json({ success: true, message: 'Account created successfully', token, user: userPayload(user) });
+    res.status(201).json({
+      success: true,
+      message: 'Account created successfully. Please verify your email.',
+      token,
+      user: userPayload(user),
+      requiresEmailVerification: true,
+    });
+  } catch (error) { next(error); }
+};
+
+/* ── POST /api/auth/send-email-otp ────────────────────────────────────── */
+// Resend OTP to the authenticated user's email
+const sendEmailVerificationOTP = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id).select('+emailOTP');
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    if (user.isEmailVerified) return res.status(400).json({ success: false, message: 'Email already verified' });
+
+    // Rate-limit: don't resend if last OTP was sent < 60 seconds ago
+    if (user.emailOTP?.expiresAt) {
+      const remainingMs = user.emailOTP.expiresAt.getTime() - Date.now();
+      if (remainingMs > 9 * 60 * 1000) { // less than 1 min old
+        return res.status(429).json({ success: false, message: 'Please wait 60 seconds before requesting a new code.' });
+      }
+    }
+
+    const otp = generateOTP();
+    user.emailOTP = { code: otp, expiresAt: new Date(Date.now() + 10 * 60 * 1000) };
+    await user.save({ validateBeforeSave: false });
+
+    await sendEmailOTP(user.email, user.name, otp);
+    res.status(200).json({ success: true, message: 'Verification code sent to your email' });
+  } catch (error) { next(error); }
+};
+
+/* ── POST /api/auth/verify-email ───────────────────────────────────────── */
+const verifyEmail = async (req, res, next) => {
+  try {
+    const { code } = req.body;
+    if (!code) return res.status(400).json({ success: false, message: 'Verification code is required' });
+
+    const user = await User.findById(req.user._id).select('+emailOTP');
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    if (user.isEmailVerified) return res.status(400).json({ success: false, message: 'Email already verified' });
+
+    if (!user.emailOTP?.code || user.emailOTP.code !== String(code).trim()) {
+      return res.status(400).json({ success: false, message: 'Invalid verification code' });
+    }
+    if (user.emailOTP.expiresAt < new Date()) {
+      return res.status(400).json({ success: false, message: 'Verification code has expired. Please request a new one.' });
+    }
+
+    user.isEmailVerified = true;
+    user.emailOTP = undefined;
+    await user.save({ validateBeforeSave: false });
+
+    res.status(200).json({ success: true, message: 'Email verified successfully', user: userPayload(user) });
   } catch (error) { next(error); }
 };
 
@@ -130,15 +219,16 @@ const googleAuth = async (req, res, next) => {
       if (taken) return res.status(409).json({ success: false, message: 'Username already taken' });
 
       user = await User.create({
-        name:         name || email.split('@')[0],
-        username:     username.toLowerCase(),
+        name:            name || email.split('@')[0],
+        username:        username.toLowerCase(),
         email,
         googleId,
-        authProvider: 'google',
-        profileImage: picture || '',
-        role:         role || 'other',
-        location:     location || {},
-        skills:       skills || [],
+        authProvider:    'google',
+        profileImage:    picture || '',
+        role:            role || 'other',
+        location:        location || {},
+        skills:          skills || [],
+        isEmailVerified: true, // Google already verified the email
       });
       await Profile.create({ user: user._id });
     }
@@ -155,4 +245,4 @@ const getMe = async (req, res) => {
   res.status(200).json({ success: true, user: userPayload(req.user) });
 };
 
-module.exports = { register, login, googleAuth, getMe };
+module.exports = { register, login, googleAuth, getMe, sendEmailVerificationOTP, verifyEmail };

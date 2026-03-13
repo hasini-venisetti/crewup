@@ -52,12 +52,7 @@ const userSchema = new mongoose.Schema(
       default: 'local',
     },
     role: {
-      type: String,
-      enum: [
-        'filmmaker', 'actor', 'editor', 'writer',
-        'musician',  'designer', 'photographer',
-        'content-creator', 'other',
-      ],
+      type:    String,
       default: 'other',
     },
     profileImage: { type: String, default: '' },
@@ -66,6 +61,24 @@ const userSchema = new mongoose.Schema(
     isAdmin:      { type: Boolean, default: false },
     // Saved / bookmarked films (project refs with youtubeLink)
     bookmarks:    [{ type: mongoose.Schema.Types.ObjectId, ref: 'Project' }],
+
+    // ── Phase 1: Account Safety ──────────────────────────────────────────
+    dateOfBirth:     { type: Date, default: null },
+    isMinor:         { type: Boolean, default: false },
+    isEmailVerified: { type: Boolean, default: false },
+    emailOTP: {
+      code:      { type: String, select: false },
+      expiresAt: { type: Date,   select: false },
+    },
+    // Phone number + OTP (optional — for future SMS verification)
+    phone: {
+      number:     { type: String, default: '' },
+      isVerified: { type: Boolean, default: false },
+    },
+    phoneOTP: {
+      code:      { type: String, select: false },
+      expiresAt: { type: Date,   select: false },
+    },
   },
   { timestamps: true }
 );

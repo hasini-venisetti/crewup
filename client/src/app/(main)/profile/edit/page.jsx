@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { profileAPI, portfolioAPI } from '@/lib/api';
+import { useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
@@ -38,9 +39,15 @@ export default function EditProfilePage() {
     socialLinks: { instagram: '', youtube: '', vimeo: '', linkedin: '', website: '' },
     portfolioLinks: [{ label: '', url: '' }],
     isMentor: false, mentorBio: '', mentorFields: [], mentorRate: '', mentorCurrency: 'INR',
+    // Phase 5: Emergency contact & verification links
+    emergencyContact: { name: '', phone: '', relationship: '' },
+    verificationLinks: { imdb: '', instagram: '' },
   });
-  const [skillInput, setSkillInput] = useState('');
-  const [portfolio, setPortfolio]   = useState([]);
+  const [skillInput, setSkillInput]         = useState('');
+  const [portfolio, setPortfolio]           = useState([]);
+  const [picturePreview, setPicturePreview] = useState('');
+  const [uploadingPic, setUploadingPic]     = useState(false);
+  const picInputRef = useRef(null);
   const [addingItem, setAddingItem] = useState(false);
   const [newItem, setNewItem]       = useState({ title: '', description: '', type: 'other', link: '', tags: '' });
   const [deletingId, setDeletingId] = useState('');
@@ -75,6 +82,8 @@ export default function EditProfilePage() {
           mentorFields:    p.mentorFields     || [],
           mentorRate:      p.mentorRate != null ? String(p.mentorRate) : '',
           mentorCurrency:  p.mentorCurrency   || 'INR',
+          emergencyContact:   p.emergencyContact   || { name: '', phone: '', relationship: '' },
+          verificationLinks:  p.verificationLinks  || { imdb: '', instagram: '' },
         });
       })
       .catch(() => toast.error('Failed to load profile'))
@@ -93,8 +102,8 @@ export default function EditProfilePage() {
   const removeSkill = (s) => set('skills', form.skills.filter((x) => x !== s));
 
   const handleSave = async () => {
-    if (form.isMentor && (!form.mentorRate || Number(form.mentorRate) <= 0)) {
-      toast.error('Please set your hourly rate to become a mentor.');
+    if (form.isMentor && (form.mentorRate === '' || form.mentorRate === null || form.mentorRate === undefined || Number(form.mentorRate) < 0)) {
+      toast.error('Please set your hourly rate (enter 0 for free mentorship).');
       setTab('mentor'); return;
     }
     setSaving(true);
@@ -106,10 +115,37 @@ export default function EditProfilePage() {
         isMentor: form.isMentor, mentorBio: form.mentorBio, mentorFields: form.mentorFields,
         mentorRate: form.mentorRate !== '' ? Number(form.mentorRate) : null,
         mentorCurrency: form.mentorCurrency,
+        // Phase 5: Emergency contact & verification links
+        emergencyContact:  form.emergencyContact,
+        verificationLinks: form.verificationLinks,
       });
       toast.success('Profile saved!');
     } catch { toast.error('Failed to save profile'); }
     finally { setSaving(false); }
+  };
+
+  const handlePictureChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { toast.error('Please select an image file'); return; }
+    if (file.size > 1.5 * 1024 * 1024) { toast.error('Image must be under 1.5 MB'); return; }
+
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const imageData = ev.target.result; // base64 data URL
+      setPicturePreview(imageData);
+      setUploadingPic(true);
+      try {
+        await profileAPI.uploadPicture(imageData);
+        toast.success('Profile picture updated!');
+      } catch {
+        toast.error('Failed to upload picture');
+        setPicturePreview('');
+      } finally {
+        setUploadingPic(false);
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleAddPortfolioItem = async () => {
@@ -145,6 +181,7 @@ export default function EditProfilePage() {
     { key: 'portfolio',    label: 'Portfolio' },
     { key: 'links',        label: 'Links' },
     { key: 'mentor',       label: '🎓 Mentor' },
+    { key: 'safety',       label: '🛡 Safety' },
   ];
 
   const addSlot = () => {
@@ -198,6 +235,38 @@ export default function EditProfilePage() {
         {/* ── BASIC INFO ── */}
         {tab === 'basic' && (
           <div className="bg-white rounded-2xl border border-[#efefed] p-8 flex flex-col gap-6">
+
+            {/* Profile Picture */}
+            <div>
+              <label className={labelCls}>Profile Picture</label>
+              <div className="flex items-center gap-5">
+                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#c9c4ff] to-[#e4e1ff] flex items-center justify-center text-2xl font-bold text-[#3730A3] flex-shrink-0 overflow-hidden">
+                  {(picturePreview || profile?.user?.profileImage)
+                    ? <img src={picturePreview || profile.user.profileImage} alt="Profile" className="w-full h-full object-cover" />
+                    : <span>{profile?.user?.name?.[0]?.toUpperCase() || '?'}</span>
+                  }
+                </div>
+                <div className="flex flex-col gap-2">
+                  <input
+                    ref={picInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handlePictureChange}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => picInputRef.current?.click()}
+                    disabled={uploadingPic}
+                    className="text-sm font-semibold px-4 py-2 rounded-lg border border-[#e0e0dd] text-[#111110] hover:border-[#6C63FF] hover:text-[#6C63FF] transition-all disabled:opacity-50"
+                  >
+                    {uploadingPic ? 'Uploading…' : 'Change Photo'}
+                  </button>
+                  <p className="text-xs text-[#a3a39e]">JPG, PNG or WebP · Max 1.5 MB</p>
+                </div>
+              </div>
+            </div>
+
             <div>
               <label className={labelCls}>Full Name</label>
               <input className={inputCls} value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Your full name" />
@@ -568,6 +637,101 @@ export default function EditProfilePage() {
                   </p>
                 ) : null
               ) : null}
+            </div>
+          </div>
+        )}
+
+        {/* ── SAFETY TAB ── */}
+        {tab === 'safety' && (
+          <div className="flex flex-col gap-6">
+
+            {/* Email verification status */}
+            <div className="bg-white rounded-2xl border border-[#efefed] p-6 shadow-sm">
+              <h3 className="font-bold text-[#111110] text-sm mb-4">Email Verification</h3>
+              {user?.isEmailVerified ? (
+                <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-xl">
+                  <span className="text-green-600 text-xl">✅</span>
+                  <div>
+                    <p className="text-sm font-semibold text-green-800">Email verified</p>
+                    <p className="text-xs text-green-600">{user.email}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <span className="text-amber-500 text-xl">⚠️</span>
+                    <div>
+                      <p className="text-sm font-semibold text-amber-800">Email not verified</p>
+                      <p className="text-xs text-amber-600">Verify to unlock full platform access</p>
+                    </div>
+                  </div>
+                  <a href="/verify-email" className="text-xs font-semibold text-white bg-amber-500 hover:bg-amber-600 px-3 py-2 rounded-lg transition-colors">
+                    Verify Now
+                  </a>
+                </div>
+              )}
+            </div>
+
+            {/* Verification links (for Verified Creator badge) */}
+            <div className="bg-white rounded-2xl border border-[#efefed] p-6 shadow-sm">
+              <h3 className="font-bold text-[#111110] text-sm mb-1">Creator Verification Links</h3>
+              <p className="text-xs text-[#a3a39e] mb-4">Provide links to your IMDb or verified social profile. These help our team verify your identity for the Verified Creator badge.</p>
+              <div className="flex flex-col gap-3">
+                <div>
+                  <label className="text-xs text-[#6b6b66] font-medium block mb-1">IMDb Profile URL</label>
+                  <input type="url" placeholder="https://www.imdb.com/name/nm..."
+                    className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF]"
+                    value={form.verificationLinks.imdb}
+                    onChange={(e) => setForm(f => ({ ...f, verificationLinks: { ...f.verificationLinks, imdb: e.target.value } }))} />
+                </div>
+                <div>
+                  <label className="text-xs text-[#6b6b66] font-medium block mb-1">Verified Instagram URL</label>
+                  <input type="url" placeholder="https://www.instagram.com/yourusername"
+                    className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF]"
+                    value={form.verificationLinks.instagram}
+                    onChange={(e) => setForm(f => ({ ...f, verificationLinks: { ...f.verificationLinks, instagram: e.target.value } }))} />
+                </div>
+              </div>
+              <p className="text-xs text-[#a3a39e] mt-3">After saving, our team will review your links and may grant a Verified Creator badge. This may take 1–3 business days.</p>
+            </div>
+
+            {/* Emergency Contact */}
+            <div className="bg-white rounded-2xl border border-[#efefed] p-6 shadow-sm">
+              <h3 className="font-bold text-[#111110] text-sm mb-1">Emergency Contact</h3>
+              <p className="text-xs text-[#a3a39e] mb-4">Stored privately and never shown on your public profile. Used only for the Safe Check-In feature.</p>
+              <div className="flex flex-col gap-3">
+                <div>
+                  <label className="text-xs text-[#6b6b66] font-medium block mb-1">Contact Name</label>
+                  <input type="text" placeholder="e.g. Priya (sister)"
+                    className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF]"
+                    value={form.emergencyContact.name}
+                    onChange={(e) => setForm(f => ({ ...f, emergencyContact: { ...f.emergencyContact, name: e.target.value } }))} />
+                </div>
+                <div>
+                  <label className="text-xs text-[#6b6b66] font-medium block mb-1">Contact Phone</label>
+                  <input type="tel" placeholder="+91 98765 43210"
+                    className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF]"
+                    value={form.emergencyContact.phone}
+                    onChange={(e) => setForm(f => ({ ...f, emergencyContact: { ...f.emergencyContact, phone: e.target.value } }))} />
+                </div>
+                <div>
+                  <label className="text-xs text-[#6b6b66] font-medium block mb-1">Relationship</label>
+                  <input type="text" placeholder="e.g. Sister, Friend, Parent"
+                    className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF]"
+                    value={form.emergencyContact.relationship}
+                    onChange={(e) => setForm(f => ({ ...f, emergencyContact: { ...f.emergencyContact, relationship: e.target.value } }))} />
+                </div>
+              </div>
+            </div>
+
+            {/* Safety guide link */}
+            <div className="flex items-center gap-3 p-4 bg-[#f5f5f3] rounded-2xl">
+              <span className="text-2xl">🛡</span>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-[#111110]">Read our Safety Guide</p>
+                <p className="text-xs text-[#6b6b66]">Tips on evaluating casting calls, safe meeting practices, and how to report issues.</p>
+              </div>
+              <a href="/safety" className="text-xs font-semibold text-[#6C63FF] hover:underline flex-shrink-0">Read →</a>
             </div>
           </div>
         )}

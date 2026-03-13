@@ -14,15 +14,19 @@ const notificationSchema = new mongoose.Schema(
         'new_message',
         'follow_request',         // recipient gets this when someone sends a follow request
         'follow_accepted',        // requester gets this when their request is accepted
-        'project_invite',         // user is invited to join a project
-        'contest_announcement',   // admin announces a contest
-        'platform_update',        // admin broadcasts a platform update
+        'project_invite',           // user is invited to join a project
+        'message_request',          // user wants to start a chat
+        'message_request_accepted', // message request was accepted
+        'mentorship_request',       // user wants mentorship
+        'contest_announcement',     // admin announces a contest
+        'platform_update',          // admin broadcasts a platform update
       ],
       required: true,
     },
     title:   { type: String, required: true },
     message: { type: String, required: true },
     link:    { type: String, default: '' },  // frontend route to navigate to
+    data:    { type: mongoose.Schema.Types.Mixed, default: {} }, // extra metadata (e.g. requestId)
     read:    { type: Boolean, default: false },
   },
   { timestamps: true }

@@ -53,12 +53,16 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Legal */}
+          {/* Trust & Safety */}
           <div>
-            <p className="text-xs font-semibold text-white/25 uppercase tracking-[0.15em] mb-5">Legal</p>
+            <p className="text-xs font-semibold text-white/25 uppercase tracking-[0.15em] mb-5">Trust & Safety</p>
             <ul className="space-y-3">
-              <li><Link href="/privacy" className="text-sm text-white/45 hover:text-white transition-colors">Privacy Policy</Link></li>
-              <li><Link href="/terms"   className="text-sm text-white/45 hover:text-white transition-colors">Terms of Service</Link></li>
+              <li><Link href="/safety"   className="text-sm text-white/45 hover:text-white transition-colors">🛡 Safety Guide</Link></li>
+              <li><Link href="/report"   className="text-sm text-white/45 hover:text-white transition-colors">Report an Issue</Link></li>
+              <li><Link href="/support"  className="text-sm text-white/45 hover:text-white transition-colors">Support</Link></li>
+              <li><Link href="/legal/privacy" className="text-sm text-white/45 hover:text-white transition-colors">Privacy Policy</Link></li>
+              <li><Link href="/legal/terms"   className="text-sm text-white/45 hover:text-white transition-colors">Terms of Service</Link></li>
+              <li><Link href="/legal/community-guidelines" className="text-sm text-white/45 hover:text-white transition-colors">Community Guidelines</Link></li>
             </ul>
           </div>
         </div>

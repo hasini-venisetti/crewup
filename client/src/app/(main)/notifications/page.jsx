@@ -1,10 +1,12 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { notificationAPI } from '@/lib/api';
+import { useRouter } from 'next/navigation';
+import { notificationAPI, messageRequestAPI } from '@/lib/api';
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading]         = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     fetchNotifications();
@@ -13,7 +15,7 @@ export default function NotificationsPage() {
   const fetchNotifications = async () => {
     try {
       setIsLoading(true);
-      const res = await notificationAPI.getAll();
+      const res  = await notificationAPI.getAll();
       const data = res.data?.data || res.data?.notifications || [];
       setNotifications(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -74,8 +76,79 @@ export default function NotificationsPage() {
     }
   };
 
+  // Accept a message/mentorship request directly from the notification
+  const handleAcceptRequest = async (notif) => {
+    const requestId = notif.data?.requestId;
+    const nid       = notif._id || notif.id;
+
+    // If no requestId in notification data, fall back to looking it up by sender
+    if (!requestId) {
+      const senderId = notif.sender?._id || notif.sender;
+      if (!senderId) {
+        router.push('/messages?tab=requests');
+        return;
+      }
+      try {
+        const statusRes = await messageRequestAPI.getStatus(senderId);
+        const rid       = statusRes.data?.data?.requestId;
+        if (!rid) { router.push('/messages?tab=requests'); return; }
+        const convRes = await messageRequestAPI.accept(rid);
+        const convId  = convRes.data?.data?._id;
+        // Mark notification as read then navigate
+        await notificationAPI.markRead(nid).catch(() => {});
+        setNotifications((prev) =>
+          prev.map((n) => ((n._id || n.id) === nid ? { ...n, read: true, _accepted: true } : n))
+        );
+        router.push(convId ? `/messages?conv=${convId}` : '/messages');
+      } catch (err) {
+        console.error('Accept failed:', err);
+        router.push('/messages?tab=requests');
+      }
+      return;
+    }
+
+    try {
+      const res    = await messageRequestAPI.accept(requestId);
+      const convId = res.data?.data?._id;
+      await notificationAPI.markRead(nid).catch(() => {});
+      setNotifications((prev) =>
+        prev.map((n) => ((n._id || n.id) === nid ? { ...n, read: true, _accepted: true } : n))
+      );
+      router.push(convId ? `/messages?conv=${convId}` : '/messages');
+    } catch (err) {
+      console.error('Accept failed:', err?.response?.data || err.message);
+      // If already accepted, just navigate
+      if (err?.response?.status === 400) {
+        router.push('/messages');
+      } else {
+        router.push('/messages?tab=requests');
+      }
+    }
+  };
+
+  // Decline a message/mentorship request directly from the notification
+  const handleDeclineRequest = async (notif) => {
+    const requestId = notif.data?.requestId;
+    const nid       = notif._id || notif.id;
+
+    if (!requestId) {
+      router.push('/messages?tab=requests');
+      return;
+    }
+
+    try {
+      await messageRequestAPI.decline(requestId);
+      await notificationAPI.markRead(nid).catch(() => {});
+      setNotifications((prev) =>
+        prev.map((n) => ((n._id || n.id) === nid ? { ...n, read: true, _declined: true } : n))
+      );
+    } catch (err) {
+      console.error('Decline failed:', err?.response?.data || err.message);
+    }
+  };
+
   const groupedNotifications = groupByDate(notifications);
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const unreadCount          = notifications.filter((n) => !n.read).length;
 
   return (
     <div className="min-h-screen bg-white">
@@ -150,6 +223,8 @@ export default function NotificationsPage() {
                       timeAgo={timeAgo}
                       onMarkRead={handleMarkRead}
                       onDelete={handleDelete}
+                      onAccept={handleAcceptRequest}
+                      onDecline={handleDeclineRequest}
                     />
                   ))}
                 </div>
@@ -172,25 +247,47 @@ export default function NotificationsPage() {
   );
 }
 
-function NotificationRow({ notif, timeAgo, onMarkRead, onDelete }) {
+function NotificationRow({ notif, timeAgo, onMarkRead, onDelete, onAccept, onDecline }) {
+  const [responding, setResponding] = useState(false);
+
   const getNotificationIcon = (type) => {
     const icons = {
-      new_message: '💬',
-      application_received: '📝',
-      application_accepted: '✅',
-      application_declined: '❌',
-      role_filled: '⭐',
-      follow_request: '👤',
-      follow_accepted: '🤝',
-      project_invite: '🎬',
-      contest_announcement: '🏆',
-      platform_update: '📢',
+      new_message:              '💬',
+      application_received:     '📝',
+      application_accepted:     '✅',
+      application_declined:     '❌',
+      role_filled:              '⭐',
+      follow_request:           '👤',
+      follow_accepted:          '🤝',
+      project_invite:           '🎬',
+      message_request:          '💬',
+      message_request_accepted: '🤝',
+      mentorship_request:       '🎓',
+      contest_announcement:     '🏆',
+      platform_update:          '📢',
     };
     return icons[type] || '🔔';
   };
 
-  const nid = notif._id || notif.id;
-  const isRead = notif.read;
+  const nid            = notif._id || notif.id;
+  const isRead         = notif.read;
+  const isAccepted     = notif._accepted;
+  const isDeclined     = notif._declined;
+  const isActionable   = (notif.type === 'message_request' || notif.type === 'mentorship_request')
+                         && !isAccepted && !isDeclined;
+  const isAcceptedType = notif.type === 'message_request_accepted';
+
+  const handleAccept = async () => {
+    setResponding(true);
+    await onAccept(notif);
+    setResponding(false);
+  };
+
+  const handleDecline = async () => {
+    setResponding(true);
+    await onDecline(notif);
+    setResponding(false);
+  };
 
   return (
     <div
@@ -204,13 +301,57 @@ function NotificationRow({ notif, timeAgo, onMarkRead, onDelete }) {
         <div className="mt-1 flex h-10 w-10 items-center justify-center rounded-lg bg-[#f0eeff] text-lg flex-shrink-0">
           {getNotificationIcon(notif.type)}
         </div>
+
         <div className="flex-1 min-w-0">
           <p className={`text-sm ${isRead ? 'text-gray-600' : 'font-semibold text-[#111110]'}`}>
             {notif.title}
           </p>
           <p className="mt-1 text-xs text-gray-500">{notif.message}</p>
           <p className="mt-2 text-xs text-gray-400">{timeAgo(notif.createdAt)}</p>
+
+          {/* Accept / Decline inline action buttons */}
+          {isActionable && (
+            <div className="mt-3 flex gap-2">
+              <button
+                onClick={handleAccept}
+                disabled={responding}
+                className="rounded-lg bg-[#6C63FF] px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#5750D4] disabled:opacity-50"
+              >
+                {responding ? '…' : notif.type === 'mentorship_request' ? 'Accept & Chat' : 'Accept'}
+              </button>
+              <button
+                onClick={handleDecline}
+                disabled={responding}
+                className="rounded-lg bg-gray-100 px-4 py-1.5 text-xs font-semibold text-gray-600 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+              >
+                Decline
+              </button>
+            </div>
+          )}
+
+          {/* Accepted state feedback */}
+          {isAccepted && (
+            <p className="mt-3 text-xs font-semibold text-green-600">✓ Accepted — opening chat…</p>
+          )}
+
+          {/* Declined state feedback */}
+          {isDeclined && (
+            <p className="mt-3 text-xs font-semibold text-gray-400">Declined</p>
+          )}
+
+          {/* Open Chat button for message_request_accepted */}
+          {isAcceptedType && notif.link && (
+            <div className="mt-3">
+              <a
+                href={notif.link}
+                className="inline-block rounded-lg bg-[#f0eeff] px-4 py-1.5 text-xs font-semibold text-[#5750D4] transition-colors hover:bg-[#e4e1ff]"
+              >
+                Open Chat →
+              </a>
+            </div>
+          )}
         </div>
+
         <div className="flex gap-2 flex-shrink-0">
           {!isRead && (
             <button

@@ -1,9 +1,12 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { conversationAPI, searchAPI } from '@/lib/api';
+import { conversationAPI, searchAPI, messageRequestAPI } from '@/lib/api';
+import Link from 'next/link';
 import { useSocket } from '@/hooks/useSocket';
 import { Search, X, Send, Plus, ArrowLeft, MoreVertical } from 'lucide-react';
+import toast from 'react-hot-toast';
+import ReportModal from '@/components/ui/ReportModal';
 
 // Navbar height offset
 const NAV_H = 'calc(100vh - 60px)';
@@ -11,6 +14,7 @@ const NAV_H = 'calc(100vh - 60px)';
 export default function MessagesPage() {
   const { user, loading: authLoading } = useAuth();
   const socket = useSocket();
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
   const [conversations, setConversations] = useState([]);
   const [selectedConvId, setSelectedConvId] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -20,11 +24,58 @@ export default function MessagesPage() {
   const [loadingMsgs, setLoadingMsgs] = useState(false);
   // mobile: 'list' | 'chat'
   const [mobileView, setMobileView] = useState('list');
+  // sidebar tab: 'chats' | 'requests'
+  const [sidebarTab, setSidebarTab] = useState('chats');
+  const [msgRequests, setMsgRequests] = useState([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
+  const [respondingId, setRespondingId] = useState(null);
   const messagesEndRef = useRef(null);
 
-  /* ─── helpers (defined before useEffect so const hoisting isn't an issue) ── */
+  /* ─── helpers ────────────────────────────────────────────── */
   const scrollToBottom = () =>
     setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 80);
+
+  const loadRequests = async () => {
+    try {
+      setLoadingRequests(true);
+      const res = await messageRequestAPI.getIncoming();
+      setMsgRequests(res.data?.data || []);
+    } catch { setMsgRequests([]); }
+    finally { setLoadingRequests(false); }
+  };
+
+  const handleAcceptRequest = async (req) => {
+    if (respondingId) return;
+    setRespondingId(req._id);
+    try {
+      const res = await messageRequestAPI.accept(req._id);
+      const conv = res.data?.data;
+      setMsgRequests((prev) => prev.filter((r) => r._id !== req._id));
+      if (conv) {
+        setConversations((prev) => {
+          const exists = prev.some((c) => c._id === conv._id);
+          return exists ? prev : [conv, ...prev];
+        });
+        setSidebarTab('chats');
+        setSelectedConvId(conv._id);
+        setMobileView('chat');
+      }
+    } catch (err) {
+      alert(err?.response?.data?.message || 'Failed to accept request.');
+    } finally {
+      setRespondingId(null);
+    }
+  };
+
+  const handleDeclineRequest = async (req) => {
+    if (respondingId) return;
+    setRespondingId(req._id);
+    try {
+      await messageRequestAPI.decline(req._id);
+      setMsgRequests((prev) => prev.filter((r) => r._id !== req._id));
+    } catch { /* silent */ }
+    finally { setRespondingId(null); }
+  };
 
   const loadConversations = async () => {
     try {
@@ -68,6 +119,7 @@ export default function MessagesPage() {
         text,
       });
       const newMsg = res.data?.data;
+      const warning = res.data?.warning;
       if (newMsg) {
         setMessages((prev) => {
           const exists = prev.some((m) => (m._id || m.id) === (newMsg._id || newMsg.id));
@@ -78,13 +130,21 @@ export default function MessagesPage() {
         setConversations((prev) =>
           prev.map((c) =>
             (c._id || c.id) === selectedConvId
-              ? { ...c, lastMessage: text, lastMessageAt: new Date().toISOString() }
+              ? { ...c, lastMessage: newMsg.text, lastMessageAt: new Date().toISOString() }
               : c
           )
         );
       }
+      // Phase 3: Show scam/contact-info warning as a toast
+      if (warning) toast(warning, { icon: '⚠️', duration: 6000, style: { background: '#fff8e8', border: '1px solid #f0d060', color: '#7a6000' } });
     } catch (err) {
-      console.error('sendMessage:', err);
+      const errCode = err?.response?.data?.code;
+      const errMsg  = err?.response?.data?.message || 'Failed to send message.';
+      if (errCode === 'MINOR_PROTECTION') {
+        toast.error(errMsg, { duration: 8000, icon: '🔒' });
+      } else {
+        toast.error(errMsg);
+      }
       setMessageText(text);
     }
   };
@@ -100,7 +160,19 @@ export default function MessagesPage() {
   useEffect(() => {
     if (!user) return;
     loadConversations();
+    loadRequests();
+    // Auto-switch to requests tab if URL says so
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('tab') === 'requests') setSidebarTab('requests');
+      const conv = params.get('conv');
+      if (conv) { setSelectedConvId(conv); setMobileView('chat'); }
+    }
   }, [user]);
+
+  useEffect(() => {
+    if (sidebarTab === 'requests') loadRequests();
+  }, [sidebarTab]);
 
   useEffect(() => {
     if (!selectedConvId) return;
@@ -198,70 +270,139 @@ export default function MessagesPage() {
         ${mobileView === 'chat' ? 'hidden sm:flex' : 'flex'}
       `}>
         {/* Sidebar header */}
-        <div className="px-5 py-4 border-b border-[#efefed] flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-bold text-[#111110]">Messages</h1>
-            <p className="text-xs text-[#a3a39e] mt-0.5">{conversations.length} conversation{conversations.length !== 1 ? 's' : ''}</p>
-          </div>
-          <button
-            onClick={() => setShowCompose(true)}
-            className="flex items-center gap-1.5 bg-[#6C63FF] hover:bg-[#5750D4] text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
-          >
-            <Plus size={14} /> New
-          </button>
+        <div className="px-5 py-4 border-b border-[#efefed]">
+          <h1 className="text-lg font-bold text-[#111110]">Messages</h1>
+          <p className="text-xs text-[#a3a39e] mt-0.5">Visit a profile to send a message request</p>
         </div>
 
-        {/* Search */}
-        <div className="px-4 py-3 border-b border-[#efefed]">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#a3a39e]" size={15} />
-            <input
-              type="text"
-              placeholder="Search conversations…"
-              className="w-full pl-9 pr-4 py-2 bg-[#f7f7f6] border border-[#e0e0dd] rounded-lg text-sm text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF]"
-            />
-          </div>
+        {/* Tabs: Chats / Requests */}
+        <div className="flex border-b border-[#efefed]">
+          <button
+            onClick={() => setSidebarTab('chats')}
+            className={`flex-1 py-2.5 text-xs font-semibold transition-colors ${
+              sidebarTab === 'chats'
+                ? 'text-[#6C63FF] border-b-2 border-[#6C63FF]'
+                : 'text-[#a3a39e] hover:text-[#6b6b66]'
+            }`}
+          >
+            Chats
+            {conversations.length > 0 && (
+              <span className="ml-1.5 bg-[#f0eeff] text-[#6C63FF] px-1.5 py-0.5 rounded-full text-[10px]">
+                {conversations.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setSidebarTab('requests')}
+            className={`flex-1 py-2.5 text-xs font-semibold transition-colors ${
+              sidebarTab === 'requests'
+                ? 'text-[#6C63FF] border-b-2 border-[#6C63FF]'
+                : 'text-[#a3a39e] hover:text-[#6b6b66]'
+            }`}
+          >
+            Requests
+            {msgRequests.length > 0 && (
+              <span className="ml-1.5 bg-red-100 text-red-500 px-1.5 py-0.5 rounded-full text-[10px] font-bold">
+                {msgRequests.length}
+              </span>
+            )}
+          </button>
         </div>
 
         {/* List */}
         <div className="flex-1 overflow-y-auto">
-          {loadingConvs ? (
-            <div className="space-y-2 p-3">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="animate-pulse rounded-xl bg-[#f7f7f6] h-16" />
-              ))}
-            </div>
-          ) : conversations.length > 0 ? (
-            <div className="p-2 space-y-0.5">
-              {conversations.map((conv) => {
-                const other = getOtherUser(conv);
-                if (!other) return null;
-                const cid = conv._id || conv.id;
-                return (
-                  <ConversationItem
-                    key={cid}
-                    conv={conv}
-                    otherUser={other}
-                    isActive={selectedConvId === cid}
-                    onClick={() => selectConversation(cid)}
-                  />
-                );
-              })}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-              <div className="w-14 h-14 bg-[#f0eeff] rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Search className="text-[#6C63FF]" size={22} />
+
+          {/* ── Requests tab ── */}
+          {sidebarTab === 'requests' && (
+            loadingRequests ? (
+              <div className="space-y-2 p-3">
+                {[...Array(3)].map((_, i) => <div key={i} className="animate-pulse rounded-xl bg-[#f7f7f6] h-20" />)}
               </div>
-              <p className="font-semibold text-[#111110] mb-1">No conversations yet</p>
-              <p className="text-sm text-[#a3a39e] mb-4">Start messaging creators you want to work with.</p>
-              <button
-                onClick={() => setShowCompose(true)}
-                className="inline-flex items-center gap-2 bg-[#6C63FF] hover:bg-[#5750D4] text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
-              >
-                <Plus size={15} /> New Conversation
-              </button>
-            </div>
+            ) : msgRequests.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+                <p className="text-3xl mb-3">📩</p>
+                <p className="text-sm font-semibold text-[#111110] mb-1">No pending requests</p>
+                <p className="text-xs text-[#a3a39e]">Message requests from other users will appear here.</p>
+              </div>
+            ) : (
+              <div className="p-3 space-y-3">
+                {msgRequests.map((req) => (
+                  <div key={req._id} className="rounded-xl border border-[#efefed] p-4 bg-white">
+                    <div className="flex items-center gap-3 mb-3">
+                      <Link href={`/profile/${req.sender?._id}`} className="flex-shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#c9c4ff] to-[#6C63FF] flex items-center justify-center text-white text-sm font-bold overflow-hidden">
+                          {req.sender?.profileImage
+                            ? <img src={req.sender.profileImage} alt="" className="w-full h-full object-cover" />
+                            : req.sender?.name?.[0]?.toUpperCase()
+                          }
+                        </div>
+                      </Link>
+                      <div className="flex-1 min-w-0">
+                        <Link href={`/profile/${req.sender?._id}`} className="text-sm font-semibold text-[#111110] hover:text-[#6C63FF] transition-colors">
+                          {req.sender?.name}
+                        </Link>
+                        <p className="text-[11px] text-[#a3a39e]">{req.sender?.role}</p>
+                      </div>
+                    </div>
+                    {req.message && (
+                      <p className="text-xs text-[#6b6b66] bg-[#f7f7f6] rounded-lg px-3 py-2 mb-3 italic">"{req.message}"</p>
+                    )}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleDeclineRequest(req)}
+                        disabled={respondingId === req._id}
+                        className="flex-1 py-1.5 rounded-lg border border-[#e0e0dd] text-xs font-semibold text-[#6b6b66] hover:border-red-300 hover:text-red-500 transition-colors disabled:opacity-50"
+                      >
+                        Decline
+                      </button>
+                      <button
+                        onClick={() => handleAcceptRequest(req)}
+                        disabled={respondingId === req._id}
+                        className="flex-1 py-1.5 rounded-lg bg-[#6C63FF] hover:bg-[#5750D4] text-white text-xs font-semibold transition-colors disabled:opacity-50"
+                      >
+                        {respondingId === req._id ? '…' : 'Accept'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          )}
+
+          {/* ── Chats tab ── */}
+          {sidebarTab === 'chats' && (
+            loadingConvs ? (
+              <div className="space-y-2 p-3">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="animate-pulse rounded-xl bg-[#f7f7f6] h-16" />
+                ))}
+              </div>
+            ) : conversations.length > 0 ? (
+              <div className="p-2 space-y-0.5">
+                {conversations.map((conv) => {
+                  const other = getOtherUser(conv);
+                  if (!other) return null;
+                  const cid = conv._id || conv.id;
+                  return (
+                    <ConversationItem
+                      key={cid}
+                      conv={conv}
+                      otherUser={other}
+                      isActive={selectedConvId === cid}
+                      onClick={() => selectConversation(cid)}
+                    />
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+                <div className="w-14 h-14 bg-[#f0eeff] rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Search className="text-[#6C63FF]" size={22} />
+                </div>
+                <p className="font-semibold text-[#111110] mb-1">No conversations yet</p>
+                <p className="text-sm text-[#a3a39e] mb-4">Send a message request from someone's profile to connect.</p>
+              </div>
+            )
           )}
         </div>
       </div>
@@ -428,13 +569,15 @@ function ConversationItem({ conv, otherUser, isActive, onClick }) {
 
 /* ─── MessageBubble ─────────────────────────── */
 function MessageBubble({ message, isOwn }) {
+  const [showReport, setShowReport] = useState(false);
   const time = message.createdAt
     ? new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     : '';
 
   return (
-    <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
-      <div className="max-w-[72%]">
+    <>
+    <div className={`flex group ${isOwn ? 'justify-end' : 'justify-start'}`}>
+      <div className="max-w-[72%] relative">
         <div
           className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
             isOwn
@@ -444,6 +587,16 @@ function MessageBubble({ message, isOwn }) {
         >
           {message.text || message.content}
         </div>
+        {/* Report button — only on other people's messages */}
+        {!isOwn && (
+          <button
+            onClick={() => setShowReport(true)}
+            title="Report this message"
+            className="absolute -right-6 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-[#c0c0bc] hover:text-red-500 text-sm leading-none"
+          >
+            ⚑
+          </button>
+        )}
         {time && (
           <p className={`text-[10px] text-[#a3a39e] mt-1 px-1 ${isOwn ? 'text-right' : 'text-left'}`}>
             {time}
@@ -451,6 +604,15 @@ function MessageBubble({ message, isOwn }) {
         )}
       </div>
     </div>
+    {showReport && (
+      <ReportModal
+        targetType="message"
+        targetId={message._id}
+        targetLabel="this message"
+        onClose={() => setShowReport(false)}
+      />
+    )}
+    </>
   );
 }
 

@@ -119,6 +119,46 @@ const projectSchema = new mongoose.Schema(
     ],
     // Film engagement
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+
+    // ── Phase 2: Casting Call Safety ─────────────────────────────────────
+    productionType: {
+      type:    String,
+      enum:    ['student', 'indie', 'commercial', 'broadcast', 'other'],
+      default: 'indie',
+    },
+    auditionFormat: {
+      type:    String,
+      enum:    ['online', 'studio', 'production-office', 'flexible', 'not-applicable'],
+      default: 'not-applicable',
+    },
+    // Shooting location type — hard validation: 'private-residence' is blocked on the client
+    shootingLocationType: {
+      type:    String,
+      enum:    ['studio', 'public-location', 'remote', 'flexible', 'not-specified'],
+      default: 'not-specified',
+    },
+    // Clear compensation statement (required when isPaid = true)
+    compensationDetails: {
+      type:      String,
+      default:   '',
+      maxlength: [300, 'Compensation details cannot exceed 300 characters'],
+    },
+    // Moderation queue — new projects start as 'pending' and must be approved
+    moderationStatus: {
+      type:    String,
+      enum:    ['pending', 'approved', 'rejected'],
+      default: 'pending',
+    },
+    moderationNote: { type: String, default: '' },
+
+    // ── Phase 4: Audit trail for project edits ────────────────────────────
+    editHistory: [
+      {
+        editedAt:  { type: Date, default: Date.now },
+        editedBy:  { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        summary:   { type: String, default: '' }, // e.g. "Updated compensation, location"
+      },
+    ],
   },
   { timestamps: true }
 );

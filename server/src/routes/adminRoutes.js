@@ -11,7 +11,12 @@ const {
   getReports,
   updateReportStatus,
   clearTestData,
+  getPendingProjects,
+  moderateProject,
+  setVerifiedBadge,
 } = require('../controllers/adminController');
+
+const { getAllReports, resolveReport } = require('../controllers/reportController');
 
 const router = express.Router();
 
@@ -29,5 +34,16 @@ router.post('/announce',        sendAnnouncement);
 router.get('/reports',          getReports);
 router.patch('/reports/:id',    updateReportStatus);
 router.delete('/clear-test-data', clearTestData);  // ⚠️ destructive — clears all projects/films/apps
+
+// Phase 2: Project moderation queue
+router.get('/projects/pending',           getPendingProjects);
+router.patch('/projects/:id/moderate',    moderateProject);
+
+// Phase 4: Verified Creator badge
+router.patch('/users/:id/verify',         setVerifiedBadge);
+
+// One-Tap Report System — admin report queue
+router.get('/report-queue',               getAllReports);
+router.patch('/report-queue/:id/resolve', resolveReport);
 
 module.exports = router;

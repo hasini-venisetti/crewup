@@ -192,7 +192,7 @@ export default function ApplicationsPage() {
       ]);
 
       const proj = projRes.data.data;
-      if (proj.createdBy?._id !== user?.id) {
+      if (String(proj.createdBy?._id) !== String(user?._id || user?.id)) {
         toast.error('Not authorized');
         router.push('/dashboard');
         return;
