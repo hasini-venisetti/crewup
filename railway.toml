@@ -1,20 +1,8 @@
 [build]
 builder = "nixpacks"
-watchPatterns = ["server/**"]
 
 [deploy]
 startCommand = "node src/server.js"
-healthcheckPath = "/api/health"
-healthcheckTimeout = 30
-restartPolicyType = "on_failure"
-
-[build]
-builder = "nixpacks"
-watchPatterns = ["server/**"]
-buildCommand = "cd server && npm install"
-
-[deploy]
-startCommand = "cd server && node src/server.js"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 30
 restartPolicyType = "on_failure"
