@@ -595,23 +595,42 @@ function ProjectDetailContent() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
           {/* Roles */}
           <div className="bg-white rounded-2xl border border-[#efefed] p-6">
-            <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#a3a39e] mb-5">Roles Needed</h2>
+            <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#a3a39e] mb-4">Roles Needed</h2>
             <div className="flex flex-col gap-3">
               {project.requiredRoles?.map((role) => {
-                const isFilled = project.teamMembers?.some(m => m.role === role);
+                const isFilled    = project.teamMembers?.some(m => m.role === role);
+                const description = project.roleDescriptions?.[role] || project.roleDescriptions?.get?.(role) || '';
+                const positions   = project.rolePositions?.[role]   || project.rolePositions?.get?.(role)   || 1;
                 return (
-                  <div key={role}>
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <span className="px-3 py-1.5 bg-[#f0eeff] border border-[#c9c4ff] text-[#3730A3] text-sm font-medium rounded-lg">{role}</span>
+                  <div key={role} className={`rounded-xl border overflow-hidden ${isFilled ? 'border-[#efefed] opacity-60' : 'border-[#c9c4ff]'}`}>
+                    {/* Role header */}
+                    <div className={`flex items-center justify-between gap-2 px-3 py-2 ${isFilled ? 'bg-[#f7f7f6]' : 'bg-[#f0eeff]'}`}>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-sm font-semibold ${isFilled ? 'text-[#a3a39e]' : 'text-[#3730A3]'}`}>{role}</span>
+                        {positions > 1 && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#6C63FF]/10 text-[#6C63FF]">
+                            {positions} spots
+                          </span>
+                        )}
+                      </div>
                       {isFilled
-                        ? <span className="text-xs text-[#a3a39e]">Filled</span>
-                        : <span className="text-xs font-semibold text-green-600">Open</span>}
+                        ? <span className="text-[10px] font-bold text-[#a3a39e] uppercase tracking-wide">Filled</span>
+                        : <span className="text-[10px] font-bold text-green-600 uppercase tracking-wide">● Open</span>}
                     </div>
+                    {/* Description */}
+                    {description && (
+                      <p className="px-3 py-2 text-xs text-[#6b6b66] leading-relaxed border-t border-[#efefed] bg-white">
+                        {description}
+                      </p>
+                    )}
+                    {/* Waitlist button */}
                     {isFilled && user && !isOwner && (
-                      <button onClick={() => handleWaitlist(role)} disabled={waitlistLoading}
-                        className="mt-1 text-xs text-[#6b6b66] border border-[#efefed] rounded-lg px-3 py-1 hover:border-[#0e0e0d] transition-colors disabled:opacity-50">
-                        {waitlistLoading ? 'Joining…' : '+ Join Waitlist'}
-                      </button>
+                      <div className="px-3 py-2 bg-white border-t border-[#efefed]">
+                        <button onClick={() => handleWaitlist(role)} disabled={waitlistLoading}
+                          className="text-xs text-[#6b6b66] border border-[#efefed] rounded-lg px-3 py-1 hover:border-[#0e0e0d] transition-colors disabled:opacity-50 w-full">
+                          {waitlistLoading ? 'Joining…' : '+ Join Waitlist'}
+                        </button>
+                      </div>
                     )}
                   </div>
                 );

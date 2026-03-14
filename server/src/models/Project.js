@@ -137,6 +137,19 @@ const projectSchema = new mongoose.Schema(
       enum:    ['studio', 'public-location', 'remote', 'flexible', 'not-specified'],
       default: 'not-specified',
     },
+    // Per-role requirements written by the creator
+    // e.g. { Actor: "Female, age 20–30, Tamil speaking", Cinematographer: "Night shoot exp." }
+    roleDescriptions: {
+      type: Map,
+      of: String,
+      default: {},
+    },
+    // How many people needed per role, e.g. { Actor: 3, Cinematographer: 1 }
+    rolePositions: {
+      type: Map,
+      of: Number,
+      default: {},
+    },
     // Clear compensation statement (required when isPaid = true)
     compensationDetails: {
       type:      String,

@@ -130,12 +130,9 @@ const getProjects = async (req, res, next) => {
     if (location) filter['location.country'] = new RegExp(location, 'i');
     if (isRemote === 'true') filter['location.isRemote'] = true;
     if (isPaid !== undefined) filter.isPaid = isPaid === 'true';
-    // Phase 2: Show approved projects + legacy projects created before moderation system
-    filter.$or = [
-      { moderationStatus: 'approved' },
-      { moderationStatus: { $exists: false } },
-      { moderationStatus: null },
-    ];
+    // Show all projects that are not auto-suspended (no manual approval queue anymore)
+    filter.autoSuspended = { $ne: true };
+    filter.moderationStatus = { $ne: 'rejected' };
 
     // Hide released projects — they belong on the Films page, not Projects
     filter.timelineStage = { $ne: 'released' };

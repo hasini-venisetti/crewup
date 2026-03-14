@@ -76,16 +76,60 @@ export default function CreateProjectPage() {
     productionType: 'indie',
     auditionFormat: 'not-applicable',
     shootingLocationType: 'not-specified',
+    // Role details
+    roleDescriptions: {},  // { [roleName]: description string }
+    rolePositions:    {},  // { [roleName]: number of spots }
   });
 
   const set = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
   const setLoc = (field, value) => setForm((prev) => ({ ...prev, location: { ...prev.location, [field]: value } }));
 
   const addRole = (role) => {
-    if (role && !form.requiredRoles.includes(role)) set('requiredRoles', [...form.requiredRoles, role]);
+    if (role && !form.requiredRoles.includes(role)) {
+      setForm((prev) => ({
+        ...prev,
+        requiredRoles: [...prev.requiredRoles, role],
+        rolePositions: { ...prev.rolePositions, [role]: 1 },
+      }));
+    }
     setRoleInput('');
   };
-  const removeRole = (role) => set('requiredRoles', form.requiredRoles.filter((r) => r !== role));
+  const removeRole = (role) => {
+    const { [role]: _d, ...restDesc } = form.roleDescriptions;
+    const { [role]: _p, ...restPos  } = form.rolePositions;
+    setForm((prev) => ({
+      ...prev,
+      requiredRoles:    prev.requiredRoles.filter((r) => r !== role),
+      roleDescriptions: restDesc,
+      rolePositions:    restPos,
+    }));
+  };
+  const setRoleDesc = (role, val) =>
+    setForm((prev) => ({ ...prev, roleDescriptions: { ...prev.roleDescriptions, [role]: val } }));
+  const setRolePos = (role, val) =>
+    setForm((prev) => ({ ...prev, rolePositions: { ...prev.rolePositions, [role]: Number(val) || 1 } }));
+
+  // Role-specific placeholder hints
+  const ROLE_HINTS = {
+    'Actor':               'e.g. Female, age 20–30, Tamil-speaking, comfortable with emotional scenes',
+    'Actress':             'e.g. Age 18–25, Hindi-speaking, experience in drama preferred',
+    'Cinematographer':     'e.g. Night shoot experience required, own DSLR/Mirrorless preferred',
+    'Editor':              'e.g. Proficient in Premiere Pro or DaVinci Resolve, short film experience',
+    'Musician':            'e.g. Background score / folk / classical, sample work required',
+    'Composer':            'e.g. Genre: thriller/drama background score, DAW: Logic/FL Studio',
+    'Writer':              'e.g. Short film format, Tamil & English, thriller genre experience',
+    'Scriptwriter':        'e.g. Feature-length, Hindi, experience in comedy or drama',
+    'Director':            'e.g. Prior short film credits, vision for realistic drama',
+    'Producer':            'e.g. Budget management experience, prior film credits preferred',
+    'Sound Designer':      'e.g. Location sound OR post-production mixing, own equipment a plus',
+    'Colorist':            'e.g. DaVinci Resolve, experience in cinematic grading',
+    'VFX Artist':          'e.g. After Effects / Blender, realistic or stylized FX, reel required',
+    'Animator':            'e.g. 2D or 3D, software (Maya/Blender/Adobe), style reference needed',
+    'Photographer':        'e.g. Behind-the-scenes stills, portrait/BTS experience, own camera',
+    'Production Designer': 'e.g. Period drama experience, ability to work within tight budget',
+    'Costume Designer':    'e.g. Contemporary wardrobe, knowledge of character-driven dressing',
+    'Makeup Artist':       'e.g. Special effects makeup skills, bridal/fashion experience',
+  };
 
   const toggleTag = (tag) => {
     if (form.projectTags.includes(tag)) {
@@ -318,23 +362,67 @@ export default function CreateProjectPage() {
               </button>
             </div>
 
-            {/* Selected roles */}
+            {/* Selected roles — expandable cards with description + positions */}
             {form.requiredRoles.length > 0 && (
-              <div className="flex flex-wrap gap-2 pt-1">
+              <div className="flex flex-col gap-3 pt-1">
                 {form.requiredRoles.map((r) => (
-                  <span
-                    key={r}
-                    className="flex items-center gap-1.5 bg-[#0e0e0d] text-white text-xs px-3 py-1.5 rounded-full font-medium"
-                  >
-                    {r}
-                    <button
-                      type="button"
-                      onClick={() => removeRole(r)}
-                      className="text-white/70 hover:text-white ml-0.5 font-bold"
-                    >
-                      ✕
-                    </button>
-                  </span>
+                  <div key={r} className="border border-[#e0e0dd] rounded-xl bg-[#fafaf9] overflow-hidden">
+                    {/* Role header */}
+                    <div className="flex items-center justify-between px-4 py-2.5 bg-[#0e0e0d]">
+                      <span className="text-white text-sm font-semibold">{r}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeRole(r)}
+                        className="text-white/50 hover:text-white text-xs font-bold transition-colors"
+                      >
+                        ✕ Remove
+                      </button>
+                    </div>
+                    {/* Role details */}
+                    <div className="px-4 py-3 flex flex-col gap-3">
+                      {/* Positions count */}
+                      <div className="flex items-center gap-3">
+                        <label className="text-xs font-semibold text-[#6b6b66] whitespace-nowrap">
+                          Positions needed
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setRolePos(r, Math.max(1, (form.rolePositions[r] || 1) - 1))}
+                            className="w-7 h-7 rounded-full border border-[#e0e0dd] text-[#6b6b66] hover:border-[#0e0e0d] hover:text-[#111110] font-bold text-sm transition-colors flex items-center justify-center"
+                          >−</button>
+                          <span className="text-sm font-bold text-[#111110] w-5 text-center">
+                            {form.rolePositions[r] || 1}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setRolePos(r, (form.rolePositions[r] || 1) + 1)}
+                            className="w-7 h-7 rounded-full border border-[#e0e0dd] text-[#6b6b66] hover:border-[#0e0e0d] hover:text-[#111110] font-bold text-sm transition-colors flex items-center justify-center"
+                          >+</button>
+                        </div>
+                        <span className="text-xs text-[#a3a39e]">
+                          {(form.rolePositions[r] || 1) === 1 ? '1 person' : `${form.rolePositions[r]} people`}
+                        </span>
+                      </div>
+                      {/* Description */}
+                      <div>
+                        <label className="text-xs font-semibold text-[#6b6b66] block mb-1.5">
+                          Requirements for this role <span className="text-[#a3a39e] font-normal">(optional)</span>
+                        </label>
+                        <textarea
+                          rows={2}
+                          value={form.roleDescriptions[r] || ''}
+                          onChange={(e) => setRoleDesc(r, e.target.value)}
+                          placeholder={ROLE_HINTS[r] || 'e.g. Experience level, specific skills, availability, any other requirements…'}
+                          maxLength={200}
+                          className="w-full rounded-lg border border-[#e0e0dd] bg-white px-3 py-2 text-sm text-[#111110] placeholder:text-[#c0c0bb] focus:outline-none focus:border-[#6C63FF] resize-none"
+                        />
+                        <p className="text-[11px] text-[#c0c0bb] text-right mt-0.5">
+                          {(form.roleDescriptions[r] || '').length}/200
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 ))}
               </div>
             )}
@@ -620,13 +708,14 @@ export default function CreateProjectPage() {
             </div>
           </section>
 
-          {/* Moderation notice */}
-          <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded-2xl">
-            <span className="text-blue-500 text-lg flex-shrink-0">🛡️</span>
+          {/* Go-live notice */}
+          <div className="flex items-start gap-3 p-4 bg-[#f0eeff] border border-[#c9c4ff] rounded-2xl">
+            <span className="text-lg flex-shrink-0">🚀</span>
             <div>
-              <p className="text-sm font-semibold text-blue-900 mb-1">Your project will be reviewed before going live</p>
-              <p className="text-xs text-blue-700 leading-relaxed">
-                All new projects go through a quick safety review by our team. Most projects are approved within a few hours. You'll receive a notification once your project is live.
+              <p className="text-sm font-semibold text-[#3730a3] mb-1">Your project goes live instantly</p>
+              <p className="text-xs text-[#4740CC] leading-relaxed">
+                Once you submit, your project is immediately visible to all creators on CREWUPFILMS.
+                Our fraud detection system monitors all listings — any violation of our guidelines can result in removal and account suspension.
               </p>
             </div>
           </div>
