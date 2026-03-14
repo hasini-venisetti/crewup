@@ -447,6 +447,149 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── SAFETY SECTION ───────────────────────────────────────────────── */}
+      <section className="py-28 px-6 bg-[#0e0e0d] relative overflow-hidden">
+        {/* Background pattern */}
+        <div
+          className="absolute inset-0 opacity-20 pointer-events-none"
+          style={{
+            backgroundImage: 'radial-gradient(circle, #252523 1px, transparent 1px)',
+            backgroundSize: '32px 32px',
+          }}
+        />
+        <div className="absolute top-1/2 left-0 w-[500px] h-[500px] rounded-full bg-[#6055de]/5 blur-[120px] pointer-events-none -translate-y-1/2" />
+
+        <div className="relative max-w-6xl mx-auto">
+          {/* Header */}
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16">
+            <div>
+              <p data-scroll className="text-xs uppercase tracking-[0.2em] text-[#8b82ff] font-bold mb-4">Trust &amp; Safety</p>
+              <h2 data-scroll data-delay="1" className="font-[Playfair_Display] text-4xl md:text-5xl text-white leading-tight">
+                A Safe Space for<br />
+                <span className="text-[#8b82ff]">Creative Collaboration.</span>
+              </h2>
+            </div>
+            <Link
+              href="/safety"
+              data-scroll data-delay="2"
+              className="flex-shrink-0 inline-flex items-center gap-2 border border-white/20 text-white/70 hover:border-[#8b82ff]/60 hover:text-white text-sm font-semibold px-6 py-3 rounded-xl transition-all self-start md:self-end"
+            >
+              Read Full Safety Guide →
+            </Link>
+          </div>
+
+          {/* Warning pill */}
+          <div data-scroll className="inline-flex items-center gap-3 bg-red-500/15 border border-red-400/30 rounded-full px-5 py-2.5 mb-12">
+            <span className="text-red-400 text-sm">⚠️</span>
+            <p className="text-sm font-semibold text-red-300">
+              Legitimate productions <strong className="text-red-200">never</strong> ask you to pay. Any fee request is a scam.
+            </p>
+          </div>
+
+          {/* Safety feature cards */}
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-14">
+            {[
+              {
+                icon: '🔍',
+                title: 'Project Moderation',
+                desc: 'Every casting call is reviewed by our team before it goes live. Fake or fraudulent projects are removed before you ever see them.',
+              },
+              {
+                icon: '🚫',
+                title: 'Contact Info Filtering',
+                desc: 'Phone numbers and emails are automatically removed from messages. All communication stays safely on-platform.',
+              },
+              {
+                icon: '⚠️',
+                title: 'Scam Detection',
+                desc: 'Messages containing payment requests or suspicious keywords are flagged in real time and reviewed by our moderation team.',
+              },
+              {
+                icon: '🔒',
+                title: 'Minor Account Protection',
+                desc: 'Accounts under 18 are automatically protected — unverified adults cannot initiate contact with minors.',
+              },
+              {
+                icon: '✅',
+                title: 'Verified Creator Badge',
+                desc: 'Top creators earn a Verified badge through identity checks, giving you confidence when joining paid projects.',
+              },
+              {
+                icon: '⚑',
+                title: 'One-Tap Reporting',
+                desc: 'Report any profile, project, or message in one tap. Your identity is kept confidential and all reports are reviewed.',
+              },
+            ].map((item, idx) => (
+              <div
+                key={idx}
+                data-scroll
+                className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:bg-white/10 hover:border-[#8b82ff]/30 transition-all duration-300"
+              >
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-xl mb-4">
+                  {item.icon}
+                </div>
+                <h3 className="text-sm font-bold text-white mb-2">{item.title}</h3>
+                <p className="text-xs text-white/40 leading-relaxed">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Do / Don't quick reference */}
+          <div data-scroll className="bg-white/5 border border-white/10 rounded-2xl p-7 mb-10">
+            <h3 className="text-white font-bold text-base mb-6 flex items-center gap-2">
+              ⚡ Quick Reference
+            </h3>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <p className="text-xs font-bold text-green-400 uppercase tracking-wide mb-4">✅ Always Do</p>
+                <ul className="flex flex-col gap-3">
+                  {[
+                    'Verify your email to unlock full platform access',
+                    'Meet in public for first in-person meetings',
+                    'Use built-in messages for all communication',
+                    'Check for a Verified badge on paid projects',
+                  ].map((item, i) => (
+                    <li key={i} className="flex items-start gap-2.5">
+                      <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-green-400 flex-shrink-0" />
+                      <span className="text-sm text-white/60 leading-relaxed">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-red-400 uppercase tracking-wide mb-4">❌ Never Do</p>
+                <ul className="flex flex-col gap-3">
+                  {[
+                    'Pay any fee to audition, apply, or join a project',
+                    'Move conversations to WhatsApp or email early on',
+                    'Share personal contact info before building trust',
+                    'Send money via crypto, wire transfer, or UPI to strangers',
+                  ].map((item, i) => (
+                    <li key={i} className="flex items-start gap-2.5">
+                      <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" />
+                      <span className="text-sm text-white/60 leading-relaxed">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* CTA */}
+          <div data-scroll className="text-center">
+            <Link
+              href="/safety"
+              className="inline-flex items-center gap-2 bg-[#6055de] hover:bg-[#4d44c8] text-white text-sm font-bold px-8 py-4 rounded-xl transition-all shadow-lg shadow-[#6055de]/25 hover:shadow-[#6055de]/40"
+            >
+              🛡 Read the Full Safety Guide →
+            </Link>
+            <p className="text-white/30 text-xs mt-4">
+              Includes emergency contacts, scam prevention tips, and minor protection guidelines.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* ── TRENDING FILMS THIS WEEK ──────────────────────────────────────── */}
       {trendingFilms.length > 0 && (
         <section className="py-24 px-6 bg-white border-y border-[#efefed]">
