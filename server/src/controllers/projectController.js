@@ -47,9 +47,7 @@ const createProject = async (req, res, next) => {
       });
     }
 
-    // ── Fraud detection ────────────────────────────────────────────────────
-
-    // Count existing projects and reports for this user
+    // ── Fraud detection (scoring only — does NOT block posting) ──────────
     const [existingProjectCount, reportCount, creatorProfile] = await Promise.all([
       Project.countDocuments({ createdBy: req.user._id }),
       Report.countDocuments({ targetId: req.user._id, targetType: 'user' }),
@@ -57,47 +55,24 @@ const createProject = async (req, res, next) => {
     ]);
 
     const profileComplete = !!(
-      creatorProfile?.bio?.trim() &&
-      creatorProfile?.skills?.length > 0
+      creatorProfile?.bio?.trim() && creatorProfile?.skills?.length > 0
     );
 
-    const projectData = {
-      title, description, isPaid: !!isPaid,
-      shootingLocationType: shootingLocationType || 'not-specified',
-      compensationDetails: compensationDetails || '',
-      location,
-    };
+    const { score, level, flags } = analyzeProject(
+      { title, description, isPaid: !!isPaid, shootingLocationType: shootingLocationType || 'not-specified', compensationDetails: compensationDetails || '', location },
+      creator,
+      { existingProjectCount, reportCount, profileComplete }
+    );
 
-    const { score, level, flags } = analyzeProject(projectData, creator, {
-      existingProjectCount,
-      reportCount,
-      profileComplete,
-    });
-
-    // ── Decide moderation status ──────────────────────────────────────────
-    // Verified creator + not high risk → goes live immediately
-    // Verified creator + high risk     → held for review, admin alerted
-    // Unverified creator               → always held for review
-    const isHighRisk    = level === 'high';
-    const autoApprove   = creator.isEmailVerified && !isHighRisk;
-    const moderationStatus = autoApprove ? 'approved' : 'pending';
-
+    // ── All projects go live immediately ──────────────────────────────────
     const project = await Project.create({
-      title,
-      description,
-      projectType,
-      requiredRoles,
-      isPaid,
-      budget,
-      location,
-      deadline,
-      experienceLevel,
-      projectTags,
+      title, description, projectType, requiredRoles, isPaid, budget,
+      location, deadline, experienceLevel, projectTags,
       productionType:       productionType       || 'indie',
       auditionFormat:       auditionFormat       || 'not-applicable',
       shootingLocationType: shootingLocationType || 'not-specified',
       compensationDetails:  compensationDetails  || '',
-      moderationStatus,
+      moderationStatus: 'approved',   // always live — admin monitors via Risk Monitor
       riskScore: score,
       riskLevel: level,
       riskFlags: flags,
@@ -107,55 +82,36 @@ const createProject = async (req, res, next) => {
     await project.populate('createdBy', 'name username role profileImage');
 
     // ── Notify creator ────────────────────────────────────────────────────
-    if (autoApprove) {
-      await Notification.create({
-        recipient: req.user._id,
-        type:      'platform_update',
-        title:     '✅ Project is now live!',
-        message:   `Your project "${project.title}" has been published and is now visible to others.`,
-        link:      `/projects/${project._id}`,
-      });
-    } else {
-      await Notification.create({
-        recipient: req.user._id,
-        type:      'platform_update',
-        title:     '⏳ Project submitted for review',
-        message:   creator.isEmailVerified
-          ? `Your project "${project.title}" was flagged for manual review and will be live once our team approves it.`
-          : `Your project "${project.title}" is pending review. Verify your email to get projects approved instantly.`,
-        link:      `/projects/${project._id}`,
-      });
-    }
+    await Notification.create({
+      recipient: req.user._id,
+      type:      'platform_update',
+      title:     '✅ Project is now live!',
+      message:   `Your project "${project.title}" has been published and is now visible to others.`,
+      link:      `/projects/${project._id}`,
+    });
 
-    // ── Alert ALL admins if high risk ────────────────────────────────────
-    if (isHighRisk) {
+    // ── Alert admins if high risk (for monitoring — project is still live) ─
+    if (level === 'high') {
       const admins = await User.find({ isAdmin: true }).select('_id').lean();
       const flagSummary = flags.slice(0, 3).join(' | ');
       await Promise.all(admins.map((admin) =>
         Notification.create({
           recipient: admin._id,
           type:      'platform_update',
-          title:     `🚨 High-Risk Project Flagged: "${project.title}"`,
-          message:   `Risk score: ${score}/100. ${flagSummary}`,
-          link:      '/admin?tab=moderation',
+          title:     `🚨 High-Risk Project Posted: "${project.title}"`,
+          message:   `Risk score: ${score}/100. ${flagSummary} — Review and delete if fraudulent.`,
+          link:      '/admin?tab=risk-monitor',
         })
       ));
     }
 
-    // Log activity (fire-and-forget)
     logActivity({
-      actor:      req.user._id,
-      type:       'project_created',
-      title:      `submitted a new project: "${project.title}"`,
-      link:       `/projects/${project._id}`,
-      projectRef: project._id,
+      actor: req.user._id, type: 'project_created',
+      title: `submitted a new project: "${project.title}"`,
+      link: `/projects/${project._id}`, projectRef: project._id,
     });
 
-    const message = autoApprove
-      ? 'Project is now live!'
-      : 'Project submitted for review. It will be live once approved by our team.';
-
-    res.status(201).json({ success: true, message, data: project });
+    res.status(201).json({ success: true, message: 'Project is now live!', data: project });
   } catch (error) {
     next(error);
   }

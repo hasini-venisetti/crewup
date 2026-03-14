@@ -14,6 +14,9 @@ const {
   getPendingProjects,
   moderateProject,
   setVerifiedBadge,
+  getRiskProjects,
+  adminDeleteProject,
+  restoreProject,
 } = require('../controllers/adminController');
 
 const { getAllReports, resolveReport } = require('../controllers/reportController');
@@ -41,6 +44,11 @@ router.patch('/projects/:id/moderate',    moderateProject);
 
 // Phase 4: Verified Creator badge
 router.patch('/users/:id/verify',         setVerifiedBadge);
+
+// Risk Monitor — replaces old approval queue
+router.get('/risk-monitor',                     getRiskProjects);
+router.delete('/risk-monitor/:id',              adminDeleteProject);
+router.patch('/risk-monitor/:id/restore',       restoreProject);
 
 // One-Tap Report System — admin report queue
 router.get('/report-queue',               getAllReports);

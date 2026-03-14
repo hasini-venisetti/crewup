@@ -289,6 +289,78 @@ const moderateProject = async (req, res, next) => {
   } catch (e) { next(e); }
 };
 
+// ── Risk Monitor — projects that need admin attention ─────────────────────────
+// GET /api/admin/risk-monitor
+// Returns: auto-suspended projects + high/medium risk projects, sorted by risk score
+const getRiskProjects = async (req, res, next) => {
+  try {
+    const { filter = 'all', page = 1, limit = 20 } = req.query;
+    const skip = (Number(page) - 1) * Number(limit);
+
+    let query = {};
+    if (filter === 'suspended')    query = { autoSuspended: true };
+    else if (filter === 'high')    query = { riskLevel: 'high' };
+    else if (filter === 'medium')  query = { riskLevel: 'medium' };
+    else {
+      // 'all' — show suspended + high + medium
+      query = { $or: [{ autoSuspended: true }, { riskLevel: { $in: ['high', 'medium'] } }] };
+    }
+
+    const [projects, total] = await Promise.all([
+      Project.find(query)
+        .populate('createdBy', 'name username email isEmailVerified')
+        .sort({ autoSuspended: -1, riskScore: -1, createdAt: -1 })
+        .skip(skip).limit(Number(limit)),
+      Project.countDocuments(query),
+    ]);
+
+    res.json({ success: true, data: projects, pagination: { total, page: Number(page), pages: Math.ceil(total / Number(limit)) } });
+  } catch (e) { next(e); }
+};
+
+// DELETE /api/admin/risk-monitor/:id — admin force-deletes a project
+const adminDeleteProject = async (req, res, next) => {
+  try {
+    const project = await Project.findById(req.params.id).populate('createdBy', 'name email _id');
+    if (!project) return res.status(404).json({ success: false, message: 'Project not found' });
+
+    await Project.findByIdAndDelete(req.params.id);
+
+    // Notify the creator
+    await Notification.create({
+      recipient: project.createdBy._id,
+      type:      'platform_update',
+      title:     '❌ Your project was removed',
+      message:   `Your project "${project.title}" was removed by our moderation team for violating platform guidelines.`,
+      link:      '/dashboard',
+    });
+
+    res.json({ success: true, message: 'Project deleted' });
+  } catch (e) { next(e); }
+};
+
+// PATCH /api/admin/risk-monitor/:id/restore — lift suspension (set autoSuspended false, keep live)
+const restoreProject = async (req, res, next) => {
+  try {
+    const project = await Project.findByIdAndUpdate(
+      req.params.id,
+      { autoSuspended: false, moderationStatus: 'approved', moderationNote: '' },
+      { new: true }
+    ).populate('createdBy', 'name _id');
+    if (!project) return res.status(404).json({ success: false, message: 'Project not found' });
+
+    await Notification.create({
+      recipient: project.createdBy._id,
+      type:      'platform_update',
+      title:     '✅ Your project has been restored',
+      message:   `Your project "${project.title}" has been reviewed and is now live again.`,
+      link:      `/projects/${project._id}`,
+    });
+
+    res.json({ success: true, message: 'Project restored', data: project });
+  } catch (e) { next(e); }
+};
+
 // ── Phase 4: Grant / revoke Verified Creator badge ────────────────────────────
 const Profile = require('../models/Profile');
 
@@ -320,4 +392,5 @@ module.exports = {
   getPlatformStats, getWeeklyAnalytics, getUsers, suspendUser, getTrendingFilms,
   sendAnnouncement, getReports, updateReportStatus, clearTestData,
   getPendingProjects, moderateProject, setVerifiedBadge,
+  getRiskProjects, adminDeleteProject, restoreProject,
 };
