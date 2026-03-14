@@ -149,7 +149,13 @@ const projectSchema = new mongoose.Schema(
       enum:    ['pending', 'approved', 'rejected'],
       default: 'pending',
     },
-    moderationNote: { type: String, default: '' },
+    moderationNote:  { type: String, default: '' },
+    autoSuspended:   { type: Boolean, default: false },
+
+    // Fraud detection — populated automatically on creation
+    riskScore: { type: Number, default: 0 },
+    riskLevel: { type: String, enum: ['low', 'medium', 'high'], default: 'low' },
+    riskFlags: [{ type: String }],
 
     // ── Phase 4: Audit trail for project edits ────────────────────────────
     editHistory: [

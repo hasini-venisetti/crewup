@@ -1,5 +1,7 @@
 const Report       = require('../models/Report');
 const Notification = require('../models/Notification');
+const Project      = require('../models/Project');
+const User         = require('../models/User');
 
 /* ─────────────────────────────────────────────────────────────────────────
    POST /api/reports
@@ -36,16 +38,42 @@ const submitReport = async (req, res, next) => {
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
-    // Notify admins via in-app notification sent to a static admin sentinel
-    // (In production you'd fan out to all admin user IDs — here we create a general record)
+    // ── Post-approval project monitoring ────────────────────────────────────
+    // If a live (approved) project gets reported → auto-suspend it immediately
+    // and alert all admins so they can act fast.
+    if (targetType === 'project') {
+      const project = await Project.findById(targetId).populate('createdBy', 'name username').lean();
+      if (project && project.moderationStatus === 'approved') {
+        // Suspend the project
+        await Project.findByIdAndUpdate(targetId, {
+          moderationStatus: 'pending',
+          autoSuspended:    true,
+          moderationNote:   'Auto-suspended: reported after approval',
+        });
+
+        // Alert all admins immediately
+        const admins = await User.find({ isAdmin: true }).select('_id').lean();
+        await Promise.all(admins.map((admin) =>
+          Notification.create({
+            recipient: admin._id,
+            type:      'platform_update',
+            title:     `🚨 Project auto-suspended: "${project.title}"`,
+            message:   `Reported by a user (reason: ${reason}). Project has been hidden from public and needs your review.`,
+            link:      '/admin?tab=moderation',
+          })
+        ));
+      }
+    }
+
+    // Echo back to reporter
     await Notification.create({
-      recipient: req.user._id,          // echo back to reporter so they know it was received
+      recipient: req.user._id,
       sender:    req.user._id,
       type:      'report_submitted',
       title:     'Report submitted',
-      message:   'Your report has been received and will be reviewed by our moderation team.',
+      message:   'Your report has been received. If the content violates our guidelines, it has been temporarily hidden while we review it.',
       link:      '/safety',
-    }).catch(() => {});                  // non-critical — don't fail the request
+    }).catch(() => {});
 
     res.status(201).json({
       success: true,

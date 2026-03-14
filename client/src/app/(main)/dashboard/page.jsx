@@ -272,6 +272,33 @@ export default function DashboardPage() {
                 {myProjects.map((p) => (
                   <div key={p._id} className="flex flex-col gap-2">
                     <ProjectCard project={p} />
+                    {/* Moderation status badge */}
+                    {p.moderationStatus === 'pending' && (
+                      <div className="flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-700">
+                        <span>⏳</span>
+                        <span>Under review — not visible to others yet</span>
+                      </div>
+                    )}
+                    {p.autoSuspended && (
+                      <div className="flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-xl bg-red-100 border border-red-300 text-red-800">
+                        <span>⛔</span>
+                        <span>Suspended — reported by a user, admin is reviewing</span>
+                      </div>
+                    )}
+                    {p.moderationStatus === 'rejected' && !p.autoSuspended && (
+                      <div className="flex flex-col gap-1.5 px-3 py-2 rounded-xl bg-red-50 border border-red-200">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-red-700">
+                          <span>❌</span>
+                          <span>Not approved — hidden from public</span>
+                        </div>
+                        {p.moderationNote && (
+                          <p className="text-xs text-red-600 pl-5">{p.moderationNote}</p>
+                        )}
+                        <Link href={`/projects/${p._id}/edit`} className="text-xs font-semibold text-[#6C63FF] hover:underline pl-5 mt-0.5">
+                          ✏️ Edit project to fix and re-submit →
+                        </Link>
+                      </div>
+                    )}
                     {p.timelineStage === 'released' ? (
                       <div className="flex gap-1.5 sm:gap-2">
                         <Link href={`/projects/${p._id}`}

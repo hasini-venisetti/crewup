@@ -2,7 +2,10 @@ const User = require('../models/User');
 const Project = require('../models/Project');
 const Application = require('../models/Application');
 const Notification = require('../models/Notification');
+const Profile = require('../models/Profile');
+const Report = require('../models/Report');
 const { getRecommendedProjects } = require('../services/recommendationService');
+const { analyzeProject } = require('../services/fraudDetectionService');
 const emailService = require('../utils/emailService');
 const { logActivity } = require('./activityController');
 
@@ -14,7 +17,6 @@ const createProject = async (req, res, next) => {
     const {
       title, description, projectType, requiredRoles, isPaid, budget, location, deadline,
       experienceLevel, projectTags,
-      // Phase 2: new safety fields
       productionType, auditionFormat, shootingLocationType, compensationDetails,
     } = req.body;
 
@@ -25,6 +27,60 @@ const createProject = async (req, res, next) => {
         message: 'Please describe the compensation clearly (required for paid projects).',
       });
     }
+
+    // ── Verification gate ─────────────────────────────────────────────────
+    const creator = await User.findById(req.user._id)
+      .select('isEmailVerified phone dateOfBirth createdAt')
+      .lean();
+
+    const missingVerifications = [];
+    if (!creator.isEmailVerified)   missingVerifications.push('email');
+    if (!creator.phone?.isVerified) missingVerifications.push('phone number');
+    if (!creator.dateOfBirth)       missingVerifications.push('date of birth (age verification)');
+
+    if (missingVerifications.length > 0) {
+      return res.status(403).json({
+        success: false,
+        code:    'VERIFICATION_REQUIRED',
+        message: `You must verify the following before posting a project: ${missingVerifications.join(', ')}.`,
+        missing: missingVerifications,
+      });
+    }
+
+    // ── Fraud detection ────────────────────────────────────────────────────
+
+    // Count existing projects and reports for this user
+    const [existingProjectCount, reportCount, creatorProfile] = await Promise.all([
+      Project.countDocuments({ createdBy: req.user._id }),
+      Report.countDocuments({ targetId: req.user._id, targetType: 'user' }),
+      Profile.findOne({ user: req.user._id }).select('bio skills').lean(),
+    ]);
+
+    const profileComplete = !!(
+      creatorProfile?.bio?.trim() &&
+      creatorProfile?.skills?.length > 0
+    );
+
+    const projectData = {
+      title, description, isPaid: !!isPaid,
+      shootingLocationType: shootingLocationType || 'not-specified',
+      compensationDetails: compensationDetails || '',
+      location,
+    };
+
+    const { score, level, flags } = analyzeProject(projectData, creator, {
+      existingProjectCount,
+      reportCount,
+      profileComplete,
+    });
+
+    // ── Decide moderation status ──────────────────────────────────────────
+    // Verified creator + not high risk → goes live immediately
+    // Verified creator + high risk     → held for review, admin alerted
+    // Unverified creator               → always held for review
+    const isHighRisk    = level === 'high';
+    const autoApprove   = creator.isEmailVerified && !isHighRisk;
+    const moderationStatus = autoApprove ? 'approved' : 'pending';
 
     const project = await Project.create({
       title,
@@ -41,20 +97,50 @@ const createProject = async (req, res, next) => {
       auditionFormat:       auditionFormat       || 'not-applicable',
       shootingLocationType: shootingLocationType || 'not-specified',
       compensationDetails:  compensationDetails  || '',
-      moderationStatus:     'pending',   // all new projects start in the moderation queue
-      createdBy:            req.user._id,
+      moderationStatus,
+      riskScore: score,
+      riskLevel: level,
+      riskFlags: flags,
+      createdBy: req.user._id,
     });
 
     await project.populate('createdBy', 'name username role profileImage');
 
-    // Notify the creator that their project is pending review
-    await Notification.create({
-      recipient: req.user._id,
-      type:      'platform_update',
-      title:     'Project submitted for review',
-      message:   `Your project "${project.title}" has been submitted and is pending moderation. It will be live shortly after review.`,
-      link:      `/projects/${project._id}`,
-    });
+    // ── Notify creator ────────────────────────────────────────────────────
+    if (autoApprove) {
+      await Notification.create({
+        recipient: req.user._id,
+        type:      'platform_update',
+        title:     '✅ Project is now live!',
+        message:   `Your project "${project.title}" has been published and is now visible to others.`,
+        link:      `/projects/${project._id}`,
+      });
+    } else {
+      await Notification.create({
+        recipient: req.user._id,
+        type:      'platform_update',
+        title:     '⏳ Project submitted for review',
+        message:   creator.isEmailVerified
+          ? `Your project "${project.title}" was flagged for manual review and will be live once our team approves it.`
+          : `Your project "${project.title}" is pending review. Verify your email to get projects approved instantly.`,
+        link:      `/projects/${project._id}`,
+      });
+    }
+
+    // ── Alert ALL admins if high risk ────────────────────────────────────
+    if (isHighRisk) {
+      const admins = await User.find({ isAdmin: true }).select('_id').lean();
+      const flagSummary = flags.slice(0, 3).join(' | ');
+      await Promise.all(admins.map((admin) =>
+        Notification.create({
+          recipient: admin._id,
+          type:      'platform_update',
+          title:     `🚨 High-Risk Project Flagged: "${project.title}"`,
+          message:   `Risk score: ${score}/100. ${flagSummary}`,
+          link:      '/admin?tab=moderation',
+        })
+      ));
+    }
 
     // Log activity (fire-and-forget)
     logActivity({
@@ -65,11 +151,11 @@ const createProject = async (req, res, next) => {
       projectRef: project._id,
     });
 
-    res.status(201).json({
-      success: true,
-      message: 'Project submitted for review. It will be live once approved by our team.',
-      data: project,
-    });
+    const message = autoApprove
+      ? 'Project is now live!'
+      : 'Project submitted for review. It will be live once approved by our team.';
+
+    res.status(201).json({ success: true, message, data: project });
   } catch (error) {
     next(error);
   }
@@ -616,6 +702,39 @@ const leaveProject = async (req, res, next) => {
   }
 };
 
+// @desc    Re-submit a rejected project for review
+// @route   PATCH /api/projects/:id/resubmit
+// @access  Private (owner only)
+const resubmitProject = async (req, res, next) => {
+  try {
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ success: false, message: 'Project not found' });
+
+    if (project.createdBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+
+    if (project.moderationStatus !== 'rejected') {
+      return res.status(400).json({ success: false, message: 'Only rejected projects can be re-submitted' });
+    }
+
+    project.moderationStatus = 'pending';
+    project.moderationNote   = '';
+    await project.save();
+
+    // Notify the creator
+    await Notification.create({
+      recipient: req.user._id,
+      type:      'platform_update',
+      title:     '📤 Project re-submitted for review',
+      message:   `Your project "${project.title}" has been re-submitted and is pending moderation.`,
+      link:      `/projects/${project._id}`,
+    });
+
+    res.json({ success: true, message: 'Project re-submitted for review', data: project });
+  } catch (e) { next(e); }
+};
+
 module.exports = {
   createProject,
   getProjects,
@@ -630,4 +749,5 @@ module.exports = {
   getUserFilms,
   removeMember,
   leaveProject,
+  resubmitProject,
 };

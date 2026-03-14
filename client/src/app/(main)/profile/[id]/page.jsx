@@ -298,8 +298,38 @@ export default function ProfilePage() {
   };
   const hasSocials = socialLinks && Object.values(socialLinks).some(Boolean);
 
+  // Compute which verifications are missing for the profile owner
+  const missingForOwner = isOwnProfile ? [
+    !user?.isEmailVerified  && { key: 'email', icon: '📧', label: 'Verify your email',        href: '/verify-email' },
+    !user?.phone?.isVerified && { key: 'phone', icon: '📱', label: 'Verify your phone number', href: '/verify-phone' },
+    !user?.hasDateOfBirth   && { key: 'dob',   icon: '🪪', label: 'Add your date of birth',   href: '/settings?tab=profile' },
+  ].filter(Boolean) : [];
+
   return (
     <div className="min-h-screen bg-[#fafaf9]">
+
+      {/* Verification completion banner — own profile only */}
+      {missingForOwner.length > 0 && (
+        <div className="bg-amber-50 border-b-2 border-amber-300 px-4 py-3">
+          <div className="max-w-[900px] mx-auto">
+            <div className="flex items-start gap-3 mb-2">
+              <span className="text-xl mt-0.5">⚠️</span>
+              <div>
+                <p className="text-sm font-bold text-amber-900">Complete your verification to unlock full access</p>
+                <p className="text-xs text-amber-700 mt-0.5">You can't post projects or apply to paid opportunities until all three steps are done.</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 mt-3 ml-8">
+              {missingForOwner.map((item) => (
+                <a key={item.key} href={item.href}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors">
+                  {item.icon} {item.label} →
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Hero Section — dark */}
       <div

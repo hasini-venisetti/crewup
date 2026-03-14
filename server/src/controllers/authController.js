@@ -22,6 +22,7 @@ function userPayload(user) {
     isEmailVerified: user.isEmailVerified || false,
     isMinor:         user.isMinor         || false,
     phone:           user.phone           || { number: '', isVerified: false },
+    hasDateOfBirth:  !!user.dateOfBirth,
   };
 }
 
@@ -240,9 +241,84 @@ const googleAuth = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
+/* ── POST /api/auth/send-phone-otp ─────────────────────────────────────
+   Body: { phone: "+919876543210" }
+   Saves the number on the user, generates a 6-digit OTP, and in production
+   you'd send it via SMS (Twilio / AWS SNS).  For now we log it and also
+   return it in dev mode so the front-end can display it without an SMS service.
+   ─────────────────────────────────────────────────────────────────────── */
+const sendPhoneOTP = async (req, res, next) => {
+  try {
+    const { phone } = req.body;
+    if (!phone || phone.trim().length < 7) {
+      return res.status(400).json({ success: false, message: 'A valid phone number is required' });
+    }
+
+    const user = await User.findById(req.user._id).select('+phoneOTP');
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    if (user.phone?.isVerified) {
+      return res.status(400).json({ success: false, message: 'Phone number already verified' });
+    }
+
+    // Rate-limit — don't resend if last OTP was sent < 60 seconds ago
+    if (user.phoneOTP?.expiresAt) {
+      const remainingMs = user.phoneOTP.expiresAt.getTime() - Date.now();
+      if (remainingMs > 9 * 60 * 1000) {
+        return res.status(429).json({ success: false, message: 'Please wait 60 seconds before requesting a new code.' });
+      }
+    }
+
+    const otp = generateOTP();
+    user.phone = { number: phone.trim(), isVerified: false };
+    user.phoneOTP = { code: otp, expiresAt: new Date(Date.now() + 10 * 60 * 1000) };
+    await user.save({ validateBeforeSave: false });
+
+    // ── SMS delivery ─────────────────────────────────────────────────────
+    // In production: plug in Twilio / AWS SNS here.
+    // For now we log the OTP and return it in non-production mode.
+    console.log(`[Phone OTP] ${phone} → ${otp}`);
+
+    const responseData = { success: true, message: `Verification code sent to ${phone}` };
+    if (process.env.NODE_ENV !== 'production') {
+      responseData.devOtp = otp; // remove this line once SMS is wired up
+    }
+
+    res.status(200).json(responseData);
+  } catch (error) { next(error); }
+};
+
+/* ── POST /api/auth/verify-phone ───────────────────────────────────────
+   Body: { code: "123456" }
+   ─────────────────────────────────────────────────────────────────────── */
+const verifyPhone = async (req, res, next) => {
+  try {
+    const { code } = req.body;
+    if (!code) return res.status(400).json({ success: false, message: 'Verification code is required' });
+
+    const user = await User.findById(req.user._id).select('+phoneOTP');
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    if (user.phone?.isVerified) {
+      return res.status(400).json({ success: false, message: 'Phone already verified' });
+    }
+
+    if (!user.phoneOTP?.code || user.phoneOTP.code !== String(code).trim()) {
+      return res.status(400).json({ success: false, message: 'Invalid verification code' });
+    }
+    if (user.phoneOTP.expiresAt < new Date()) {
+      return res.status(400).json({ success: false, message: 'Code has expired. Please request a new one.' });
+    }
+
+    user.phone.isVerified = true;
+    user.phoneOTP = undefined;
+    await user.save({ validateBeforeSave: false });
+
+    res.status(200).json({ success: true, message: 'Phone number verified successfully', user: userPayload(user) });
+  } catch (error) { next(error); }
+};
+
 /* ── GET /api/auth/me ─────────────────────────────────────────────────── */
 const getMe = async (req, res) => {
   res.status(200).json({ success: true, user: userPayload(req.user) });
 };
 
-module.exports = { register, login, googleAuth, getMe, sendEmailVerificationOTP, verifyEmail };
+module.exports = { register, login, googleAuth, getMe, sendEmailVerificationOTP, verifyEmail, sendPhoneOTP, verifyPhone };

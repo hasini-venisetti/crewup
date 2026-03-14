@@ -110,7 +110,7 @@ export default function SignupPage() {
     name: '', role: '',
     location: { city: '', country: '' },
     skills: [], username: '', email: '', password: '',
-    dateOfBirth: '',
+    dateOfBirth: '', phone: '',
   });
   const [skillInput, setSkillInput] = useState('');
   const [otherRoleText, setOtherRoleText] = useState('');
@@ -211,7 +211,12 @@ export default function SignupPage() {
     if (currentStep === 3 && (!formData.location.city.trim() || !formData.location.country.trim())) {
       toast.error('Please enter city and country'); return;
     }
-    if (currentStep < 5) setCurrentStep(currentStep + 1);
+    if (currentStep === 5) {
+      if (!formData.email.trim() || !formData.password.trim()) { toast.error('Email and password are required'); return; }
+      if (formData.password.length < 8) { toast.error('Password must be at least 8 characters'); return; }
+      if (!formData.dateOfBirth) { toast.error('Date of birth is required'); return; }
+    }
+    if (currentStep < 6) setCurrentStep(currentStep + 1);
   };
 
   const handleAddSkill = (e) => {
@@ -228,8 +233,7 @@ export default function SignupPage() {
     if (!formData.username.trim()) { toast.error('Please choose a username'); return; }
     const uErr = validateUsername(formData.username);
     if (uErr) { toast.error(uErr); return; }
-    if (!formData.email.trim() || !formData.password.trim()) { toast.error('Please enter email and password'); return; }
-    if (formData.password.length < 8) { toast.error('Password must be at least 8 characters'); return; }
+    if (!formData.dateOfBirth) { toast.error('Date of birth is required'); return; }
 
     setIsLoading(true);
     try {
@@ -241,9 +245,9 @@ export default function SignupPage() {
         email: formData.email, password: formData.password,
         role: resolvedRole,
         location: formData.location, skills: formData.skills,
-        dateOfBirth: formData.dateOfBirth || undefined,
+        dateOfBirth: formData.dateOfBirth,
       });
-      toast.success("Account created! Verify your email to get started 🎬");
+      toast.success("Account created! Let's verify your email first 🎬");
       router.push('/verify-email');
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Signup failed. Please try again.');
@@ -289,7 +293,7 @@ export default function SignupPage() {
           {/* Progress bar */}
           <div className="sticky top-0 z-10 h-1 bg-[#efefed] flex-shrink-0">
             <div className="h-full bg-[#111110] transition-all duration-500"
-              style={{ width: `${(currentStep / 5) * 100}%` }} />
+              style={{ width: `${(currentStep / 6) * 100}%` }} />
           </div>
 
           {/* Logo */}
@@ -303,12 +307,12 @@ export default function SignupPage() {
 
               <p className="form-anim text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-4"
                 style={{ animationDelay: '0s' }}>
-                Step {currentStep} of 5
+                Step {currentStep} of 6
               </p>
 
               <h1 className="form-anim text-3xl md:text-4xl font-[Playfair_Display] text-[#111110] mb-8 leading-tight"
                 style={{ animationDelay: '0.08s' }}>
-                {["What's your name?", 'What best describes you?', 'Where are you based?', 'What are your main skills?', 'Create your account'][currentStep - 1]}
+                {["What's your name?", 'What best describes you?', 'Where are you based?', 'What are your main skills?', 'Create your account', 'Verify your identity'][currentStep - 1]}
               </h1>
 
               {/* Step 1 — Name */}
@@ -429,10 +433,10 @@ export default function SignupPage() {
                   <input type="password" placeholder="Min. 8 characters" className="field-input mb-2"
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })} />
-                  <p className="text-xs text-[#a3a39e] mb-5">At least 8 characters. Never shared with anyone.</p>
+                  <p className="text-xs text-[#a3a39e] mb-4">At least 8 characters. Never shared with anyone.</p>
 
                   <label className="block text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-2">
-                    Date of Birth <span className="text-[#a3a39e] normal-case">· required for safety</span>
+                    Date of Birth <span className="text-red-500 normal-case">· required</span>
                   </label>
                   <input
                     type="date"
@@ -441,7 +445,44 @@ export default function SignupPage() {
                     max={new Date().toISOString().split('T')[0]}
                     onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
                   />
-                  <p className="text-xs text-[#a3a39e] mb-8">Used to protect minors on the platform. Never shown publicly.</p>
+                  <p className="text-xs text-[#a3a39e] mb-4">Used to confirm your age and protect minors. Never shown publicly.</p>
+
+                  <label className="block text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-2">
+                    Phone Number <span className="text-red-500 normal-case">· required for posting projects</span>
+                  </label>
+                  <input
+                    type="tel"
+                    placeholder="+91 98765 43210"
+                    className="field-input mb-1"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  />
+                  <p className="text-xs text-[#a3a39e] mb-8">Include country code. You'll verify this on the next step.</p>
+                </div>
+              )}
+
+              {/* Step 6 — Verification summary */}
+              {currentStep === 6 && (
+                <div className="form-anim" style={{ animationDelay: '0.16s' }}>
+                  <div className="flex flex-col gap-3 mb-6">
+                    {[
+                      { icon: '📧', label: 'Email', detail: formData.email || '—', note: 'We\'ll send a 6-digit code to verify' },
+                      { icon: '📱', label: 'Phone', detail: formData.phone || '(not entered)', note: formData.phone ? 'You\'ll verify this after email' : 'Add a phone number on the previous step' },
+                      { icon: '🪪', label: 'Date of Birth', detail: formData.dateOfBirth || '(not entered)', note: formData.dateOfBirth ? 'Confirmed ✓' : 'Go back and add your date of birth' },
+                    ].map((item) => (
+                      <div key={item.label} className="flex items-start gap-3 p-4 border border-[#e0e0dd] rounded-xl">
+                        <span className="text-xl mt-0.5">{item.icon}</span>
+                        <div>
+                          <p className="text-sm font-semibold text-[#111110]">{item.label}: <span className="font-normal text-[#6b6b66]">{item.detail}</span></p>
+                          <p className="text-xs text-[#a3a39e] mt-0.5">{item.note}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl mb-6">
+                    <p className="text-xs text-amber-800 font-semibold mb-1">⚠️ Verification required to post projects</p>
+                    <p className="text-xs text-amber-700">After creating your account, you must verify your email and phone before you can post a project or apply to paid opportunities.</p>
+                  </div>
                 </div>
               )}
 
@@ -453,7 +494,7 @@ export default function SignupPage() {
                     ← Back
                   </button>
                 )}
-                {currentStep < 5 ? (
+                {currentStep < 6 ? (
                   <button onClick={handleContinue}
                     className="flex-1 bg-[#111110] text-white text-sm font-medium py-3 hover:bg-[#2d2d2b] transition">
                     Continue →
@@ -466,12 +507,19 @@ export default function SignupPage() {
                         <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                         Creating…
                       </span>
-                    ) : 'Create Account'}
+                    ) : 'Create Account & Verify →'}
                   </button>
                 )}
               </div>
 
               {/* Google Sign-Up — shown on step 1 only, not in google flow */}
+              {currentStep === 6 && (
+                <p className="text-xs text-center mt-5 text-[#6b6b66]">
+                  Already have an account?{' '}
+                  <Link href="/login" className="text-[#111110] font-semibold hover:underline">Sign in</Link>
+                </p>
+              )}
+
               {currentStep === 1 && !googleStep && (
                 <div className="mt-5">
                   <div className="flex items-center gap-3 mb-4">
@@ -499,12 +547,6 @@ export default function SignupPage() {
                 </div>
               )}
 
-              {currentStep === 5 && (
-                <p className="text-xs text-center mt-5 text-[#6b6b66]">
-                  Already have an account?{' '}
-                  <Link href="/login" className="text-[#111110] font-semibold hover:underline">Sign in</Link>
-                </p>
-              )}
             </div>
           </div>
         </div>
@@ -556,7 +598,7 @@ export default function SignupPage() {
 
           {/* Step progress dots */}
           <div className="relative flex items-center gap-2">
-            {[1, 2, 3, 4, 5].map((s) => (
+            {[1, 2, 3, 4, 5, 6].map((s) => (
               <div key={s}
                 className={`h-1 rounded-full transition-all duration-300 ${
                   s === currentStep

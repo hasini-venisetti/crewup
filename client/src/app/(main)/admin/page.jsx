@@ -1218,8 +1218,46 @@ function ModerationTab() {
           <p className="text-sm text-[#6b6b66] mt-1">All projects have been reviewed.</p>
         </div>
       ) : (
-        projects.map((p) => (
-          <div key={p._id} className="bg-white border border-[#efefed] rounded-2xl p-6 shadow-sm">
+        projects.map((p) => {
+          const riskLevel = p.riskLevel || 'low';
+          const riskScore = p.riskScore ?? 0;
+          const riskConfig = {
+            high:   { bar: 'bg-red-500',    bg: 'bg-red-50 border-red-300',    text: 'text-red-700',    label: '🔴 HIGH RISK',   labelClass: 'bg-red-100 text-red-700 border border-red-300' },
+            medium: { bar: 'bg-amber-400',  bg: 'bg-amber-50 border-amber-200', text: 'text-amber-700',  label: '🟡 MEDIUM RISK', labelClass: 'bg-amber-100 text-amber-700 border border-amber-200' },
+            low:    { bar: 'bg-green-500',  bg: 'bg-green-50 border-green-200', text: 'text-green-700',  label: '🟢 LOW RISK',    labelClass: 'bg-green-100 text-green-700 border border-green-200' },
+          };
+          const rc = riskConfig[riskLevel];
+
+          return (
+          <div key={p._id} className={`bg-white rounded-2xl p-6 shadow-sm border-2 ${riskLevel === 'high' ? 'border-red-300' : riskLevel === 'medium' ? 'border-amber-200' : 'border-[#efefed]'}`}>
+
+            {/* Risk Score Header */}
+            <div className={`flex items-center justify-between px-4 py-3 rounded-xl mb-4 ${rc.bg}`}>
+              <div className="flex items-center gap-3">
+                <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${rc.labelClass}`}>{rc.label}</span>
+                {p.autoSuspended && (
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-red-700 text-white">⛔ AUTO-SUSPENDED</span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`text-sm font-bold ${rc.text}`}>Risk: {riskScore}/100</span>
+                <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full ${rc.bar}`} style={{ width: `${riskScore}%` }} />
+                </div>
+              </div>
+            </div>
+
+            {/* Risk Flags */}
+            {p.riskFlags?.length > 0 && (
+              <div className="flex flex-col gap-1 mb-4">
+                {p.riskFlags.map((flag, i) => (
+                  <div key={i} className="flex items-start gap-2 text-xs text-[#6b6b66] bg-[#fafaf9] border border-[#efefed] rounded-lg px-3 py-1.5">
+                    {flag}
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="flex items-start justify-between gap-4 mb-4">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
@@ -1232,7 +1270,8 @@ function ModerationTab() {
               </div>
               <div className="text-right text-xs text-[#a3a39e] flex-shrink-0">
                 <p>{new Date(p.createdAt).toLocaleDateString()}</p>
-                <p className="mt-1">{p.createdBy?.email}</p>
+                <p className="mt-1 font-medium text-[#6b6b66]">@{p.createdBy?.username}</p>
+                <p className="mt-0.5">{p.createdBy?.email}</p>
                 {p.createdBy?.isEmailVerified
                   ? <span className="text-green-600 font-semibold">✅ Email verified</span>
                   : <span className="text-red-500 font-semibold">⚠️ Unverified email</span>
@@ -1243,9 +1282,9 @@ function ModerationTab() {
             {/* Safety info */}
             <div className="grid grid-cols-3 gap-3 mb-4">
               {[
-                { label: 'Audition Format',     value: p.auditionFormat?.replace('-', ' ') || '—' },
-                { label: 'Shooting Location',   value: p.shootingLocationType?.replace('-', ' ') || '—' },
-                { label: 'Compensation',        value: p.isPaid ? (p.compensationDetails || 'Paid, no details') : 'Unpaid' },
+                { label: 'Audition Format',   value: p.auditionFormat?.replace(/-/g, ' ') || '—' },
+                { label: 'Location Type',     value: p.shootingLocationType?.replace(/-/g, ' ') || '—' },
+                { label: 'Compensation',      value: p.isPaid ? (p.compensationDetails || 'Paid, no details') : 'Unpaid / Collab' },
               ].map(({ label, value }) => (
                 <div key={label} className="bg-[#fafaf9] rounded-xl p-3 border border-[#efefed]">
                   <p className="text-xs text-[#a3a39e] mb-0.5">{label}</p>
@@ -1257,12 +1296,12 @@ function ModerationTab() {
             {/* Rejection note */}
             <div className="mb-4">
               <label className="text-xs text-[#6b6b66] font-medium block mb-1">
-                Rejection note (optional — sent to creator if rejected)
+                Note to creator (optional — sent if rejected)
               </label>
               <input
                 type="text"
                 className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-3 py-2 text-sm text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:border-[#6C63FF]"
-                placeholder="e.g. Missing compensation details, please resubmit with full pay information."
+                placeholder="e.g. Project asks for upfront payments which violates our guidelines."
                 value={noteMap[p._id] || ''}
                 onChange={(e) => setNoteMap(m => ({ ...m, [p._id]: e.target.value }))}
               />
@@ -1293,7 +1332,8 @@ function ModerationTab() {
               </a>
             </div>
           </div>
-        ))
+          );
+        })
       )}
     </div>
   );

@@ -61,10 +61,9 @@ export default function VerifyEmailPage() {
     try {
       const { data } = await authAPI.verifyEmail(fullCode);
       if (data.success) {
-        // Update auth context with verified user
         if (loginWithToken && data.token) loginWithToken(data.token, data.user);
-        toast.success('Email verified! Welcome to CREWUPFILMS 🎬');
-        router.push('/dashboard');
+        toast.success('Email verified! Now verify your phone number 📱');
+        router.push('/verify-phone');
       }
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Invalid or expired code. Try again.');
@@ -109,8 +108,15 @@ export default function VerifyEmailPage() {
 
       <div className="min-h-screen bg-white flex flex-col">
         {/* Header */}
-        <div className="px-8 pt-8">
+        <div className="px-8 pt-8 flex items-center justify-between">
           <Logo size="sm" />
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-[#a3a39e]">Step 1 of 2</span>
+            <div className="flex gap-1">
+              <div className="w-8 h-1 bg-[#111110] rounded-full" />
+              <div className="w-8 h-1 bg-[#e0e0dd] rounded-full" />
+            </div>
+          </div>
         </div>
 
         {/* Content */}
@@ -183,10 +189,10 @@ export default function VerifyEmailPage() {
               </p>
             </div>
 
-            {/* Skip (for now) */}
+            {/* Skip — warn them */}
             <p className="fade-up text-center text-xs text-[#a3a39e] mt-6" style={{ animationDelay: '0.42s' }}>
               <Link href="/dashboard" className="hover:text-[#6b6b66] transition-colors">
-                Skip for now — verify later in settings
+                Skip for now — you won't be able to post projects until verified
               </Link>
             </p>
 

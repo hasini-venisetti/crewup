@@ -1,6 +1,6 @@
 const express = require('express');
 const { body } = require('express-validator');
-const { register, login, googleAuth, getMe, sendEmailVerificationOTP, verifyEmail } = require('../controllers/authController');
+const { register, login, googleAuth, getMe, sendEmailVerificationOTP, verifyEmail, sendPhoneOTP, verifyPhone } = require('../controllers/authController');
 const { protect } = require('../middleware/auth');
 
 const router = express.Router();
@@ -41,5 +41,13 @@ router.post('/send-email-otp', protect, sendEmailVerificationOTP);
 router.post('/verify-email', protect, [
   body('code').notEmpty().withMessage('Verification code is required'),
 ], verifyEmail);
+
+// ── Phone OTP Verification ────────────────────────────────────────────────────
+router.post('/send-phone-otp', protect, [
+  body('phone').notEmpty().withMessage('Phone number is required'),
+], sendPhoneOTP);
+router.post('/verify-phone', protect, [
+  body('code').notEmpty().withMessage('Verification code is required'),
+], verifyPhone);
 
 module.exports = router;

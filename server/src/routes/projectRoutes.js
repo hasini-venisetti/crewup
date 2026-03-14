@@ -13,6 +13,7 @@ const {
   getUserFilms,
   removeMember,
   leaveProject,
+  resubmitProject,
 } = require('../controllers/projectController');
 const { protect } = require('../middleware/auth');
 
@@ -28,6 +29,7 @@ router.get('/films',               getAllFilms);                // public – gl
 router.get('/films/:userId',        getUserFilms);               // public – used on profiles
 router.patch('/:id/roles/fill',         protect, fillRole);
 router.patch('/:id/youtube-link',       protect, setYoutubeLink);
+router.patch('/:id/resubmit',           protect, resubmitProject);
 router.delete('/:id/members/:userId',   protect, removeMember);
 router.delete('/:id/leave',             protect, leaveProject);
 router.get('/',            getProjects);

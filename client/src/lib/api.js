@@ -38,9 +38,12 @@ export const authAPI = {
   login:           (data)   => api.post('/auth/login', data),
   me:              ()       => api.get('/auth/me'),
   googleAuth:      (data)   => api.post('/auth/google', data),
-  // Phase 1: Email OTP verification
-  sendEmailOTP:    ()       => api.post('/auth/send-email-otp'),
-  verifyEmail:     (code)   => api.post('/auth/verify-email', { code }),
+  // Email OTP verification
+  sendEmailOTP:    ()         => api.post('/auth/send-email-otp'),
+  verifyEmail:     (code)     => api.post('/auth/verify-email', { code }),
+  // Phone OTP verification
+  sendPhoneOTP:    (phone)    => api.post('/auth/send-phone-otp', { phone }),
+  verifyPhone:     (code)     => api.post('/auth/verify-phone', { code }),
 };
 
 /* ── Profile ── */
@@ -62,6 +65,7 @@ export const projectAPI = {
   delete:          (id)       => api.delete(`/projects/${id}`),
   setYoutubeLink:  (id, link)     => api.patch(`/projects/${id}/youtube-link`, { youtubeLink: link }),
   setEpisodeLinks: (id, episodes) => api.patch(`/projects/${id}/youtube-link`, { episodeLinks: episodes }),
+  resubmit:        (id)           => api.patch(`/projects/${id}/resubmit`),
   getAllFilms:     (params)        => api.get('/projects/films', { params }),
   getUserFilms:   (userId)        => api.get(`/projects/films/${userId}`),
 };

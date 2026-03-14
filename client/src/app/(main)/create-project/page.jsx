@@ -120,13 +120,75 @@ export default function CreateProjectPage() {
       toast.success('Project submitted! It will be live after our team reviews it.');
       router.push(`/projects/${data.data._id}`);
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to create project');
+      const code = err.response?.data?.code;
+      if (code === 'VERIFICATION_REQUIRED') {
+        toast.error('Complete your email, phone, and age verification before posting.', { duration: 6000, icon: '🔒' });
+      } else {
+        toast.error(err.response?.data?.message || 'Failed to create project');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   if (!user) return null;
+
+  // ── Verification gate ───────────────────────────────────────────────────
+  const missingVerifications = [];
+  if (!user.isEmailVerified)         missingVerifications.push({ key: 'email',   icon: '📧', label: 'Verify your email', desc: 'Check your inbox for a verification link', href: '/settings?tab=security' });
+  if (!user.phone?.isVerified)       missingVerifications.push({ key: 'phone',   icon: '📱', label: 'Verify your phone number', desc: 'We need to confirm your phone for safety', href: '/settings?tab=security' });
+  if (!user.hasDateOfBirth)          missingVerifications.push({ key: 'age',     icon: '🪪', label: 'Add your date of birth', desc: 'Required to confirm you meet our age requirements', href: '/settings?tab=profile' });
+
+  if (missingVerifications.length > 0) {
+    return (
+      <div className="min-h-screen bg-[#fafaf9] flex flex-col items-center justify-center px-4 py-16">
+        <div className="w-full max-w-lg">
+          <div className="text-center mb-8">
+            <div className="text-5xl mb-4">🔒</div>
+            <h1 className="text-2xl font-[Playfair_Display] font-bold text-[#111110] mb-2">
+              Verify your account first
+            </h1>
+            <p className="text-[#6b6b66] text-sm">
+              To keep CrewUp safe for everyone, you must complete the following before posting a project.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-3 mb-8">
+            {[
+              { key: 'email', icon: '📧', label: 'Email verified', done: user.isEmailVerified, href: '/settings?tab=security', desc: 'Verify your email address' },
+              { key: 'phone', icon: '📱', label: 'Phone verified', done: user.phone?.isVerified, href: '/settings?tab=security', desc: 'Add and verify a phone number' },
+              { key: 'age',   icon: '🪪', label: 'Age confirmed',  done: user.hasDateOfBirth,   href: '/settings?tab=profile',  desc: 'Add your date of birth' },
+            ].map((item) => (
+              <div key={item.key} className={`flex items-center gap-4 px-5 py-4 rounded-2xl border-2 ${item.done ? 'bg-green-50 border-green-200' : 'bg-white border-[#e0e0dd]'}`}>
+                <span className="text-2xl">{item.icon}</span>
+                <div className="flex-1">
+                  <p className={`text-sm font-semibold ${item.done ? 'text-green-700' : 'text-[#111110]'}`}>{item.label}</p>
+                  {!item.done && <p className="text-xs text-[#6b6b66] mt-0.5">{item.desc}</p>}
+                </div>
+                {item.done ? (
+                  <span className="text-green-600 font-bold text-lg">✓</span>
+                ) : (
+                  <Link href={item.href} className="text-xs font-semibold text-white bg-[#6C63FF] hover:bg-[#7C75FF] px-3 py-1.5 rounded-lg transition-colors">
+                    Fix →
+                  </Link>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <p className="text-center text-xs text-[#a3a39e]">
+            These verifications protect actors and crew from scams and ensure accountability on our platform.
+          </p>
+
+          <div className="text-center mt-4">
+            <Link href="/projects" className="text-sm text-[#6C63FF] hover:underline">
+              ← Browse existing projects
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#fafaf9]">
