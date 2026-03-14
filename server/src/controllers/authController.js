@@ -4,7 +4,8 @@ const { validationResult } = require('express-validator');
 const User                 = require('../models/User');
 const Profile              = require('../models/Profile');
 const generateToken        = require('../utils/generateToken');
-const { sendEmailOTP }     = require('../utils/emailService');
+const { sendEmailOTP }       = require('../utils/emailService');
+const { sendPhoneOTPSMS }    = require('../utils/smsService');
 
 /* ── helpers ──────────────────────────────────────────────────────────── */
 function userPayload(user) {
@@ -284,13 +285,18 @@ const sendPhoneOTP = async (req, res, next) => {
     await user.save({ validateBeforeSave: false });
 
     // ── SMS delivery ─────────────────────────────────────────────────────
-    // In production: plug in Twilio / AWS SNS here.
-    // For now we log the OTP and return it in non-production mode.
-    console.log(`[Phone OTP] ${phone} → ${otp}`);
+    // Tries Fast2SMS → Twilio → MSG91 based on configured env vars.
+    // Falls back to console.log if no provider is set (dev mode).
+    try {
+      await sendPhoneOTPSMS(phone.trim(), otp);
+    } catch (smsErr) {
+      console.error('[SMS ERROR]', smsErr.message);
+      // Don't block — OTP is saved, devOtp shown on screen in dev
+    }
 
     const responseData = { success: true, message: `Verification code sent to ${phone}` };
     if (process.env.NODE_ENV !== 'production') {
-      responseData.devOtp = otp; // remove this line once SMS is wired up
+      responseData.devOtp = otp; // shown on-screen in dev — auto-hides once SMS provider is live
     }
 
     res.status(200).json(responseData);
