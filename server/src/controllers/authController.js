@@ -93,13 +93,17 @@ const register = async (req, res, next) => {
     sendEmailOTP(email, name, otp).catch(() => {});
 
     const token = generateToken(user._id);
-    res.status(201).json({
+    const registerResponse = {
       success: true,
       message: 'Account created successfully. Please verify your email.',
       token,
       user: userPayload(user),
       requiresEmailVerification: true,
-    });
+    };
+    if (process.env.NODE_ENV !== 'production') {
+      registerResponse.devEmailOtp = otp;
+    }
+    res.status(201).json(registerResponse);
   } catch (error) { next(error); }
 };
 
@@ -124,7 +128,12 @@ const sendEmailVerificationOTP = async (req, res, next) => {
     await user.save({ validateBeforeSave: false });
 
     await sendEmailOTP(user.email, user.name, otp);
-    res.status(200).json({ success: true, message: 'Verification code sent to your email' });
+
+    const responseData = { success: true, message: 'Verification code sent to your email' };
+    if (process.env.NODE_ENV !== 'production') {
+      responseData.devOtp = otp; // shown on-screen in dev — remove when email provider is live
+    }
+    res.status(200).json(responseData);
   } catch (error) { next(error); }
 };
 

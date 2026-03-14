@@ -16,6 +16,7 @@ export default function VerifyEmailPage() {
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [devOtp, setDevOtp] = useState('');
   const inputRefs = useRef([]);
 
   // Redirect if already verified
@@ -29,9 +30,15 @@ export default function VerifyEmailPage() {
   useEffect(() => {
     if (!user) return;
     authAPI.sendEmailOTP()
-      .then(() => setCountdown(60))
+      .then(({ data }) => {
+        setCountdown(60);
+        if (data.devOtp) {
+          setDevOtp(data.devOtp);
+          toast(`Dev mode — email OTP: ${data.devOtp}`, { icon: '🛠', duration: 30000 });
+        }
+      })
       .catch(() => {
-        // 429 = already sent recently (from registration) — that's fine, existing code still works
+        // 429 = rate limited (OTP already sent at registration) — still valid for 10 min
         setCountdown(60);
       });
   }, []);
@@ -89,9 +96,13 @@ export default function VerifyEmailPage() {
     if (countdown > 0) return;
     setResending(true);
     try {
-      await authAPI.sendEmailOTP();
+      const { data } = await authAPI.sendEmailOTP();
       toast.success('A new code has been sent to your email');
       setCountdown(60);
+      if (data.devOtp) {
+        setDevOtp(data.devOtp);
+        toast(`Dev mode — email OTP: ${data.devOtp}`, { icon: '🛠', duration: 30000 });
+      }
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Failed to resend. Please try again.');
     } finally {
@@ -147,6 +158,13 @@ export default function VerifyEmailPage() {
               <strong className="text-[#111110]">{user?.email || 'your email'}</strong>.<br />
               Enter it below to activate your account.
             </p>
+
+            {/* Dev OTP banner — only shown when no email provider is configured */}
+            {devOtp && (
+              <div className="fade-up mb-5 p-3 bg-yellow-50 border border-yellow-200 rounded-xl text-center">
+                <p className="text-xs text-yellow-700">🛠 Dev OTP: <strong className="font-mono text-lg">{devOtp}</strong></p>
+              </div>
+            )}
 
             {/* OTP inputs */}
             <div className="fade-up flex gap-2 justify-center mb-8" style={{ animationDelay: '0.18s' }} onPaste={handlePaste}>
