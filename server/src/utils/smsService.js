@@ -1,6 +1,7 @@
 // ─── SMS Service ──────────────────────────────────────────────────────────────
 // Provider priority:
 //   1. Fast2SMS  (set FAST2SMS_API_KEY)  — Cheapest for India, ~₹0.10/SMS
+//      Uses the OTP route (no DLT registration needed for OTPs)
 //   2. Twilio    (set TWILIO_SID + TWILIO_AUTH_TOKEN + TWILIO_PHONE) — Global
 //   3. MSG91     (set MSG91_AUTH_KEY + MSG91_SENDER_ID) — India
 //   Fallback: console.log (dev mode)
@@ -13,12 +14,15 @@ const TWILIO_PHONE       = process.env.TWILIO_PHONE;
 const MSG91_AUTH_KEY     = process.env.MSG91_AUTH_KEY;
 const MSG91_SENDER_ID    = process.env.MSG91_SENDER_ID || 'CREWUP';
 
-// ── Fast2SMS (India) ──────────────────────────────────────────────────────────
+// ── Fast2SMS OTP Route (India) ────────────────────────────────────────────────
 // Docs: https://docs.fast2sms.com
-// Sign up at fast2sms.com → get API key → add to Railway as FAST2SMS_API_KEY
-const sendViaFast2SMS = async (phone, message) => {
-  // Fast2SMS expects Indian numbers without country code
-  // Strip leading +91 or 91 if present
+// Uses the dedicated OTP route — NO DLT registration required.
+// Sign up at fast2sms.com → Dev API → copy API key → add to Railway as FAST2SMS_API_KEY
+//
+// The OTP route sends a system template: "Your OTP is <otp>. Please do not share..."
+// Pass just the numeric OTP as variables_values.
+const sendViaFast2SMS = async (phone, otp) => {
+  // Fast2SMS expects Indian numbers without country code (10 digits)
   const number = phone.replace(/^\+91/, '').replace(/^91/, '').replace(/\s/g, '').trim();
 
   const res = await fetch('https://www.fast2sms.com/dev/bulkV2', {
@@ -28,11 +32,10 @@ const sendViaFast2SMS = async (phone, message) => {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      route:    'q',          // transactional route
-      message,
-      language: 'english',
-      flash:    0,
-      numbers:  number,
+      route:            'otp',   // OTP route — no DLT needed
+      variables_values: String(otp),
+      flash:            0,
+      numbers:          number,
     }),
     signal: AbortSignal.timeout(15000),
   });
@@ -109,12 +112,34 @@ else if (TWILIO_SID)        console.log('[SMS SERVICE] Using Twilio ✓');
 else if (MSG91_AUTH_KEY)    console.log('[SMS SERVICE] Using MSG91 ✓');
 else                        console.warn('[SMS SERVICE] No provider configured — SMS will be logged only. Set FAST2SMS_API_KEY in Railway.');
 
-// ── Central send function ─────────────────────────────────────────────────────
-const sendSMS = async (phone, message) => {
+// ── OTP sender — routes to correct provider ───────────────────────────────────
+// Fast2SMS uses its own OTP route (just the numeric code).
+// Twilio / MSG91 send a full text message.
+const sendPhoneOTPSMS = async (phone, otp) => {
   if (FAST2SMS_API_KEY) {
-    await sendViaFast2SMS(phone, message);
+    await sendViaFast2SMS(phone, otp);          // OTP route: no DLT needed
+    console.log(`[SMS SENT] OTP via Fast2SMS to ${phone}`);
     return;
   }
+
+  const message = `${otp} is your CREWUPFILMS verification code. Valid for 10 minutes. Do not share this code with anyone.`;
+
+  if (TWILIO_SID && TWILIO_AUTH_TOKEN && TWILIO_PHONE) {
+    await sendViaTwilio(phone, message);
+    console.log(`[SMS SENT] OTP via Twilio to ${phone}`);
+    return;
+  }
+  if (MSG91_AUTH_KEY) {
+    await sendViaMSG91(phone, message);
+    console.log(`[SMS SENT] OTP via MSG91 to ${phone}`);
+    return;
+  }
+  // No provider — log only (dev mode)
+  console.log(`[SMS SKIPPED] No provider configured — OTP for ${phone}: "${otp}"`);
+};
+
+// ── Generic SMS (Twilio / MSG91 only — Fast2SMS OTP route is OTP-only) ────────
+const sendSMS = async (phone, message) => {
   if (TWILIO_SID && TWILIO_AUTH_TOKEN && TWILIO_PHONE) {
     await sendViaTwilio(phone, message);
     return;
@@ -123,15 +148,7 @@ const sendSMS = async (phone, message) => {
     await sendViaMSG91(phone, message);
     return;
   }
-  // No provider — log only (dev mode)
-  console.log(`[SMS SKIPPED] No provider configured — would have sent to ${phone}: "${message}"`);
-};
-
-// ── OTP-specific sender ───────────────────────────────────────────────────────
-const sendPhoneOTPSMS = async (phone, otp) => {
-  const message = `${otp} is your CREWUPFILMS verification code. Valid for 10 minutes. Do not share this code with anyone.`;
-  await sendSMS(phone, message);
-  console.log(`[SMS SENT] OTP to ${phone}`);
+  console.log(`[SMS SKIPPED] No provider — would have sent to ${phone}: "${message}"`);
 };
 
 module.exports = { sendSMS, sendPhoneOTPSMS };
