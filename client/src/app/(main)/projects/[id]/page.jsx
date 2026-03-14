@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
-import { projectAPI, applicationAPI, timelineAPI, waitlistAPI, reviewAPI, fillRoleAPI } from '@/lib/api';
+import { projectAPI, applicationAPI, timelineAPI, waitlistAPI, reviewAPI, fillRoleAPI, profileAPI } from '@/lib/api';
 import { useRef } from 'react';
 import { AuthProvider, useAuth } from '@/hooks/useAuth';
 import CrewSuggestions from '@/components/ui/CrewSuggestions';
@@ -370,6 +370,7 @@ function ProjectDetailContent() {
   const [waitlistLoading, setWaitlistLoading]       = useState(false);
   const [waitlistMsg, setWaitlistMsg]               = useState('');
   const [showYoutubeModal, setShowYoutubeModal]     = useState(false);
+  const [creatorIsVerified, setCreatorIsVerified]   = useState(false);
 
   useEffect(() => {
     projectAPI.getById(id)
@@ -377,6 +378,14 @@ function ProjectDetailContent() {
       .catch(() => router.push('/projects'))
       .finally(() => setLoading(false));
   }, [id]);
+
+  // Fetch creator's verified status from their Profile
+  useEffect(() => {
+    if (!project?.createdBy?._id) return;
+    profileAPI.getById(project.createdBy._id)
+      .then(({ data }) => setCreatorIsVerified(!!data?.data?.isVerified))
+      .catch(() => {/* silent — badge just won't show */});
+  }, [project?.createdBy?._id]);
 
   const handleDelete = async () => {
     if (!confirm('Delete this project? This cannot be undone.')) return;
@@ -489,11 +498,16 @@ function ProjectDetailContent() {
                 <span className="text-xs capitalize bg-white/10 text-white/60 px-2.5 py-1 rounded-md">{project.status}</span>
               </div>
               <h1 className="text-2xl sm:text-4xl font-[Playfair_Display] text-white mb-2 leading-tight">{project.title}</h1>
-              <div className="flex items-center gap-2 text-sm text-white/50">
+              <div className="flex items-center gap-2 text-sm text-white/50 flex-wrap">
                 <span>by</span>
                 <Link href={`/profile/${project.createdBy?._id}`} className="text-white/80 hover:text-white font-medium transition-colors">
                   @{project.createdBy?.username}
                 </Link>
+                {creatorIsVerified && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-500/20 border border-blue-400/40 text-blue-300 tracking-wide">
+                    ✔ Verified Creator
+                  </span>
+                )}
               </div>
             </div>
             <div className="flex gap-2 flex-wrap">

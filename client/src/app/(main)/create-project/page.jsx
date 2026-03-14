@@ -53,6 +53,14 @@ const LEVELS = [
   { value: 'advanced',     label: 'Advanced',      desc: 'Seasoned professionals preferred' },
 ];
 
+const COMPENSATION_TYPES = [
+  { value: 'paid',          label: '💰 Paid',          desc: 'Fixed rate or day rate' },
+  { value: 'revenue-share', label: '📊 Revenue Share',  desc: 'Share of profits / backend deal' },
+  { value: 'deferred',      label: '⏳ Deferred',       desc: 'Paid upon project sale or funding' },
+  { value: 'unpaid',        label: '🤝 Unpaid / Collab', desc: 'Passion project, no payment' },
+  { value: 'not-specified', label: '❓ Not Specified',  desc: 'TBD — discuss with applicants' },
+];
+
 export default function CreateProjectPage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -61,7 +69,7 @@ export default function CreateProjectPage() {
 
   const [form, setForm] = useState({
     title: '', description: '', projectType: '', requiredRoles: [],
-    isPaid: false, budget: '', compensationDetails: '',
+    isPaid: false, compensationType: '', budget: '', compensationDetails: '',
     location: { city: '', country: '', isRemote: false },
     deadline: '', experienceLevel: 'any', projectTags: [],
     // Phase 2: Safety fields
@@ -94,15 +102,19 @@ export default function CreateProjectPage() {
     if (!form.projectType) return toast.error('Select a project type');
     if (form.requiredRoles.length === 0) return toast.error('Add at least one role');
     // Phase 2: Safety validations
-    if (form.isPaid && !form.compensationDetails.trim()) return toast.error('Please describe the compensation clearly');
+    if (!form.compensationType) return toast.error('Please select a compensation type');
+    if (form.compensationType === 'paid' && !form.compensationDetails.trim()) return toast.error('Please describe the compensation for paid projects');
     if (!form.location.isRemote && (!form.location.city.trim() || !form.location.country.trim())) return toast.error('Please enter the shooting city and country');
     setLoading(true);
     try {
       const payload = {
         ...form,
+        isPaid: form.compensationType === 'paid',
         deadline: form.deadline || undefined,
-        budget: form.isPaid ? form.budget : '',
-        compensationDetails: form.isPaid ? form.compensationDetails : '',
+        budget: form.compensationType === 'paid' ? form.budget : '',
+        compensationDetails: ['paid', 'revenue-share', 'deferred'].includes(form.compensationType)
+          ? form.compensationDetails
+          : '',
       };
       const { data } = await projectAPI.create(payload);
       toast.success('Project submitted! It will be live after our team reviews it.');
@@ -346,62 +358,84 @@ export default function CreateProjectPage() {
           <section className="bg-white rounded-2xl border border-[#efefed] p-7 shadow-sm flex flex-col gap-5">
             <h2 className="font-bold text-[#111110] text-base mb-1">Details</h2>
 
-            {/* Paid toggle */}
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-[#111110]">Paid Project</p>
-                <p className="text-xs text-[#a3a39e]">Will team members be compensated?</p>
+            {/* ── Compensation Type ── */}
+            <div>
+              <label className="text-sm text-[#6b6b66] block mb-1 font-medium">
+                Compensation Type <span className="text-red-500">*</span>
+              </label>
+              <p className="text-xs text-[#a3a39e] mb-3">Required — applicants must know what to expect.</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {COMPENSATION_TYPES.map((c) => (
+                  <button
+                    key={c.value}
+                    type="button"
+                    onClick={() => set('compensationType', c.value)}
+                    className={`text-left p-3 border-2 rounded-xl transition-all ${
+                      form.compensationType === c.value
+                        ? 'border-[#6C63FF] bg-[#f0eeff]'
+                        : 'border-[#e0e0dd] bg-white hover:border-[#6C63FF]/40'
+                    }`}
+                  >
+                    <p className={`text-sm font-semibold ${form.compensationType === c.value ? 'text-[#3730A3]' : 'text-[#111110]'}`}>
+                      {c.label}
+                    </p>
+                    <p className="text-xs text-[#a3a39e] mt-0.5">{c.desc}</p>
+                  </button>
+                ))}
               </div>
-              <button
-                type="button"
-                onClick={() => set('isPaid', !form.isPaid)}
-                className={`w-12 h-7 rounded-full transition-colors ${
-                  form.isPaid ? 'bg-[#6C63FF]' : 'bg-[#f0f0ee]'
-                }`}
-              >
-                <div
-                  className={`w-6 h-6 rounded-full bg-white transition-all ${
-                    form.isPaid ? 'translate-x-5' : 'translate-x-0.5'
-                  }`}
-                />
-              </button>
             </div>
 
-            {form.isPaid && (
+            {/* Compensation details — shown for Paid, Revenue Share, Deferred */}
+            {['paid', 'revenue-share', 'deferred'].includes(form.compensationType) && (
               <div className="flex flex-col gap-3">
-                <div>
-                  <label className="text-sm text-[#6b6b66] block mb-2 font-medium">Budget / Compensation</label>
-                  <input
-                    type="text"
-                    className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF]"
-                    placeholder="e.g. ₹5,000 per day, Revenue share, Negotiable"
-                    value={form.budget}
-                    onChange={(e) => set('budget', e.target.value)}
-                  />
-                </div>
+                {form.compensationType === 'paid' && (
+                  <div>
+                    <label className="text-sm text-[#6b6b66] block mb-2 font-medium">Rate / Budget</label>
+                    <input
+                      type="text"
+                      className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF]"
+                      placeholder="e.g. ₹5,000 per day · ₹15,000 total · Negotiable"
+                      value={form.budget}
+                      onChange={(e) => set('budget', e.target.value)}
+                    />
+                  </div>
+                )}
                 <div>
                   <label className="text-sm text-[#6b6b66] block mb-2 font-medium">
-                    Compensation Details * <span className="text-[#a3a39e] font-normal">(required for paid projects)</span>
+                    Compensation Details
+                    {form.compensationType === 'paid' && (
+                      <span className="text-red-500 ml-1">*</span>
+                    )}
                   </label>
                   <textarea
                     className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] min-h-[80px] resize-none"
-                    placeholder="Be specific: e.g. ₹3,000/day for 2 shooting days, paid within 7 days of wrap. Travel and meals covered."
+                    placeholder={
+                      form.compensationType === 'paid'
+                        ? 'e.g. ₹3,000/day for 2 shoot days, paid within 7 days of wrap. Travel and meals covered.'
+                        : form.compensationType === 'revenue-share'
+                        ? 'e.g. 10% net revenue share after distribution costs, paid quarterly.'
+                        : 'e.g. Full payment upon securing a distribution deal or festival selection.'
+                    }
                     value={form.compensationDetails}
                     onChange={(e) => set('compensationDetails', e.target.value)}
                     maxLength={300}
-                    required
                   />
                   <p className="text-xs text-[#a3a39e] mt-1">{form.compensationDetails.length}/300</p>
                 </div>
-                {/* Scam notice */}
-                <div className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
-                  <span className="text-amber-500 text-base flex-shrink-0">⚠️</span>
-                  <p className="text-xs text-amber-700 leading-relaxed">
-                    <strong>Reminder:</strong> Never ask collaborators to pay fees, deposits, or any upfront costs. Legitimate productions always pay their crew — never the other way around.
-                  </p>
-                </div>
               </div>
             )}
+
+            {/* ── Scam Protection Notice ── */}
+            <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl">
+              <span className="text-red-500 text-lg flex-shrink-0">🚫</span>
+              <div>
+                <p className="text-sm font-bold text-red-800 mb-1">Important Safety Notice</p>
+                <p className="text-xs text-red-700 leading-relaxed">
+                  Legitimate productions <strong>never</strong> ask actors or crew to pay audition fees, registration fees, or any upfront costs.
+                  Requesting payment from applicants is a violation of our guidelines and will result in your account being permanently banned.
+                </p>
+              </div>
+            </div>
 
             {/* Location */}
             <div>
@@ -513,9 +547,14 @@ export default function CreateProjectPage() {
                 ))}
               </select>
               {/* Hard block: private residences not allowed */}
-              <p className="text-xs text-[#a3a39e] mt-2">
-                ⚠️ <strong className="text-[#6b6b66]">Private residences are not allowed</strong> as audition or shooting locations. All in-person meetings must be at registered studios, production offices, or public locations.
-              </p>
+              <div className="flex items-start gap-2 mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <span className="text-amber-500 flex-shrink-0">⚠️</span>
+                <p className="text-xs text-amber-800 leading-relaxed">
+                  <strong>Private residences are not allowed</strong> for auditions or first meetings.
+                  All in-person meetings must take place at registered studios, production offices, or public locations.
+                  This protects both you and your applicants.
+                </p>
+              </div>
             </div>
           </section>
 
