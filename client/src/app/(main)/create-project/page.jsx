@@ -161,7 +161,7 @@ export default function CreateProjectPage() {
           : '',
       };
       const { data } = await projectAPI.create(payload);
-      toast.success('Project submitted! It will be live after our team reviews it.');
+      toast.success('🎉 Your project is live! Creators can now apply.');
       router.push(`/projects/${data.data._id}`);
     } catch (err) {
       const code = err.response?.data?.code;
@@ -714,8 +714,7 @@ export default function CreateProjectPage() {
             <div>
               <p className="text-sm font-semibold text-[#3730a3] mb-1">Your project goes live instantly</p>
               <p className="text-xs text-[#4740CC] leading-relaxed">
-                Once you submit, your project is immediately visible to all creators on CREWUPFILMS.
-                Our fraud detection system monitors all listings — any violation of our guidelines can result in removal and account suspension.
+                Once you post, your project is immediately visible to all creators on CREWUPFILMS. We do not manually review listings — you are responsible for ensuring your post follows our community guidelines. Any violation may result in removal and account suspension.
               </p>
             </div>
           </div>
@@ -726,7 +725,7 @@ export default function CreateProjectPage() {
             disabled={loading}
             className="bg-[#6C63FF] text-white rounded-xl py-4 text-base font-bold w-full hover:bg-[#5750D4] disabled:opacity-50 transition-colors"
           >
-            {loading ? 'Submitting...' : 'Submit Project for Review →'}
+            {loading ? 'Posting...' : 'Post Project →'}
           </button>
         </form>
       </div>
