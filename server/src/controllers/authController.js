@@ -107,7 +107,7 @@ const register = async (req, res, next) => {
 // Resend OTP to the authenticated user's email
 const sendEmailVerificationOTP = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user._id).select('+emailOTP');
+    const user = await User.findById(req.user._id).select('+emailOTP.code +emailOTP.expiresAt');
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
     if (user.isEmailVerified) return res.status(400).json({ success: false, message: 'Email already verified' });
 
@@ -134,7 +134,7 @@ const verifyEmail = async (req, res, next) => {
     const { code } = req.body;
     if (!code) return res.status(400).json({ success: false, message: 'Verification code is required' });
 
-    const user = await User.findById(req.user._id).select('+emailOTP');
+    const user = await User.findById(req.user._id).select('+emailOTP.code +emailOTP.expiresAt');
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
     if (user.isEmailVerified) return res.status(400).json({ success: false, message: 'Email already verified' });
 
@@ -149,7 +149,8 @@ const verifyEmail = async (req, res, next) => {
     user.emailOTP = undefined;
     await user.save({ validateBeforeSave: false });
 
-    res.status(200).json({ success: true, message: 'Email verified successfully', user: userPayload(user) });
+    const token = generateToken(user._id);
+    res.status(200).json({ success: true, message: 'Email verified successfully', token, user: userPayload(user) });
   } catch (error) { next(error); }
 };
 
@@ -254,7 +255,7 @@ const sendPhoneOTP = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'A valid phone number is required' });
     }
 
-    const user = await User.findById(req.user._id).select('+phoneOTP');
+    const user = await User.findById(req.user._id).select('+phoneOTP.code +phoneOTP.expiresAt');
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
     if (user.phone?.isVerified) {
       return res.status(400).json({ success: false, message: 'Phone number already verified' });
@@ -295,7 +296,7 @@ const verifyPhone = async (req, res, next) => {
     const { code } = req.body;
     if (!code) return res.status(400).json({ success: false, message: 'Verification code is required' });
 
-    const user = await User.findById(req.user._id).select('+phoneOTP');
+    const user = await User.findById(req.user._id).select('+phoneOTP.code +phoneOTP.expiresAt');
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
     if (user.phone?.isVerified) {
       return res.status(400).json({ success: false, message: 'Phone already verified' });
@@ -312,7 +313,8 @@ const verifyPhone = async (req, res, next) => {
     user.phoneOTP = undefined;
     await user.save({ validateBeforeSave: false });
 
-    res.status(200).json({ success: true, message: 'Phone number verified successfully', user: userPayload(user) });
+    const token = generateToken(user._id);
+    res.status(200).json({ success: true, message: 'Phone number verified successfully', token, user: userPayload(user) });
   } catch (error) { next(error); }
 };
 

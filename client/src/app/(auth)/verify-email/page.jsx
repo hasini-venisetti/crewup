@@ -25,6 +25,17 @@ export default function VerifyEmailPage() {
     }
   }, [user]);
 
+  // Auto-send OTP on page load (silently ignore rate-limit — registration already sent one)
+  useEffect(() => {
+    if (!user) return;
+    authAPI.sendEmailOTP()
+      .then(() => setCountdown(60))
+      .catch(() => {
+        // 429 = already sent recently (from registration) — that's fine, existing code still works
+        setCountdown(60);
+      });
+  }, []);
+
   // Countdown timer for resend button
   useEffect(() => {
     if (countdown <= 0) return;
