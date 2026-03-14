@@ -93,18 +93,17 @@ const register = async (req, res, next) => {
     // Send OTP email (fire-and-forget — don't block signup)
     sendEmailOTP(email, name, otp).catch(() => {});
 
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[DEV] Email OTP for ${user.email}: ${otp}`);
+    }
     const token = generateToken(user._id);
-    const registerResponse = {
+    res.status(201).json({
       success: true,
       message: 'Account created successfully. Please verify your email.',
       token,
       user: userPayload(user),
       requiresEmailVerification: true,
-    };
-    if (process.env.NODE_ENV !== 'production') {
-      registerResponse.devEmailOtp = otp;
-    }
-    res.status(201).json(registerResponse);
+    });
   } catch (error) { next(error); }
 };
 
@@ -130,11 +129,10 @@ const sendEmailVerificationOTP = async (req, res, next) => {
 
     await sendEmailOTP(user.email, user.name, otp);
 
-    const responseData = { success: true, message: 'Verification code sent to your email' };
     if (process.env.NODE_ENV !== 'production') {
-      responseData.devOtp = otp; // shown on-screen in dev — remove when email provider is live
+      console.log(`[DEV] Email OTP for ${user.email}: ${otp}`);
     }
-    res.status(200).json(responseData);
+    res.status(200).json({ success: true, message: 'Verification code sent to your email' });
   } catch (error) { next(error); }
 };
 
@@ -291,15 +289,12 @@ const sendPhoneOTP = async (req, res, next) => {
       await sendPhoneOTPSMS(phone.trim(), otp);
     } catch (smsErr) {
       console.error('[SMS ERROR]', smsErr.message);
-      // Don't block — OTP is saved, devOtp shown on screen in dev
     }
-
-    const responseData = { success: true, message: `Verification code sent to ${phone}` };
     if (process.env.NODE_ENV !== 'production') {
-      responseData.devOtp = otp; // shown on-screen in dev — auto-hides once SMS provider is live
+      console.log(`[DEV] Phone OTP for ${phone}: ${otp}`);
     }
 
-    res.status(200).json(responseData);
+    res.status(200).json({ success: true, message: `Verification code sent to ${phone}` });
   } catch (error) { next(error); }
 };
 

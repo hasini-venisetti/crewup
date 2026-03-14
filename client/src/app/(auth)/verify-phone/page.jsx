@@ -18,7 +18,6 @@ export default function VerifyPhonePage() {
   const [sending, setSending]       = useState(false);
   const [verifying, setVerifying]   = useState(false);
   const [countdown, setCountdown]   = useState(0);
-  const [devOtp, setDevOtp]         = useState(''); // shown in dev mode
   const inputRefs = useRef([]);
 
   // Redirect if already verified
@@ -41,10 +40,6 @@ export default function VerifyPhonePage() {
       setOtpSent(true);
       setCountdown(60);
       toast.success(`Code sent to ${phone}`);
-      if (data.devOtp) {
-        setDevOtp(data.devOtp);
-        toast(`Dev mode — your OTP is: ${data.devOtp}`, { icon: '🛠', duration: 30000 });
-      }
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Failed to send code. Check the number and try again.');
     } finally { setSending(false); }
@@ -188,12 +183,6 @@ export default function VerifyPhonePage() {
                   <button onClick={() => { setOtpSent(false); setCode(['','','','','','']); }}
                     className="text-[#6C63FF] hover:underline text-xs">Change number</button>
                 </p>
-
-                {devOtp && (
-                  <div className="fade-up mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-xl text-center">
-                    <p className="text-xs text-yellow-700">🛠 Dev OTP: <strong className="font-mono text-lg">{devOtp}</strong></p>
-                  </div>
-                )}
 
                 {/* OTP inputs */}
                 <div className="fade-up flex gap-2 justify-center mb-8" onPaste={handlePaste}>
