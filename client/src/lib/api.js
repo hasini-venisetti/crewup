@@ -238,6 +238,10 @@ export const adminAPI = {
   moderateProject:     (id, action, note) => api.patch(`/admin/projects/${id}/moderate`, { action, note }),
   // Phase 4: Verified Creator badge
   setVerifiedBadge:    (id, verified)    => api.patch(`/admin/users/${id}/verify`, { verified }),
+  // Risk Monitor
+  getRiskProjects:     (params)          => api.get('/admin/risk-monitor', { params }),
+  adminDeleteProject:  (id)              => api.delete(`/admin/risk-monitor/${id}`),
+  restoreProject:      (id)              => api.patch(`/admin/risk-monitor/${id}/restore`),
 };
 
 /* ── Reports ── */

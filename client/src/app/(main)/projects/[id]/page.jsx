@@ -475,18 +475,7 @@ function ProjectDetailContent() {
         />
       )}
 
-      {/* Owner-only moderation status banner */}
-      {isOwner && project.moderationStatus === 'pending' && (
-        <div className="bg-amber-50 border-b border-amber-200 px-4 py-3">
-          <div className="max-w-5xl mx-auto flex items-center gap-3">
-            <span className="text-lg">⏳</span>
-            <div>
-              <p className="text-sm font-semibold text-amber-800">Your project is under review</p>
-              <p className="text-xs text-amber-700 mt-0.5">It's not visible to others yet. Our team usually reviews within 24 hours.</p>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Owner-only suspension banner */}
       {isOwner && project.autoSuspended && (
         <div className="bg-red-100 border-b border-red-300 px-4 py-3">
           <div className="max-w-5xl mx-auto flex items-start gap-3">
@@ -494,20 +483,6 @@ function ProjectDetailContent() {
             <div className="flex-1">
               <p className="text-sm font-semibold text-red-900">Your project has been temporarily suspended</p>
               <p className="text-xs text-red-700 mt-0.5">A user reported this project and it has been hidden while our admin team reviews it. You'll be notified of the outcome.</p>
-            </div>
-          </div>
-        </div>
-      )}
-      {isOwner && project.moderationStatus === 'rejected' && !project.autoSuspended && (
-        <div className="bg-red-50 border-b border-red-200 px-4 py-3">
-          <div className="max-w-5xl mx-auto flex items-start gap-3">
-            <span className="text-lg">❌</span>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-red-800">Your project was not approved</p>
-              {project.moderationNote && (
-                <p className="text-xs text-red-700 mt-0.5">Reason: {project.moderationNote}</p>
-              )}
-              <p className="text-xs text-red-600 mt-1">Edit your project to address the issue. Our team will be notified to re-review it.</p>
             </div>
           </div>
         </div>

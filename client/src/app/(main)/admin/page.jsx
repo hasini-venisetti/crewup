@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
+import toast from 'react-hot-toast';
 import { adminAPI, contestAPI, contestSubmissionAPI, launchWaitlistAPI, reportAPI } from '@/lib/api';
 
 /* ── helpers ── */
@@ -1168,172 +1169,217 @@ function WaitlistTab() {
 }
 
 /* ══════════════════════════════════════════════════════════════════════
-   TAB: Moderation (Phase 2 - Project approval queue)
+   TAB: Risk Monitor — live projects with high/medium risk or auto-suspended
 ══════════════════════════════════════════════════════════════════════ */
-function ModerationTab() {
-  const [projects, setProjects]   = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [acting, setActing]       = useState(null); // id of project being actioned
-  const [noteMap, setNoteMap]     = useState({});   // { [projectId]: note }
+function RiskMonitorTab() {
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [filter, setFilter]     = useState('all'); // all | suspended | high | medium
+  const [acting, setActing]     = useState(null);  // id being actioned
 
   const load = () => {
     setLoading(true);
-    adminAPI.getPendingProjects()
+    adminAPI.getRiskProjects()
       .then(({ data }) => setProjects(data.data || []))
-      .catch(() => toast.error('Failed to load pending projects'))
+      .catch(() => toast.error('Failed to load risk monitor'))
       .finally(() => setLoading(false));
   };
 
   useEffect(() => { load(); }, []);
 
-  const handleModerate = async (id, action) => {
+  const handleDelete = async (id) => {
+    if (!confirm('Permanently delete this project and notify the creator?')) return;
     setActing(id);
     try {
-      await adminAPI.moderateProject(id, action, noteMap[id] || '');
-      toast.success(`Project ${action === 'approve' ? 'approved ✅' : 'rejected ❌'}`);
-      setProjects(prev => prev.filter(p => p._id !== id));
+      await adminAPI.adminDeleteProject(id);
+      toast.success('Project deleted');
+      setProjects((prev) => prev.filter((p) => p._id !== id));
     } catch {
-      toast.error('Action failed');
+      toast.error('Delete failed');
     } finally {
       setActing(null);
     }
   };
 
-  if (loading) return <div className="flex justify-center py-20"><div className="w-8 h-8 border-2 border-[#6C63FF] border-t-transparent rounded-full animate-spin" /></div>;
+  const handleRestore = async (id) => {
+    setActing(id);
+    try {
+      await adminAPI.restoreProject(id);
+      toast.success('Project restored ✅');
+      setProjects((prev) => prev.map((p) => p._id === id ? { ...p, autoSuspended: false, moderationStatus: 'approved' } : p));
+    } catch {
+      toast.error('Restore failed');
+    } finally {
+      setActing(null);
+    }
+  };
+
+  const filtered = projects.filter((p) => {
+    if (filter === 'suspended') return p.autoSuspended;
+    if (filter === 'high')      return p.riskLevel === 'high';
+    if (filter === 'medium')    return p.riskLevel === 'medium';
+    return true;
+  });
+
+  const riskConfig = {
+    high:   { bar: 'bg-red-500',   bg: 'bg-red-50 border-red-300',    text: 'text-red-700',   label: '🔴 HIGH RISK',   labelClass: 'bg-red-100 text-red-700 border border-red-300' },
+    medium: { bar: 'bg-amber-400', bg: 'bg-amber-50 border-amber-200', text: 'text-amber-700', label: '🟡 MEDIUM RISK', labelClass: 'bg-amber-100 text-amber-700 border border-amber-200' },
+    low:    { bar: 'bg-green-500', bg: 'bg-green-50 border-green-200', text: 'text-green-700', label: '🟢 LOW RISK',    labelClass: 'bg-green-100 text-green-700 border border-green-200' },
+  };
+
+  const counts = {
+    all:       projects.length,
+    suspended: projects.filter((p) => p.autoSuspended).length,
+    high:      projects.filter((p) => p.riskLevel === 'high').length,
+    medium:    projects.filter((p) => p.riskLevel === 'medium').length,
+  };
+
+  if (loading) return (
+    <div className="flex justify-center py-20">
+      <div className="w-8 h-8 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex items-center justify-between">
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-lg font-bold text-[#111110]">Project Moderation Queue</h2>
-          <p className="text-sm text-[#6b6b66]">{projects.length} project{projects.length !== 1 ? 's' : ''} pending review</p>
+          <h2 className="text-lg font-bold text-[#111110]">🚨 Risk Monitor</h2>
+          <p className="text-sm text-[#6b6b66]">Live projects flagged by the fraud detection system</p>
         </div>
-        <button onClick={load} className="text-xs text-[#6C63FF] hover:underline">↻ Refresh</button>
+        <button onClick={load} className="text-xs text-[#6C63FF] font-semibold hover:underline">↻ Refresh</button>
       </div>
 
-      {projects.length === 0 ? (
+      {/* Filter tabs */}
+      <div className="flex gap-1 bg-white border border-[#efefed] rounded-xl p-1 w-fit flex-wrap">
+        {[
+          { key: 'all',       label: `All (${counts.all})` },
+          { key: 'suspended', label: `⛔ Suspended (${counts.suspended})` },
+          { key: 'high',      label: `🔴 High Risk (${counts.high})` },
+          { key: 'medium',    label: `🟡 Medium Risk (${counts.medium})` },
+        ].map(({ key, label }) => (
+          <button key={key} onClick={() => setFilter(key)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              filter === key ? 'bg-[#0e0e0d] text-white shadow-sm' : 'text-[#6b6b66] hover:text-[#111110]'
+            }`}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Empty state */}
+      {filtered.length === 0 ? (
         <div className="bg-white border border-[#efefed] rounded-2xl p-12 text-center">
           <p className="text-4xl mb-3">✅</p>
-          <p className="font-bold text-[#111110]">Queue is empty</p>
-          <p className="text-sm text-[#6b6b66] mt-1">All projects have been reviewed.</p>
+          <p className="font-bold text-[#111110]">All clear!</p>
+          <p className="text-sm text-[#6b6b66] mt-1">No flagged projects in this category.</p>
         </div>
       ) : (
-        projects.map((p) => {
-          const riskLevel = p.riskLevel || 'low';
-          const riskScore = p.riskScore ?? 0;
-          const riskConfig = {
-            high:   { bar: 'bg-red-500',    bg: 'bg-red-50 border-red-300',    text: 'text-red-700',    label: '🔴 HIGH RISK',   labelClass: 'bg-red-100 text-red-700 border border-red-300' },
-            medium: { bar: 'bg-amber-400',  bg: 'bg-amber-50 border-amber-200', text: 'text-amber-700',  label: '🟡 MEDIUM RISK', labelClass: 'bg-amber-100 text-amber-700 border border-amber-200' },
-            low:    { bar: 'bg-green-500',  bg: 'bg-green-50 border-green-200', text: 'text-green-700',  label: '🟢 LOW RISK',    labelClass: 'bg-green-100 text-green-700 border border-green-200' },
-          };
-          const rc = riskConfig[riskLevel];
+        <div className="space-y-4">
+          {filtered.map((p) => {
+            const riskLevel = p.riskLevel || 'low';
+            const riskScore = p.riskScore ?? 0;
+            const rc = riskConfig[riskLevel];
 
-          return (
-          <div key={p._id} className={`bg-white rounded-2xl p-6 shadow-sm border-2 ${riskLevel === 'high' ? 'border-red-300' : riskLevel === 'medium' ? 'border-amber-200' : 'border-[#efefed]'}`}>
+            return (
+              <div key={p._id} className={`bg-white rounded-2xl p-6 shadow-sm border-2 ${
+                p.autoSuspended ? 'border-red-500' : riskLevel === 'high' ? 'border-red-300' : riskLevel === 'medium' ? 'border-amber-200' : 'border-[#efefed]'
+              }`}>
 
-            {/* Risk Score Header */}
-            <div className={`flex items-center justify-between px-4 py-3 rounded-xl mb-4 ${rc.bg}`}>
-              <div className="flex items-center gap-3">
-                <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${rc.labelClass}`}>{rc.label}</span>
-                {p.autoSuspended && (
-                  <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-red-700 text-white">⛔ AUTO-SUSPENDED</span>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={`text-sm font-bold ${rc.text}`}>Risk: {riskScore}/100</span>
-                <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full ${rc.bar}`} style={{ width: `${riskScore}%` }} />
-                </div>
-              </div>
-            </div>
-
-            {/* Risk Flags */}
-            {p.riskFlags?.length > 0 && (
-              <div className="flex flex-col gap-1 mb-4">
-                {p.riskFlags.map((flag, i) => (
-                  <div key={i} className="flex items-start gap-2 text-xs text-[#6b6b66] bg-[#fafaf9] border border-[#efefed] rounded-lg px-3 py-1.5">
-                    {flag}
+                {/* Risk Score Header */}
+                <div className={`flex items-center justify-between px-4 py-3 rounded-xl mb-4 ${rc.bg}`}>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${rc.labelClass}`}>{rc.label}</span>
+                    {p.autoSuspended && (
+                      <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-red-700 text-white">⛔ AUTO-SUSPENDED</span>
+                    )}
                   </div>
-                ))}
-              </div>
-            )}
-
-            <div className="flex items-start justify-between gap-4 mb-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-bold uppercase tracking-widest text-[#6C63FF]">{p.projectType?.replace('-', ' ')}</span>
-                  <span className="text-xs text-[#a3a39e]">·</span>
-                  <span className="text-xs text-[#a3a39e]">{p.productionType}</span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-sm font-bold ${rc.text}`}>Risk: {riskScore}/100</span>
+                    <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full ${rc.bar}`} style={{ width: `${Math.min(riskScore, 100)}%` }} />
+                    </div>
+                  </div>
                 </div>
-                <h3 className="font-bold text-[#111110] text-base mb-1">{p.title}</h3>
-                <p className="text-sm text-[#6b6b66] line-clamp-2">{p.description}</p>
-              </div>
-              <div className="text-right text-xs text-[#a3a39e] flex-shrink-0">
-                <p>{new Date(p.createdAt).toLocaleDateString()}</p>
-                <p className="mt-1 font-medium text-[#6b6b66]">@{p.createdBy?.username}</p>
-                <p className="mt-0.5">{p.createdBy?.email}</p>
-                {p.createdBy?.isEmailVerified
-                  ? <span className="text-green-600 font-semibold">✅ Email verified</span>
-                  : <span className="text-red-500 font-semibold">⚠️ Unverified email</span>
-                }
-              </div>
-            </div>
 
-            {/* Safety info */}
-            <div className="grid grid-cols-3 gap-3 mb-4">
-              {[
-                { label: 'Audition Format',   value: p.auditionFormat?.replace(/-/g, ' ') || '—' },
-                { label: 'Location Type',     value: p.shootingLocationType?.replace(/-/g, ' ') || '—' },
-                { label: 'Compensation',      value: p.isPaid ? (p.compensationDetails || 'Paid, no details') : 'Unpaid / Collab' },
-              ].map(({ label, value }) => (
-                <div key={label} className="bg-[#fafaf9] rounded-xl p-3 border border-[#efefed]">
-                  <p className="text-xs text-[#a3a39e] mb-0.5">{label}</p>
-                  <p className="text-sm font-medium text-[#111110] capitalize">{value}</p>
+                {/* Risk Flags */}
+                {p.riskFlags?.length > 0 && (
+                  <div className="flex flex-col gap-1 mb-4">
+                    {p.riskFlags.map((flag, i) => (
+                      <div key={i} className="flex items-start gap-2 text-xs text-[#6b6b66] bg-[#fafaf9] border border-[#efefed] rounded-lg px-3 py-1.5">
+                        ⚠️ {flag}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Project info */}
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-bold uppercase tracking-widest text-[#6C63FF]">{p.projectType?.replace(/-/g, ' ')}</span>
+                      <span className="text-xs text-[#a3a39e]">·</span>
+                      <span className="text-xs text-[#a3a39e]">{p.productionType}</span>
+                    </div>
+                    <h3 className="font-bold text-[#111110] text-base mb-1">{p.title}</h3>
+                    <p className="text-sm text-[#6b6b66] line-clamp-2">{p.description}</p>
+                  </div>
+                  <div className="text-right text-xs text-[#a3a39e] flex-shrink-0">
+                    <p>{new Date(p.createdAt).toLocaleDateString()}</p>
+                    <p className="mt-1 font-medium text-[#6b6b66]">@{p.createdBy?.username}</p>
+                    <p className="mt-0.5">{p.createdBy?.email}</p>
+                    {p.createdBy?.isEmailVerified
+                      ? <span className="text-green-600 font-semibold">✅ Email verified</span>
+                      : <span className="text-red-500 font-semibold">⚠️ Unverified</span>}
+                  </div>
                 </div>
-              ))}
-            </div>
 
-            {/* Rejection note */}
-            <div className="mb-4">
-              <label className="text-xs text-[#6b6b66] font-medium block mb-1">
-                Note to creator (optional — sent if rejected)
-              </label>
-              <input
-                type="text"
-                className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-3 py-2 text-sm text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:border-[#6C63FF]"
-                placeholder="e.g. Project asks for upfront payments which violates our guidelines."
-                value={noteMap[p._id] || ''}
-                onChange={(e) => setNoteMap(m => ({ ...m, [p._id]: e.target.value }))}
-              />
-            </div>
+                {/* Safety info */}
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  {[
+                    { label: 'Audition',     value: p.auditionFormat?.replace(/-/g, ' ') || '—' },
+                    { label: 'Location',     value: p.shootingLocationType?.replace(/-/g, ' ') || '—' },
+                    { label: 'Compensation', value: p.isPaid ? (p.compensationDetails || 'Paid — no details') : 'Unpaid / Collab' },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="bg-[#fafaf9] rounded-xl p-3 border border-[#efefed]">
+                      <p className="text-xs text-[#a3a39e] mb-0.5">{label}</p>
+                      <p className="text-sm font-medium text-[#111110] capitalize">{value}</p>
+                    </div>
+                  ))}
+                </div>
 
-            <div className="flex gap-3">
-              <button
-                onClick={() => handleModerate(p._id, 'approve')}
-                disabled={acting === p._id}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors disabled:opacity-50"
-              >
-                {acting === p._id ? '…' : '✅ Approve'}
-              </button>
-              <button
-                onClick={() => handleModerate(p._id, 'reject')}
-                disabled={acting === p._id}
-                className="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors disabled:opacity-50"
-              >
-                {acting === p._id ? '…' : '❌ Reject'}
-              </button>
-              <a
-                href={`/projects/${p._id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-4 py-2.5 border border-[#e0e0dd] text-sm font-semibold text-[#6b6b66] rounded-xl hover:border-[#111110] hover:text-[#111110] transition-colors"
-              >
-                View →
-              </a>
-            </div>
-          </div>
-          );
-        })
+                {/* Actions */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => handleDelete(p._id)}
+                    disabled={acting === p._id}
+                    className="flex-1 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors disabled:opacity-50"
+                  >
+                    {acting === p._id ? '…' : '🗑 Delete Project'}
+                  </button>
+                  {p.autoSuspended && (
+                    <button
+                      onClick={() => handleRestore(p._id)}
+                      disabled={acting === p._id}
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors disabled:opacity-50"
+                    >
+                      {acting === p._id ? '…' : '✅ Restore Project'}
+                    </button>
+                  )}
+                  <a
+                    href={`/projects/${p._id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2.5 border border-[#e0e0dd] text-sm font-semibold text-[#6b6b66] rounded-xl hover:border-[#111110] hover:text-[#111110] transition-colors"
+                  >
+                    View →
+                  </a>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
     </div>
   );
@@ -1464,7 +1510,7 @@ function ReportQueueTab() {
 
 const TABS = [
   { id: 'overview',      label: '📊 Overview' },
-  { id: 'moderation',    label: '🛡 Moderation' },
+  { id: 'risk-monitor',  label: '🚨 Risk Monitor' },
   { id: 'report-queue',  label: '⚑ Report Queue' },
   { id: 'users',         label: '👥 Users' },
   { id: 'contests',      label: '🏆 Contests' },
@@ -1477,7 +1523,8 @@ const TABS = [
 export default function AdminPage() {
   const { user, loading } = useAuth();
   const router            = useRouter();
-  const [tab, setTab]     = useState('overview');
+  const searchParams      = useSearchParams();
+  const [tab, setTab]     = useState(() => searchParams?.get('tab') || 'overview');
   const [pendingReports, setPendingReports] = useState(0);
 
   useEffect(() => {
@@ -1530,7 +1577,7 @@ export default function AdminPage() {
 
         {/* Content */}
         {tab === 'overview'      && <OverviewTab />}
-        {tab === 'moderation'    && <ModerationTab />}
+        {tab === 'risk-monitor'  && <RiskMonitorTab />}
         {tab === 'report-queue'  && <ReportQueueTab />}
         {tab === 'users'         && <UsersTab />}
         {tab === 'contests'      && <ContestsTab />}
