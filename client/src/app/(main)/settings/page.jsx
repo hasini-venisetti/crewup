@@ -397,6 +397,18 @@ function HelpTab() {
 
   return (
     <div className="space-y-6">
+      {/* Full Help Center banner */}
+      <Link
+        href="/support"
+        className="flex items-center justify-between p-5 rounded-2xl bg-gradient-to-r from-[#6C63FF] to-[#8b7fff] text-white hover:opacity-95 transition-opacity"
+      >
+        <div>
+          <p className="font-bold text-base mb-0.5">Full Help Center</p>
+          <p className="text-white/70 text-sm">Detailed answers to all questions — Getting Started, Account, Projects &amp; more</p>
+        </div>
+        <span className="text-2xl flex-shrink-0 ml-4">→</span>
+      </Link>
+
       {/* Contact */}
       <div className={card}>
         <h3 className="text-lg font-bold text-[#111110] mb-1">Contact Support</h3>
@@ -429,7 +441,10 @@ function HelpTab() {
 
       {/* FAQ */}
       <div className={card}>
-        <h3 className="text-lg font-bold text-[#111110] mb-6">Frequently Asked Questions</h3>
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-bold text-[#111110]">Quick Answers</h3>
+          <Link href="/support" className="text-xs text-[#6C63FF] font-semibold hover:underline">View all →</Link>
+        </div>
         <div className="space-y-3">
           {FAQS.map((faq, i) => (
             <div key={i} className="border border-[#efefed] rounded-xl overflow-hidden">
@@ -455,6 +470,7 @@ function HelpTab() {
         <h3 className="text-lg font-bold text-[#111110] mb-4">Resources</h3>
         <div className="flex flex-wrap gap-3">
           {[
+            { href: '/support',           label: '💬 Help Center' },
             { href: '/safety',            label: '🛡 Safety Guide' },
             { href: '/legal/guidelines',  label: '📋 Community Guidelines' },
             { href: '/legal/terms',       label: '📄 Terms of Service' },
