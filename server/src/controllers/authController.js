@@ -333,4 +333,41 @@ const getMe = async (req, res) => {
   res.status(200).json({ success: true, user: userPayload(req.user) });
 };
 
-module.exports = { register, login, googleAuth, getMe, sendEmailVerificationOTP, verifyEmail, sendPhoneOTP, verifyPhone };
+/* ── PUT /api/auth/update-me ──────────────────────────────────────────── */
+// Update basic user fields: name, dateOfBirth
+const updateMe = async (req, res, next) => {
+  try {
+    const { name, dateOfBirth } = req.body;
+    const updates = {};
+
+    if (name && name.trim()) updates.name = name.trim();
+    if (dateOfBirth) {
+      const dob = new Date(dateOfBirth);
+      if (isNaN(dob.getTime())) {
+        return res.status(400).json({ success: false, message: 'Invalid date of birth' });
+      }
+      updates.dateOfBirth = dob;
+      // Recalculate isMinor
+      const ageDiff = Date.now() - dob.getTime();
+      const ageDate = new Date(ageDiff);
+      const age = Math.abs(ageDate.getUTCFullYear() - 1970);
+      updates.isMinor = age < 18;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ success: false, message: 'No valid fields to update' });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      updates,
+      { new: true, runValidators: false }
+    );
+
+    res.status(200).json({ success: true, message: 'Profile updated', user: userPayload(user) });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { register, login, googleAuth, getMe, updateMe, sendEmailVerificationOTP, verifyEmail, sendPhoneOTP, verifyPhone };

@@ -1,6 +1,6 @@
 const express = require('express');
 const { body } = require('express-validator');
-const { register, login, googleAuth, getMe, sendEmailVerificationOTP, verifyEmail, sendPhoneOTP, verifyPhone } = require('../controllers/authController');
+const { register, login, googleAuth, getMe, updateMe, sendEmailVerificationOTP, verifyEmail, sendPhoneOTP, verifyPhone } = require('../controllers/authController');
 const { protect } = require('../middleware/auth');
 
 const router = express.Router();
@@ -33,6 +33,7 @@ router.post(
 router.post('/google', googleAuth);
 
 router.get('/me', protect, getMe);
+router.put('/update-me', protect, updateMe);
 
 // ── Phase 1: Email OTP Verification ──────────────────────────────────────────
 // Send / resend OTP to authenticated user's email
