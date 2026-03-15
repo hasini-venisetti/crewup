@@ -2,7 +2,13 @@ import Link from 'next/link';
 
 export default function Footer() {
   return (
-    <footer className="bg-black mt-auto" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+    <footer
+      className="mt-auto"
+      style={{
+        background: '#0a0a09',
+        borderTop: '1px solid rgba(96,85,222,0.25)',
+      }}
+    >
       <div className="max-w-7xl mx-auto px-6 pt-16 pb-10">
 
         {/* Links grid */}
@@ -11,75 +17,79 @@ export default function Footer() {
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
             <span className="text-white font-bold text-base tracking-tight">
-              CREWUP<span style={{ color: '#6055de' }}>FILMS</span>
+              CREWUP<span style={{ color: '#8b82ff' }}>FILMS</span>
             </span>
-            <p className="text-sm text-white/40 mt-3 leading-relaxed">
+            <p className="text-sm mt-3 leading-relaxed" style={{ color: 'rgba(255,255,255,0.45)' }}>
               Where creators find their team.<br />Build something worth watching.
             </p>
-            <p className="text-xs text-white/25 mt-3">hello@crewup.in</p>
+            <p className="text-xs mt-3" style={{ color: 'rgba(255,255,255,0.25)' }}>hello@crewup.in</p>
           </div>
 
           {/* Product */}
           <div>
-            <p className="text-xs font-semibold text-white/25 uppercase tracking-[0.15em] mb-5">Product</p>
+            <p className="text-xs font-bold uppercase tracking-[0.15em] mb-5" style={{ color: '#6055de' }}>Product</p>
             <ul className="space-y-3">
-              <li><Link href="/projects"       className="text-sm text-white/45 hover:text-white transition-colors">Explore Projects</Link></li>
-              <li><Link href="/explore"        className="text-sm text-white/45 hover:text-white transition-colors">Find Creators</Link></li>
-              <li><Link href="/create-project" className="text-sm text-white/45 hover:text-white transition-colors">Create Project</Link></li>
-              <li><Link href="/how-it-works"   className="text-sm text-white/45 hover:text-white transition-colors">How It Works</Link></li>
-              <li><Link href="/features"       className="text-sm text-white/45 hover:text-white transition-colors">Features</Link></li>
+              <li><Link href="/projects"       className="text-sm transition-colors" style={{ color: 'rgba(255,255,255,0.5)' }} onMouseEnter={e=>e.target.style.color='#8b82ff'} onMouseLeave={e=>e.target.style.color='rgba(255,255,255,0.5)'}>Explore Projects</Link></li>
+              <li><Link href="/explore"        className="text-sm transition-colors" style={{ color: 'rgba(255,255,255,0.5)' }} onMouseEnter={e=>e.target.style.color='#8b82ff'} onMouseLeave={e=>e.target.style.color='rgba(255,255,255,0.5)'}>Find Creators</Link></li>
+              <li><Link href="/create-project" className="text-sm transition-colors" style={{ color: 'rgba(255,255,255,0.5)' }} onMouseEnter={e=>e.target.style.color='#8b82ff'} onMouseLeave={e=>e.target.style.color='rgba(255,255,255,0.5)'}>Create Project</Link></li>
+              <li><Link href="/how-it-works"   className="text-sm transition-colors" style={{ color: 'rgba(255,255,255,0.5)' }} onMouseEnter={e=>e.target.style.color='#8b82ff'} onMouseLeave={e=>e.target.style.color='rgba(255,255,255,0.5)'}>How It Works</Link></li>
+              <li><Link href="/features"       className="text-sm transition-colors" style={{ color: 'rgba(255,255,255,0.5)' }} onMouseEnter={e=>e.target.style.color='#8b82ff'} onMouseLeave={e=>e.target.style.color='rgba(255,255,255,0.5)'}>Features</Link></li>
             </ul>
           </div>
 
           {/* Company */}
           <div>
-            <p className="text-xs font-semibold text-white/25 uppercase tracking-[0.15em] mb-5">Company</p>
+            <p className="text-xs font-bold uppercase tracking-[0.15em] mb-5" style={{ color: '#6055de' }}>Company</p>
             <ul className="space-y-3">
-              <li><Link href="/about"   className="text-sm text-white/45 hover:text-white transition-colors">About Us</Link></li>
-              <li><Link href="/mission" className="text-sm text-white/45 hover:text-white transition-colors">Our Mission</Link></li>
-              <li><Link href="/blog"    className="text-sm text-white/45 hover:text-white transition-colors">Blog</Link></li>
-              <li><Link href="/contact" className="text-sm text-white/45 hover:text-white transition-colors">Contact</Link></li>
+              <li><Link href="/about"   className="text-sm transition-colors" style={{ color: 'rgba(255,255,255,0.5)' }} onMouseEnter={e=>e.target.style.color='#8b82ff'} onMouseLeave={e=>e.target.style.color='rgba(255,255,255,0.5)'}>About Us</Link></li>
+              <li><Link href="/mission" className="text-sm transition-colors" style={{ color: 'rgba(255,255,255,0.5)' }} onMouseEnter={e=>e.target.style.color='#8b82ff'} onMouseLeave={e=>e.target.style.color='rgba(255,255,255,0.5)'}>Our Mission</Link></li>
+              <li><Link href="/blog"    className="text-sm transition-colors" style={{ color: 'rgba(255,255,255,0.5)' }} onMouseEnter={e=>e.target.style.color='#8b82ff'} onMouseLeave={e=>e.target.style.color='rgba(255,255,255,0.5)'}>Blog</Link></li>
+              <li><Link href="/contact" className="text-sm transition-colors" style={{ color: 'rgba(255,255,255,0.5)' }} onMouseEnter={e=>e.target.style.color='#8b82ff'} onMouseLeave={e=>e.target.style.color='rgba(255,255,255,0.5)'}>Contact</Link></li>
             </ul>
           </div>
 
           {/* Community */}
           <div>
-            <p className="text-xs font-semibold text-white/25 uppercase tracking-[0.15em] mb-5">Community</p>
+            <p className="text-xs font-bold uppercase tracking-[0.15em] mb-5" style={{ color: '#6055de' }}>Community</p>
             <ul className="space-y-3">
-              <li><Link href="/contests"    className="text-sm text-white/45 hover:text-white transition-colors">Contests</Link></li>
-              <li><Link href="/leaderboard" className="text-sm text-white/45 hover:text-white transition-colors">Leaderboard</Link></li>
-              <li><Link href="/films"       className="text-sm text-white/45 hover:text-white transition-colors">Films</Link></li>
-              <li><Link href="/crew-match"  className="text-sm text-white/45 hover:text-white transition-colors">Crew Match</Link></li>
+              <li><Link href="/contests"    className="text-sm transition-colors" style={{ color: 'rgba(255,255,255,0.5)' }} onMouseEnter={e=>e.target.style.color='#8b82ff'} onMouseLeave={e=>e.target.style.color='rgba(255,255,255,0.5)'}>Contests</Link></li>
+              <li><Link href="/leaderboard" className="text-sm transition-colors" style={{ color: 'rgba(255,255,255,0.5)' }} onMouseEnter={e=>e.target.style.color='#8b82ff'} onMouseLeave={e=>e.target.style.color='rgba(255,255,255,0.5)'}>Leaderboard</Link></li>
+              <li><Link href="/films"       className="text-sm transition-colors" style={{ color: 'rgba(255,255,255,0.5)' }} onMouseEnter={e=>e.target.style.color='#8b82ff'} onMouseLeave={e=>e.target.style.color='rgba(255,255,255,0.5)'}>Films</Link></li>
+              <li><Link href="/crew-match"  className="text-sm transition-colors" style={{ color: 'rgba(255,255,255,0.5)' }} onMouseEnter={e=>e.target.style.color='#8b82ff'} onMouseLeave={e=>e.target.style.color='rgba(255,255,255,0.5)'}>Crew Match</Link></li>
             </ul>
           </div>
 
           {/* Trust & Safety */}
           <div>
-            <p className="text-xs font-semibold text-white/25 uppercase tracking-[0.15em] mb-5">Trust & Safety</p>
+            <p className="text-xs font-bold uppercase tracking-[0.15em] mb-5" style={{ color: '#6055de' }}>Trust &amp; Safety</p>
             <ul className="space-y-3">
-              <li><Link href="/safety"   className="text-sm text-white/45 hover:text-white transition-colors">🛡 Safety Guide</Link></li>
-              <li><Link href="/report"   className="text-sm text-white/45 hover:text-white transition-colors">Report an Issue</Link></li>
-              <li><Link href="/support"  className="text-sm text-white/45 hover:text-white transition-colors">Support</Link></li>
-              <li><Link href="/legal/privacy" className="text-sm text-white/45 hover:text-white transition-colors">Privacy Policy</Link></li>
-              <li><Link href="/legal/terms"   className="text-sm text-white/45 hover:text-white transition-colors">Terms of Service</Link></li>
-              <li><Link href="/legal/community-guidelines" className="text-sm text-white/45 hover:text-white transition-colors">Community Guidelines</Link></li>
+              <li><Link href="/safety"   className="text-sm transition-colors" style={{ color: 'rgba(255,255,255,0.5)' }} onMouseEnter={e=>e.target.style.color='#8b82ff'} onMouseLeave={e=>e.target.style.color='rgba(255,255,255,0.5)'}>🛡 Safety Guide</Link></li>
+              <li><Link href="/report"   className="text-sm transition-colors" style={{ color: 'rgba(255,255,255,0.5)' }} onMouseEnter={e=>e.target.style.color='#8b82ff'} onMouseLeave={e=>e.target.style.color='rgba(255,255,255,0.5)'}>Report an Issue</Link></li>
+              <li><Link href="/support"  className="text-sm transition-colors" style={{ color: 'rgba(255,255,255,0.5)' }} onMouseEnter={e=>e.target.style.color='#8b82ff'} onMouseLeave={e=>e.target.style.color='rgba(255,255,255,0.5)'}>Support</Link></li>
+              <li><Link href="/legal/privacy" className="text-sm transition-colors" style={{ color: 'rgba(255,255,255,0.5)' }} onMouseEnter={e=>e.target.style.color='#8b82ff'} onMouseLeave={e=>e.target.style.color='rgba(255,255,255,0.5)'}>Privacy Policy</Link></li>
+              <li><Link href="/legal/terms"   className="text-sm transition-colors" style={{ color: 'rgba(255,255,255,0.5)' }} onMouseEnter={e=>e.target.style.color='#8b82ff'} onMouseLeave={e=>e.target.style.color='rgba(255,255,255,0.5)'}>Terms of Service</Link></li>
+              <li><Link href="/legal/community-guidelines" className="text-sm transition-colors" style={{ color: 'rgba(255,255,255,0.5)' }} onMouseEnter={e=>e.target.style.color='#8b82ff'} onMouseLeave={e=>e.target.style.color='rgba(255,255,255,0.5)'}>Community Guidelines</Link></li>
             </ul>
           </div>
         </div>
 
         {/* Bottom bar */}
-        <div className="border-t border-white/[0.08] pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 mb-10">
-          <p className="text-xs text-white/20">© {new Date().getFullYear()} CREWUPFILMS. All rights reserved.</p>
-          <p className="text-xs text-white/20">Made with ♥ for independent creators</p>
+        <div
+          className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 mb-10"
+          style={{ borderTop: '1px solid rgba(96,85,222,0.15)' }}
+        >
+          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>© {new Date().getFullYear()} CREWUPFILMS. All rights reserved.</p>
+          <p className="text-xs" style={{ color: 'rgba(139,130,255,0.4)' }}>Made with ♥ for independent creators</p>
         </div>
 
         {/* Large wordmark — bottom */}
         <div className="overflow-hidden -mx-6">
           <p
-            className="font-black uppercase leading-none select-none text-white/10 text-center"
+            className="font-black uppercase leading-none select-none text-center"
             style={{
               fontSize: 'clamp(4rem, 13vw, 11rem)',
               letterSpacing: '-0.03em',
+              color: 'rgba(96,85,222,0.07)',
             }}
           >
             CREWUPFILMS
