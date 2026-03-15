@@ -185,74 +185,26 @@ export default function ContactPage() {
               <div className="rounded-xl border border-[#efefed] p-5 bg-white">
                 <h3 className="font-semibold text-[#0e0e0d] mb-2">Email</h3>
                 <a
-                  href="mailto:hello@crewupfilms.com"
+                  href="mailto:crewupfilms@gmail.com"
                   className="text-[#5750D4] font-semibold hover:text-[#4740CC] transition block mb-1"
                 >
-                  hello@crewupfilms.com
+                  crewupfilms@gmail.com
                 </a>
                 <p className="text-xs text-[#6b6b66]">We'll reply within 24 hours</p>
               </div>
 
-              {/* Support Email Card */}
+              {/* Instagram Card */}
               <div className="rounded-xl border border-[#efefed] p-5 bg-white">
-                <h3 className="font-semibold text-[#0e0e0d] mb-2">Support</h3>
+                <h3 className="font-semibold text-[#0e0e0d] mb-2">Instagram</h3>
                 <a
-                  href="mailto:support@crewupfilms.com"
+                  href="https://www.instagram.com/crewupfilms_official/"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-[#5750D4] font-semibold hover:text-[#4740CC] transition block mb-1"
                 >
-                  support@crewupfilms.com
+                  @crewupfilms_official
                 </a>
-                <p className="text-xs text-[#6b6b66]">For account and technical issues</p>
-              </div>
-
-              {/* Phone Card */}
-              <div className="rounded-xl border border-[#efefed] p-5 bg-white">
-                <h3 className="font-semibold text-[#0e0e0d] mb-2">Phone</h3>
-                <a
-                  href="tel:+1234567890"
-                  className="text-[#5750D4] font-semibold hover:text-[#4740CC] transition block mb-1"
-                >
-                  +1 (234) 567-890
-                </a>
-                <p className="text-xs text-[#6b6b66]">Mon-Fri, 9am-6pm EST</p>
-              </div>
-
-              {/* Address Card */}
-              <div className="rounded-xl border border-[#efefed] p-5 bg-white">
-                <h3 className="font-semibold text-[#0e0e0d] mb-2">Location</h3>
-                <p className="text-sm text-[#6b6b66] mb-1">
-                  123 Creative Street<br />
-                  Los Angeles, CA 90001
-                </p>
-                <p className="text-xs text-[#6b6b66]">Available for meetings by appointment</p>
-              </div>
-
-              {/* Social Links Card */}
-              <div className="rounded-xl border border-[#efefed] p-5 bg-white">
-                <h3 className="font-semibold text-[#0e0e0d] mb-3">Follow Us</h3>
-                <div className="flex gap-3">
-                  <a
-                    href="#"
-                    className="w-10 h-10 rounded-lg bg-[#f7f7f6] hover:bg-[#f0eeff] flex items-center justify-center transition"
-                    title="Twitter"
-                  >
-                    <span className="text-[#6b6b66] hover:text-[#5750D4]">𝕏</span>
-                  </a>
-                  <a
-                    href="#"
-                    className="w-10 h-10 rounded-lg bg-[#f7f7f6] hover:bg-[#f0eeff] flex items-center justify-center transition"
-                    title="Instagram"
-                  >
-                    <span className="text-[#6b6b66] hover:text-[#5750D4]">📷</span>
-                  </a>
-                  <a
-                    href="#"
-                    className="w-10 h-10 rounded-lg bg-[#f7f7f6] hover:bg-[#f0eeff] flex items-center justify-center transition"
-                    title="LinkedIn"
-                  >
-                    <span className="text-[#6b6b66] hover:text-[#5750D4]">in</span>
-                  </a>
-                </div>
+                <p className="text-xs text-[#6b6b66]">Follow us for updates</p>
               </div>
             </div>
           </div>

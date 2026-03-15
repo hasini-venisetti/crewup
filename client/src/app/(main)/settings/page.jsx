@@ -434,7 +434,7 @@ function HelpTab() {
             </div>
           </a>
           <a
-            href="https://instagram.com/crewupfilms"
+            href="https://www.instagram.com/crewupfilms_official/"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-4 p-4 rounded-xl border border-[#efefed] hover:border-[#6C63FF]/40 hover:bg-[#f8f7ff] transition-all group"
@@ -442,7 +442,7 @@ function HelpTab() {
             <div className="w-10 h-10 rounded-xl bg-[#f0eeff] flex items-center justify-center text-xl flex-shrink-0 group-hover:bg-[#e6e0ff] transition-colors">📸</div>
             <div>
               <p className="text-sm font-semibold text-[#111110]">Instagram</p>
-              <p className="text-xs text-[#6C63FF]">@crewupfilms</p>
+              <p className="text-xs text-[#6C63FF]">@crewupfilms_official</p>
             </div>
           </a>
         </div>

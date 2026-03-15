@@ -7,8 +7,8 @@ export default function Footer() {
     <footer
       className="mt-auto"
       style={{
-        background: '#0a0a09',
-        borderTop: '1px solid rgba(96,85,222,0.25)',
+        background: 'linear-gradient(180deg, #100e1f 0%, #0b0a16 100%)',
+        borderTop: '2px solid rgba(96,85,222,0.45)',
       }}
     >
       <div className="max-w-7xl mx-auto px-6 pt-16 pb-10">
@@ -24,7 +24,7 @@ export default function Footer() {
             <p className="text-sm text-white/45 mt-3 leading-relaxed">
               Where creators find their team.<br />Build something worth watching.
             </p>
-            <p className="text-xs text-white/25 mt-3">hello@crewup.in</p>
+            <p className="text-xs text-white/25 mt-3">crewupfilms@gmail.com</p>
           </div>
 
           {/* Product */}
