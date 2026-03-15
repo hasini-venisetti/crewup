@@ -24,6 +24,7 @@ function userPayload(user) {
     isMinor:         user.isMinor         || false,
     phone:           user.phone           || { number: '', isVerified: false },
     hasDateOfBirth:  !!user.dateOfBirth,
+    dateOfBirth:     user.dateOfBirth     || null,
   };
 }
 

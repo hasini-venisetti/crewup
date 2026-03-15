@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { saveAuth, getToken } from '@/lib/auth';
 import api from '@/lib/api';
 
 /* ── Password strength indicator ─────────────────────────────────────────── */
@@ -54,6 +55,14 @@ function ProfileTab({ user, onUpdate }) {
     user?.dateOfBirth ? new Date(user.dateOfBirth).toISOString().split('T')[0] : ''
   );
   const [loading, setLoading] = useState(false);
+
+  // Sync DOB if user object updates (e.g. after save or fresh auth load)
+  useEffect(() => {
+    if (user?.dateOfBirth) {
+      setDob(new Date(user.dateOfBirth).toISOString().split('T')[0]);
+    }
+    if (user?.name) setName(user.name);
+  }, [user?.dateOfBirth, user?.name]);
 
   // Max DOB = today, min = 100 years ago
   const today    = new Date().toISOString().split('T')[0];
@@ -512,8 +521,12 @@ function SettingsContent() {
   }, [searchParams]);
 
   const handleUpdate = (updated) => {
-    setUserData((prev) => ({ ...(prev || user), ...updated }));
-    if (loginWithToken && updated.token) loginWithToken(updated.token, updated);
+    const merged = { ...(userData || user), ...updated };
+    setUserData(merged);
+    // Persist to localStorage so refresh doesn't lose changes
+    const token = updated.token || getToken();
+    if (token) saveAuth(token, merged);
+    if (loginWithToken && updated.token) loginWithToken(updated.token, merged);
   };
 
   if (authLoading || !user) return null;
