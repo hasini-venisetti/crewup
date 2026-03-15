@@ -1,0 +1,428 @@
+/* Fonts loaded via <link> in layout.jsx for better performance */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── CREWUPFILMS Design System ──────────────────────────────── */
+:root {
+  /* Brand */
+  --accent:          #6055de;
+  --accent-dark:     #4d44c8;
+  --accent-light:    #edeeff;
+  --accent-mid:      #8b82ff;
+
+  /* Backgrounds */
+  --bg-dark:         #000000;
+  --bg-dark-2:       #06040f;
+  --bg-dark-3:       #0e0b1a;
+  --bg-light:        #f7f6fb;
+  --bg-white:        #ffffff;
+
+  /* Text */
+  --text-primary:    #0e0e0d;
+  --text-secondary:  #5a5a56;
+  --text-muted:      #9a9a96;
+  --text-dark:       #ffffff;
+  --text-dark-muted: rgba(255,255,255,0.5);
+
+  /* Borders */
+  --border-light:    #ebebea;
+  --border-mid:      #dcdcda;
+  --border-dark:     rgba(255,255,255,0.08);
+
+  /* Shadows */
+  --shadow-xs: 0 1px 4px rgba(96,85,222,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-sm: 0 2px 10px rgba(96,85,222,0.08), 0 1px 3px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 20px rgba(96,85,222,0.10), 0 2px 6px rgba(0,0,0,0.06);
+  --shadow-lg: 0 8px 36px rgba(96,85,222,0.14), 0 4px 12px rgba(0,0,0,0.08);
+
+  --amber: #6055de;
+}
+
+/* ── Base ─────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg-white);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  font-feature-settings: 'cv02','cv03','cv04','cv11';
+  letter-spacing: -0.01em;
+}
+
+/* ── Grain texture utility ────────────────────────────────── */
+.grain {
+  position: relative;
+}
+.grain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ── Dot grid (dark sections) ─────────────────────────────── */
+.dot-grid {
+  background-image: radial-gradient(circle, #252523 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* ── Typography ───────────────────────────────────────────── */
+.font-display { font-family: 'Playfair Display', serif; }
+
+h1,h2,h3,h4,h5,h6 {
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  color: var(--text-primary);
+}
+
+/* ── Card ─────────────────────────────────────────────────── */
+.card {
+  background: var(--bg-white);
+  border: 1px solid var(--border-light);
+  border-radius: 14px;
+  box-shadow: var(--shadow-xs);
+  transition: box-shadow 0.22s ease, transform 0.22s ease, border-color 0.22s ease;
+}
+.card:hover {
+  border-color: rgba(96,85,222,0.18);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+/* ── Buttons ──────────────────────────────────────────────── */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0.65rem 1.4rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16,1,0.3,1);
+  text-decoration: none;
+  box-shadow: 0 2px 12px rgba(96,85,222,0.25);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.btn-primary:hover {
+  background: var(--accent-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(96,85,222,0.35);
+}
+.btn-primary:active { transform: translateY(0); }
+
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  background: #fff;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0.65rem 1.4rem;
+  border-radius: 8px;
+  border: 1.5px solid var(--border-mid);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16,1,0.3,1);
+  text-decoration: none;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.btn-outline:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(96,85,222,0.04);
+  transform: translateY(-1px);
+}
+.btn-outline:active { transform: translateY(0); }
+
+/* ── Input ────────────────────────────────────────────────── */
+.input {
+  width: 100%;
+  background: #fafafa;
+  border: 1.5px solid var(--border-mid);
+  border-radius: 8px;
+  padding: 0.6rem 0.9rem;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
+  font-family: inherit;
+  letter-spacing: -0.01em;
+}
+.input:hover { border-color: #c0bfbd; }
+.input:focus {
+  border-color: var(--accent);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(96,85,222,0.10);
+}
+.input::placeholder { color: var(--text-muted); font-size: 0.85rem; }
+
+/* ── Label ────────────────────────────────────────────────── */
+.label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 0.35rem;
+  letter-spacing: 0.01em;
+}
+
+/* ── Chip / Tag ───────────────────────────────────────────── */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(96,85,222,0.07);
+  border: 1px solid rgba(96,85,222,0.16);
+  border-radius: 6px;
+  font-size: 0.69rem;
+  font-weight: 600;
+  color: var(--accent);
+  padding: 0.18rem 0.6rem;
+  letter-spacing: 0.01em;
+}
+
+/* ── Page section header utility ─────────────────────────── */
+.section-eyebrow {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.75rem;
+}
+
+/* ── Divider ──────────────────────────────────────────────── */
+.divider {
+  border: none;
+  border-top: 1px solid var(--border-light);
+  margin: 0;
+}
+
+/* ── Skeleton ─────────────────────────────────────────────── */
+.skeleton {
+  background: linear-gradient(90deg, #eeedf5 25%, #e4e3ef 50%, #eeedf5 75%);
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s infinite;
+}
+@keyframes skeleton-loading {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Marquee ──────────────────────────────────────────────── */
+@keyframes marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee 28s linear infinite;
+}
+.marquee-track:hover { animation-play-state: paused; }
+
+/* ── Scroll animations ────────────────────────────────────── */
+[data-scroll] {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+[data-scroll="right"] {
+  opacity: 0;
+  transform: translateX(30px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+[data-scroll="fade"] {
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+[data-scroll].in-view,
+[data-scroll="right"].in-view,
+[data-scroll="fade"].in-view {
+  opacity: 1;
+  transform: translate(0);
+}
+[data-delay="1"] { transition-delay: 0.1s; }
+[data-delay="2"] { transition-delay: 0.2s; }
+[data-delay="3"] { transition-delay: 0.3s; }
+[data-delay="4"] { transition-delay: 0.4s; }
+
+/* ── Focus ring ───────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── Gradient text ────────────────────────────────────────── */
+.gradient-text {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-mid) 60%, #c4bfff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Responsive ───────────────────────────────────────────── */
+@media (max-width: 768px) {
+  h1 { font-size: 2rem; }
+  h2 { font-size: 1.75rem; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   CINEMATIC ANIMATIONS
+══════════════════════════════════════════════════════════ */
+
+/* Ken Burns — slow epic zoom on hero background */
+@keyframes kenBurns {
+  0%   { transform: scale(1.0) translate(0, 0); }
+  100% { transform: scale(1.10) translate(-1%, -1%); }
+}
+.hero-bg-kenburns {
+  animation: kenBurns 22s ease-out forwards;
+  will-change: transform;
+}
+
+/* Letterbox bars — cinematic top/bottom bars that slide away */
+@keyframes letterboxTop {
+  0%   { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(-100%); opacity: 1; }
+}
+@keyframes letterboxBottom {
+  0%   { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(100%); opacity: 1; }
+}
+.letterbox-bar-top {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 9vh;
+  background: #000;
+  z-index: 30;
+  animation: letterboxTop 1.1s cubic-bezier(0.76, 0, 0.24, 1) 0.6s forwards;
+}
+.letterbox-bar-bottom {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 9vh;
+  background: #000;
+  z-index: 30;
+  animation: letterboxBottom 1.1s cubic-bezier(0.76, 0, 0.24, 1) 0.6s forwards;
+}
+
+/* Word reveal — each word wipes up from clipped position */
+@keyframes wordRevealUp {
+  0%   { transform: translateY(108%); opacity: 0; }
+  100% { transform: translateY(0);    opacity: 1; }
+}
+.word-clip-wrap {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+  padding-bottom: 0.08em; /* prevent descender clip */
+}
+.word-reveal {
+  display: inline-block;
+  opacity: 0;
+  animation: wordRevealUp 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* Cinematic fade-in for subtext and badges */
+@keyframes cinematicFadeIn {
+  0%   { opacity: 0; filter: blur(4px); transform: translateY(12px); }
+  100% { opacity: 1; filter: blur(0);   transform: translateY(0); }
+}
+.cinematic-fade {
+  opacity: 0;
+  animation: cinematicFadeIn 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Vignette overlay — darkens edges like a film lens */
+.hero-vignette {
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.55) 100%);
+}
+
+/* Upgrade scroll animations — more cinematic easing + distance */
+[data-scroll] {
+  opacity: 0;
+  transform: translateY(32px);
+  transition: opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+}
+[data-scroll="right"] {
+  opacity: 0;
+  transform: translateX(40px);
+  transition: opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+}
+[data-scroll="fade"] {
+  opacity: 0;
+  transition: opacity 1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+[data-scroll].in-view,
+[data-scroll="right"].in-view,
+[data-scroll="fade"].in-view {
+  opacity: 1;
+  transform: translate(0);
+}
+[data-delay="1"] { transition-delay: 0.1s; }
+[data-delay="2"] { transition-delay: 0.22s; }
+[data-delay="3"] { transition-delay: 0.34s; }
+[data-delay="4"] { transition-delay: 0.46s; }
+
+/* Section card cinematic entrance */
+@keyframes cardRise {
+  0%   { opacity: 0; transform: translateY(40px) scale(0.97); }
+  100% { opacity: 1; transform: translateY(0)    scale(1); }
+}
+.card-cinematic {
+  animation: cardRise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Horizontal scan line (film aesthetic) */
+@keyframes scanLine {
+  0%   { top: -2px; }
+  100% { top: 100%; }
+}
+.hero-scanline {
+  position: absolute;
+  left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+  animation: scanLine 8s linear infinite;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Film grain animation */
+@keyframes grainShift {
+  0%, 100% { background-position: 0% 0%; }
+  10%  { background-position: -5% -10%; }
+  30%  { background-position: 3% 15%; }
+  50%  { background-position: -10% 5%; }
+  70%  { background-position: 8% -8%; }
+  90%  { background-position: -3% 12%; }
+}
+.film-grain-anim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: grainShift 0.5s steps(1) infinite;
+  z-index: 6;
+}

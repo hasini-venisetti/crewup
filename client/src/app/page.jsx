@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import Logo from '@/components/ui/Logo';
 import Navbar from '@/components/layout/Navbar';
+import Footer from '@/components/layout/Footer';
 import { useScrollAnimation } from '@/hooks/useScrollAnimation';
 import { projectAPI, adminAPI } from '@/lib/api';
 
@@ -103,6 +104,7 @@ export default function Home() {
   }, []);
 
   return (
+    <>
     <main className="bg-white overflow-x-hidden">
       <Navbar />
 
@@ -121,7 +123,7 @@ export default function Home() {
           <div
             className="absolute inset-0 bg-cover bg-center bg-no-repeat hero-bg-kenburns"
             style={{
-              backgroundImage: 'url("https://images.unsplash.com/photo-1478720568477-152d9b164e26?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80")'
+              backgroundImage: 'url("https://images.unsplash.com/photo-1536440136628-849c177e76a1?ixlib=rb-4.0.3&auto=format&fit=crop&w=2025&q=80")'
             }}
           />
           {/* Dark overlay for text readability */}
@@ -708,5 +710,7 @@ export default function Home() {
       </section>
 
     </main>
+    <Footer />
+    </>
   );
 }

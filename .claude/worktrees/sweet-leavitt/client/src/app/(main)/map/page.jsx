@@ -1,0 +1,291 @@
+'use client';
+
+import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
+import { mapAPI } from '@/lib/api';
+
+// City → approximate coords mapping (common Indian + global cities)
+const CITY_COORDS = {
+  'mumbai': [19.076, 72.877], 'delhi': [28.6139, 77.209], 'bangalore': [12.9716, 77.5946],
+  'bengaluru': [12.9716, 77.5946], 'hyderabad': [17.385, 78.4867], 'chennai': [13.0827, 80.2707],
+  'kolkata': [22.5726, 88.3639], 'pune': [18.5204, 73.8567], 'ahmedabad': [23.0225, 72.5714],
+  'jaipur': [26.9124, 75.7873], 'surat': [21.1702, 72.8311], 'lucknow': [26.8467, 80.9462],
+  'new york': [40.7128, -74.006], 'london': [51.5074, -0.1278], 'los angeles': [34.0522, -118.2437],
+  'paris': [48.8566, 2.3522], 'tokyo': [35.6762, 139.6503], 'sydney': [-33.8688, 151.2093],
+  'toronto': [43.6532, -79.3832], 'berlin': [52.52, 13.405], 'dubai': [25.2048, 55.2708],
+  'singapore': [1.3521, 103.8198], 'amsterdam': [52.3676, 4.9041], 'barcelona': [41.3851, 2.1734],
+  'bhopal': [23.2599, 77.4126], 'indore': [22.7196, 75.8577], 'nagpur': [21.1458, 79.0882],
+  'chandigarh': [30.7333, 76.7794], 'kochi': [9.9312, 76.2673], 'goa': [15.2993, 74.124],
+};
+
+const AVAIL_COLOR = { 'available': '#22c55e', 'open-to-offers': '#7C75FF', 'busy': '#ef4444' };
+
+const ROLE_EMOJI = {
+  'director': '🎬', 'cinematographer': '📷', 'editor': '✂️', 'musician': '🎵',
+  'actor': '🎭', 'photographer': '📸', 'writer': '✍️', 'producer': '🎙',
+};
+
+function getCoordsForCreator(profile) {
+  const city = profile.location?.city?.toLowerCase().trim();
+  if (!city) return null;
+  // exact match
+  if (CITY_COORDS[city]) return CITY_COORDS[city];
+  // partial match
+  for (const [key, val] of Object.entries(CITY_COORDS)) {
+    if (city.includes(key) || key.includes(city)) return val;
+  }
+  return null;
+}
+
+function groupByCity(creators) {
+  const groups = {};
+  for (const c of creators) {
+    const coords = getCoordsForCreator(c);
+    if (!coords) continue;
+    const key = `${coords[0]},${coords[1]}`;
+    if (!groups[key]) groups[key] = { coords, creators: [] };
+    groups[key].creators.push(c);
+  }
+  return Object.values(groups);
+}
+
+export default function MapPage() {
+  const [creators, setCreators]     = useState([]);
+  const [groups, setGroups]         = useState([]);
+  const [selected, setSelected]     = useState(null);
+  const [loading, setLoading]       = useState(true);
+  const [filterRole, setFilterRole] = useState('');
+  const mapRef       = useRef(null);
+  const leafletRef   = useRef(null);
+  const markersRef   = useRef([]);
+
+  useEffect(() => {
+    mapAPI.getCreators()
+      .then(({ data }) => {
+        setCreators(data.data);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  // Filter creators by role
+  const filtered = filterRole
+    ? creators.filter((c) => c.user?.role?.toLowerCase().includes(filterRole.toLowerCase()))
+    : creators;
+
+  useEffect(() => {
+    setGroups(groupByCity(filtered));
+  }, [filtered]);
+
+  // Initialize Leaflet map
+  useEffect(() => {
+    if (typeof window === 'undefined' || !mapRef.current) return;
+
+    // Load Leaflet CSS + JS if not already loaded
+    if (!window.L) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';
+      document.head.appendChild(link);
+
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
+      script.onload = () => initMap();
+      document.head.appendChild(script);
+    } else {
+      initMap();
+    }
+
+    function initMap() {
+      if (leafletRef.current) {
+        leafletRef.current.remove();
+        leafletRef.current = null;
+      }
+
+      const L = window.L;
+      const map = L.map(mapRef.current, {
+        center: [20, 78],
+        zoom: 4,
+        zoomControl: true,
+      });
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 18,
+      }).addTo(map);
+
+      leafletRef.current = map;
+    }
+
+    return () => {
+      if (leafletRef.current) {
+        leafletRef.current.remove();
+        leafletRef.current = null;
+      }
+    };
+  }, [mapRef.current]);
+
+  // Add markers when groups change
+  useEffect(() => {
+    if (!leafletRef.current || !window.L) return;
+    const L = window.L;
+    const map = leafletRef.current;
+
+    // Clear old markers
+    markersRef.current.forEach((m) => m.remove());
+    markersRef.current = [];
+
+    groups.forEach(({ coords, creators: grp }) => {
+      const dominant = grp[0];
+      const availColor = AVAIL_COLOR[dominant.availability] || '#6b6b66';
+      const count = grp.length;
+
+      const icon = L.divIcon({
+        className: '',
+        html: `<div style="
+          width:${count > 1 ? 44 : 36}px;
+          height:${count > 1 ? 44 : 36}px;
+          border-radius:50%;
+          background:${availColor};
+          border:3px solid white;
+          box-shadow:0 2px 8px rgba(0,0,0,0.3);
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          font-size:${count > 1 ? '13px' : '14px'};
+          font-weight:700;
+          color:white;
+          cursor:pointer;
+        ">${count > 1 ? count : (ROLE_EMOJI[dominant.user?.role?.toLowerCase()] || '👤')}</div>`,
+        iconSize: [count > 1 ? 44 : 36, count > 1 ? 44 : 36],
+        iconAnchor: [count > 1 ? 22 : 18, count > 1 ? 22 : 18],
+      });
+
+      const marker = L.marker(coords, { icon })
+        .addTo(map)
+        .on('click', () => setSelected(grp));
+
+      markersRef.current.push(marker);
+    });
+  }, [groups]);
+
+  const allRoles = [...new Set(creators.map((c) => c.user?.role).filter(Boolean))];
+
+  return (
+    <div className="min-h-screen bg-[#fafaf9]">
+      {/* Dark Hero */}
+      <div
+        className="relative bg-[#0e0e0d] pt-24 pb-8 overflow-hidden"
+        style={{
+          backgroundImage: 'radial-gradient(circle, #252523 1px, transparent 1px)',
+          backgroundSize: '28px 28px',
+        }}
+      >
+        <div className="absolute top-0 left-1/4 w-72 h-72 bg-[#6C63FF]/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative max-w-7xl mx-auto px-4">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div>
+              <div className="inline-flex items-center gap-2 bg-[#6C63FF]/20 border border-[#6C63FF]/30 rounded-full px-3 py-1 mb-3">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#6C63FF]" />
+                <p className="text-xs uppercase tracking-[0.15em] text-[#6C63FF] font-bold">Explore</p>
+              </div>
+              <h1 className="text-4xl font-[Playfair_Display] text-white mb-1">Creator Map</h1>
+              <p className="text-white/50 text-sm">
+                Discover {creators.length} creators by location
+              </p>
+            </div>
+            <div className="flex gap-3 flex-wrap items-center pb-1">
+              <select value={filterRole} onChange={(e) => setFilterRole(e.target.value)}
+                className="bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/30">
+                <option value="" className="text-black">All Roles</option>
+                {allRoles.map((r) => (
+                  <option key={r} value={r} className="capitalize text-black">{r.replace('-', ' ')}</option>
+                ))}
+              </select>
+              <div className="flex items-center gap-4 text-xs text-white/60">
+                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-green-500 inline-block" />Available</span>
+                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-[#6C63FF] inline-block" />Open</span>
+                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-red-500 inline-block" />Busy</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-4 max-w-7xl mx-auto">
+        {/* spacer */}
+        <div className="h-4" />
+
+        {/* Map + Sidebar Layout */}
+        <div className="flex gap-4 h-[calc(100vh-220px)]">
+
+          {/* Map */}
+          <div className="flex-1 rounded-2xl border border-[#efefed] overflow-hidden relative">
+            {loading && (
+              <div className="absolute inset-0 bg-white flex items-center justify-center z-10">
+                <p className="text-[#6b6b66] text-sm">Loading creators...</p>
+              </div>
+            )}
+            <div ref={mapRef} className="w-full h-full" />
+          </div>
+
+          {/* Sidebar: selected city creators */}
+          <div className="w-72 flex-shrink-0 flex flex-col rounded-2xl border border-[#efefed] bg-white overflow-y-auto">
+            {selected ? (
+              <>
+                <div className="p-4 border-b border-[#efefed] flex items-center justify-between sticky top-0 bg-white z-10">
+                  <div>
+                    <p className="font-bold text-[#111110] text-sm">{selected[0].location?.city}</p>
+                    <p className="text-xs text-[#a3a39e]">{selected.length} creator{selected.length !== 1 ? 's' : ''}</p>
+                  </div>
+                  <button onClick={() => setSelected(null)} className="text-[#a3a39e] hover:text-[#111110] text-lg">✕</button>
+                </div>
+                <div className="flex flex-col divide-y divide-[#f0f0ee]">
+                  {selected.map((creator) => {
+                    const avail = creator.availability || 'available';
+                    const dot = AVAIL_COLOR[avail] || '#6b6b66';
+                    return (
+                      <Link key={creator.user?._id} href={`/profile/${creator.user?._id}`}
+                        className="p-4 hover:bg-[#fafaf9] transition-colors flex items-start gap-3">
+                        <div className="relative flex-shrink-0">
+                          <div className="w-10 h-10 rounded-full bg-[#f0ede8] flex items-center justify-center text-sm font-bold text-[#111110]">
+                            {creator.user?.name?.[0]?.toUpperCase() || '?'}
+                          </div>
+                          <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white"
+                            style={{ background: dot }} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-[#111110] truncate">{creator.user?.name}</p>
+                          <p className="text-xs text-[#a3a39e] capitalize">{creator.user?.role?.replace('-', ' ')}</p>
+                          {creator.skills?.slice(0, 2).map((s) => (
+                            <span key={s} className="text-xs bg-[#f7f7f6] text-[#a3a39e] px-1.5 py-0.5 mr-1 mt-1 inline-block">{s}</span>
+                          ))}
+                        </div>
+                        <span className="text-xs text-[#a3a39e] flex-shrink-0">→</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center justify-center h-full text-center p-6">
+                <div>
+                  <p className="text-3xl mb-3">📍</p>
+                  <p className="text-sm font-medium text-[#111110] mb-1">Click a pin</p>
+                  <p className="text-xs text-[#a3a39e]">to see creators in that city</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* No location message */}
+        {!loading && creators.filter((c) => !getCoordsForCreator(c)).length > 0 && (
+          <p className="text-xs text-[#a3a39e] text-center mt-3 pb-4">
+            {creators.filter((c) => !getCoordsForCreator(c)).length} creators haven't set a city yet and aren't shown on the map.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
