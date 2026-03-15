@@ -1,6 +1,10 @@
 'use client';
 
 import { useState } from 'react';
+import axios from 'axios';
+import toast from 'react-hot-toast';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -15,29 +19,24 @@ export default function ContactPage() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!formData.name || !formData.email || !formData.subject || !formData.message) {
+      toast.error('Please fill in all required fields.');
+      return;
+    }
     try {
       setLoading(true);
-      // API call would go here
-      // await contactAPI.submitForm(formData);
+      await axios.post(`${API_URL}/contact`, formData);
       setSubmitted(true);
-      setFormData({
-        name: '',
-        email: '',
-        subject: '',
-        type: '',
-        message: '',
-      });
-      setTimeout(() => setSubmitted(false), 5000);
+      toast.success("Message sent! We'll get back to you within 24 hours.");
+      setFormData({ name: '', email: '', subject: '', type: '', message: '' });
+      setTimeout(() => setSubmitted(false), 6000);
     } catch (error) {
-      console.error('Error submitting form:', error);
+      toast.error(error?.response?.data?.message || 'Failed to send. Please email us at crewupfilms@gmail.com');
     } finally {
       setLoading(false);
     }

@@ -32,7 +32,7 @@ export default function EditProfilePage() {
   const [saving, setSaving]     = useState(false);
   const [tab, setTab]           = useState('basic');
   const [form, setForm]         = useState({
-    name: '', role: '', bio: '',
+    name: '', role: '', bio: '', gender: '',
     experienceLevel: 'beginner', availability: 'available',
     location: { city: '', country: '' },
     skills: [],
@@ -71,6 +71,7 @@ export default function EditProfilePage() {
           name:            p.user?.name       || '',
           role:            p.user?.role       || '',
           bio:             p.bio              || '',
+          gender:          p.user?.gender     || '',
           experienceLevel: p.experienceLevel  || 'beginner',
           availability:    p.availability     || 'available',
           location:        p.location         || { city: '', country: '' },
@@ -270,6 +271,16 @@ export default function EditProfilePage() {
             <div>
               <label className={labelCls}>Full Name</label>
               <input className={inputCls} value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Your full name" />
+            </div>
+            <div>
+              <label className={labelCls}>Gender <span className="normal-case text-[#a3a39e] font-normal">· optional, never shown publicly</span></label>
+              <select className={inputCls} value={form.gender} onChange={(e) => set('gender', e.target.value)}>
+                <option value="">Prefer not to say</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="non-binary">Non-binary</option>
+                <option value="prefer-not-to-say">Prefer not to say</option>
+              </select>
             </div>
             <div>
               <label className={labelCls}>Primary Role</label>

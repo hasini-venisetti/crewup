@@ -25,6 +25,7 @@ function userPayload(user) {
     phone:           user.phone           || { number: '', isVerified: false },
     hasDateOfBirth:  !!user.dateOfBirth,
     dateOfBirth:     user.dateOfBirth     || null,
+    gender:          user.gender          || '',
   };
 }
 
@@ -70,7 +71,7 @@ const register = async (req, res, next) => {
     if (!errors.isEmpty())
       return res.status(400).json({ success: false, errors: errors.array() });
 
-    const { name, username, email, password, role, dateOfBirth } = req.body;
+    const { name, username, email, password, role, dateOfBirth, gender } = req.body;
 
     const existingUser = await User.findOne({ $or: [{ email }, { username }] });
     if (existingUser) {
@@ -82,10 +83,12 @@ const register = async (req, res, next) => {
     const otp = generateOTP();
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
+    const validGenders = ['male', 'female', 'non-binary', 'prefer-not-to-say', ''];
     const user = await User.create({
       name, username, email, password, role,
       dateOfBirth: dateOfBirth || null,
       isMinor,
+      gender: validGenders.includes(gender) ? gender : '',
       isEmailVerified: false,
       emailOTP: { code: otp, expiresAt: otpExpiry },
     });
@@ -338,10 +341,12 @@ const getMe = async (req, res) => {
 // Update basic user fields: name, dateOfBirth
 const updateMe = async (req, res, next) => {
   try {
-    const { name, dateOfBirth } = req.body;
+    const { name, dateOfBirth, gender } = req.body;
     const updates = {};
 
     if (name && name.trim()) updates.name = name.trim();
+    const validGenders = ['male', 'female', 'non-binary', 'prefer-not-to-say', ''];
+    if (gender !== undefined && validGenders.includes(gender)) updates.gender = gender;
     if (dateOfBirth) {
       const dob = new Date(dateOfBirth);
       if (isNaN(dob.getTime())) {

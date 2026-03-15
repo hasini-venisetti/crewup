@@ -34,6 +34,7 @@ const contestRoutes           = require('./routes/contestRoutes');
 const launchWaitlistRoutes    = require('./routes/launchWaitlistRoutes');
 const activityRoutes          = require('./routes/activityRoutes');
 const reportRoutes            = require('./routes/reportRoutes');
+const contactRoutes           = require('./routes/contactRoutes');
 const socketHandler        = require('./socket/socketHandler');
 
 // Connect to MongoDB
@@ -127,6 +128,7 @@ app.use('/api/admin',                  adminRoutes);
 app.use('/api/contests',               contestRoutes);
 app.use('/api/launch-waitlist',        launchWaitlistRoutes);
 app.use('/api/activity',               activityRoutes);
+app.use('/api/contact',                contactRoutes);
 app.use('/api/reports',                reportRoutes);
 
 // ── 404 + global error handler ───────────────────────────────────────────

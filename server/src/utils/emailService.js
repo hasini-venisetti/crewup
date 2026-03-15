@@ -387,6 +387,7 @@ const sendProjectEditedNotice = async (applicantEmail, applicantName, projectTit
 };
 
 module.exports = {
+  sendEmail,
   sendApplicationReceived,
   sendApplicationAccepted,
   sendApplicationDeclined,

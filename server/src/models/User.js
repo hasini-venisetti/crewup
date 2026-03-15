@@ -63,6 +63,11 @@ const userSchema = new mongoose.Schema(
     bookmarks:    [{ type: mongoose.Schema.Types.ObjectId, ref: 'Project' }],
 
     // ── Phase 1: Account Safety ──────────────────────────────────────────
+    gender: {
+      type:    String,
+      enum:    ['male', 'female', 'non-binary', 'prefer-not-to-say', ''],
+      default: '',
+    },
     dateOfBirth:     { type: Date, default: null },
     isMinor:         { type: Boolean, default: false },
     isEmailVerified: { type: Boolean, default: false },

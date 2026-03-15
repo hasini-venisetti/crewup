@@ -53,11 +53,13 @@ const updateProfile = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Profile not found' });
     }
 
-    // Also update role/name on User if provided
-    if (req.body.role || req.body.name) {
+    // Also update role/name/gender on User if provided
+    const validGenders = ['male', 'female', 'non-binary', 'prefer-not-to-say', ''];
+    if (req.body.role || req.body.name || req.body.gender !== undefined) {
       await User.findByIdAndUpdate(req.user._id, {
         ...(req.body.name && { name: req.body.name }),
         ...(req.body.role && { role: req.body.role }),
+        ...(req.body.gender !== undefined && validGenders.includes(req.body.gender) && { gender: req.body.gender }),
       });
     }
 

@@ -110,7 +110,7 @@ export default function SignupPage() {
     name: '', role: '',
     location: { city: '', country: '' },
     skills: [], username: '', email: '', password: '',
-    dateOfBirth: '', phone: '',
+    dateOfBirth: '', phone: '', gender: '',
   });
   const [skillInput, setSkillInput] = useState('');
   const [otherRoleText, setOtherRoleText] = useState('');
@@ -246,6 +246,7 @@ export default function SignupPage() {
         role: resolvedRole,
         location: formData.location, skills: formData.skills,
         dateOfBirth: formData.dateOfBirth,
+        gender: formData.gender || '',
       });
       toast.success("Account created! Let's verify your email first 🎬");
       router.push('/verify-email');
@@ -446,6 +447,20 @@ export default function SignupPage() {
                     onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
                   />
                   <p className="text-xs text-[#a3a39e] mb-4">Used to confirm your age and protect minors. Never shown publicly.</p>
+
+                  <label className="block text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-2">Gender</label>
+                  <select
+                    className="field-input mb-1"
+                    value={formData.gender}
+                    onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                  >
+                    <option value="">Prefer not to say</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="non-binary">Non-binary</option>
+                    <option value="prefer-not-to-say">Prefer not to say</option>
+                  </select>
+                  <p className="text-xs text-[#a3a39e] mb-4">Optional. Never shown publicly.</p>
 
                   <label className="block text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-2">
                     Phone Number <span className="text-red-500 normal-case">· required for posting projects</span>
