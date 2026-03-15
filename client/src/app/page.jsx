@@ -490,9 +490,9 @@ export default function Home() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-14">
             {[
               {
-                icon: '🔍',
-                title: 'Project Moderation',
-                desc: 'Every casting call is reviewed by our team before it goes live. Fake or fraudulent projects are removed before you ever see them.',
+                icon: '🚨',
+                title: 'Fraud Risk Detection',
+                desc: 'Every project is automatically scanned for fraud signals. High-risk listings are flagged and reviewed by our team.',
               },
               {
                 icon: '🚫',
