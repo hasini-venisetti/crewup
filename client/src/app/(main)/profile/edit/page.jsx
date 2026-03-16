@@ -57,7 +57,9 @@ export default function EditProfilePage() {
   const [uploadingPic, setUploadingPic]     = useState(false);
   const picInputRef = useRef(null);
   const [addingItem, setAddingItem] = useState(false);
-  const [newItem, setNewItem]       = useState({ title: '', description: '', type: 'other', link: '', tags: '', issuer: '', issueDate: '', expiryDate: '', credentialId: '' });
+  const [newItem, setNewItem]       = useState({ title: '', description: '', type: 'other', link: '', tags: '', issuer: '', issueDate: '', expiryDate: '', credentialId: '', certificateFileUrl: '' });
+  const [certFileName, setCertFileName] = useState('');
+  const certFileRef = useRef(null);
   const [deletingId, setDeletingId] = useState('');
   const [availSlots, setAvailSlots] = useState([]);        // { startDate, endDate, note }
   const [newSlot, setNewSlot]       = useState({ startDate: '', endDate: '', note: '' });
@@ -167,10 +169,25 @@ export default function EditProfilePage() {
       await portfolioAPI.add({ ...newItem, tags });
       const { data } = await profileAPI.getMe();
       setPortfolio(data.data.portfolio || []);
-      setNewItem({ title: '', description: '', type: 'other', link: '', tags: '', issuer: '', issueDate: '', expiryDate: '', credentialId: '' });
+      setNewItem({ title: '', description: '', type: 'other', link: '', tags: '', issuer: '', issueDate: '', expiryDate: '', credentialId: '', certificateFileUrl: '' });
+      setCertFileName('');
       setAddingItem(false);
       toast.success('Portfolio item added!');
     } catch { toast.error('Failed to add item'); }
+  };
+
+  const handleCertFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const allowed = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+    if (!allowed.includes(file.type)) { toast.error('Only PDF or image files are supported'); return; }
+    if (file.size > 3.5 * 1024 * 1024) { toast.error('File must be under 3.5 MB'); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setNewItem((prev) => ({ ...prev, certificateFileUrl: ev.target.result }));
+      setCertFileName(file.name);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleDeletePortfolioItem = async (itemId) => {
@@ -555,6 +572,27 @@ export default function EditProfilePage() {
                         <input className={inputCls} placeholder="e.g. ABC-123456"
                           value={newItem.credentialId} onChange={(e) => setNewItem({ ...newItem, credentialId: e.target.value })} />
                       </div>
+                      {/* Certificate file upload */}
+                      <div>
+                        <label className={labelCls}>Upload Certificate File <span className="text-[#a3a39e] normal-case">(PDF or image, max 3.5 MB)</span></label>
+                        <input ref={certFileRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" className="hidden" onChange={handleCertFileChange} />
+                        {newItem.certificateFileUrl ? (
+                          <div className="flex items-center gap-3 p-3 rounded-lg border border-[#fde68a] bg-[#fffbeb]">
+                            <span className="text-2xl">{newItem.certificateFileUrl.startsWith('data:application/pdf') ? '📄' : '🖼'}</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-[#92400e] truncate">{certFileName}</p>
+                              <p className="text-xs text-[#a3a39e]">File attached</p>
+                            </div>
+                            <button type="button" onClick={() => { setNewItem((p) => ({ ...p, certificateFileUrl: '' })); setCertFileName(''); if (certFileRef.current) certFileRef.current.value = ''; }}
+                              className="text-xs text-red-500 hover:text-red-700 font-semibold transition-colors flex-shrink-0">Remove</button>
+                          </div>
+                        ) : (
+                          <button type="button" onClick={() => certFileRef.current?.click()}
+                            className="w-full flex items-center justify-center gap-2 p-3 rounded-lg border-2 border-dashed border-[#e0e0dd] hover:border-[#6C63FF] hover:bg-[#f8f7ff] text-[#a3a39e] hover:text-[#6C63FF] transition-all text-sm font-medium">
+                            <span>📎</span> Choose file to upload
+                          </button>
+                        )}
+                      </div>
                     </>
                   )}
 
@@ -567,7 +605,7 @@ export default function EditProfilePage() {
 
                   <div>
                     <label className={labelCls}>
-                      {newItem.type === 'certificate' ? 'Credential URL' : 'Link'}
+                      {newItem.type === 'certificate' ? 'Credential / Verify URL' : 'Link'}
                       <span className="text-[#a3a39e] normal-case ml-1">(optional)</span>
                     </label>
                     <input className={inputCls}
@@ -586,7 +624,7 @@ export default function EditProfilePage() {
                       className="text-sm font-semibold px-5 py-2 rounded-lg bg-[#6C63FF] hover:bg-[#7C75FF] text-white transition-all">
                       Add to Portfolio
                     </button>
-                    <button onClick={() => { setAddingItem(false); setNewItem({ title: '', description: '', type: 'other', link: '', tags: '', issuer: '', issueDate: '', expiryDate: '', credentialId: '' }); }}
+                    <button onClick={() => { setAddingItem(false); setNewItem({ title: '', description: '', type: 'other', link: '', tags: '', issuer: '', issueDate: '', expiryDate: '', credentialId: '', certificateFileUrl: '' }); setCertFileName(''); if (certFileRef.current) certFileRef.current.value = ''; }}
                       className="text-sm font-semibold px-4 py-2 rounded-lg border border-[#e0e0dd] text-[#111110] hover:border-[#0e0e0d] transition-all">
                       Cancel
                     </button>
@@ -614,6 +652,11 @@ export default function EditProfilePage() {
                         )}
                         {item.description && <p className="text-xs text-[#6b6b66] mt-0.5 line-clamp-1">{item.description}</p>}
                         {item.link && <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-xs text-[#5750D4] hover:text-[#4740CC] mt-1 block truncate">{item.link}</a>}
+                        {item.certificateFileUrl && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#92400e] bg-[#fef9ee] border border-[#fde68a] px-2 py-0.5 rounded-full mt-1">
+                            {item.certificateFileUrl.startsWith('data:application/pdf') ? '📄' : '🖼'} File attached
+                          </span>
+                        )}
                         {item.tags?.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-1.5">
                             {item.tags.map((t) => <span key={t} className="text-[11px] bg-[#f7f7f6] text-[#a3a39e] px-2 py-0.5 rounded-full">{t}</span>)}

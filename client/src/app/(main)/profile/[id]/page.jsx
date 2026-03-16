@@ -874,12 +874,20 @@ export default function ProfilePage() {
                                     ))}
                                   </div>
                                 )}
-                                {item.link && (
-                                  <a href={item.link.startsWith('http') ? item.link : `https://${item.link}`} target="_blank" rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1 text-xs text-[#d97706] hover:text-[#b45309] font-semibold transition-colors">
-                                    Verify Credential →
-                                  </a>
-                                )}
+                                <div className="flex flex-wrap gap-3">
+                                  {item.certificateFileUrl && (
+                                    <a href={item.certificateFileUrl} target="_blank" rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1.5 text-xs text-white bg-[#d97706] hover:bg-[#b45309] font-semibold px-3 py-1.5 rounded-lg transition-colors">
+                                      {item.certificateFileUrl.startsWith('data:application/pdf') ? '📄' : '🖼'} View Certificate
+                                    </a>
+                                  )}
+                                  {item.link && (
+                                    <a href={item.link.startsWith('http') ? item.link : `https://${item.link}`} target="_blank" rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1 text-xs text-[#d97706] hover:text-[#b45309] font-semibold transition-colors">
+                                      Verify Credential →
+                                    </a>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           );

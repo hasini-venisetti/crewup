@@ -70,11 +70,12 @@ const profileSchema = new mongoose.Schema(
         link:         { type: String, default: '' },
         tags:         { type: [String], default: [] },
         // Certificate-specific fields
-        issuer:       { type: String, default: '' },   // e.g. "Coursera", "Adobe", "FTII"
-        issueDate:    { type: String, default: '' },   // YYYY-MM-DD
-        expiryDate:   { type: String, default: '' },   // YYYY-MM-DD (optional)
-        credentialId: { type: String, default: '' },   // optional unique ID
-        createdAt:    { type: Date, default: Date.now },
+        issuer:             { type: String, default: '' },   // e.g. "Coursera", "Adobe", "FTII"
+        issueDate:          { type: String, default: '' },   // YYYY-MM-DD
+        expiryDate:         { type: String, default: '' },   // YYYY-MM-DD (optional)
+        credentialId:       { type: String, default: '' },   // optional unique ID
+        certificateFileUrl: { type: String, default: '' },   // base64 data-URL of uploaded cert file
+        createdAt:          { type: Date, default: Date.now },
       },
     ],
 

@@ -97,12 +97,18 @@ const getMyProfile = async (req, res, next) => {
 // @access  Private
 const addPortfolioItem = async (req, res, next) => {
   try {
-    const { title, description, type, link, tags, issuer, issueDate, expiryDate, credentialId } = req.body;
+    const { title, description, type, link, tags, issuer, issueDate, expiryDate, credentialId, certificateFileUrl } = req.body;
     if (!title) return res.status(400).json({ success: false, message: 'Title is required' });
+
+    // Validate certificate file if provided (~5 MB limit as base64 string)
+    const MAX_CERT_SIZE = 5 * 1024 * 1024;
+    if (certificateFileUrl && certificateFileUrl.length > MAX_CERT_SIZE) {
+      return res.status(400).json({ success: false, message: 'Certificate file too large. Max 3.5 MB.' });
+    }
 
     const profile = await Profile.findOneAndUpdate(
       { user: req.user._id },
-      { $push: { portfolio: { title, description, type, link, tags, issuer, issueDate, expiryDate, credentialId } } },
+      { $push: { portfolio: { title, description, type, link, tags, issuer, issueDate, expiryDate, credentialId, certificateFileUrl } } },
       { new: true, runValidators: true }
     ).populate('user', 'name username role profileImage');
 
