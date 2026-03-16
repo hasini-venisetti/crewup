@@ -180,7 +180,7 @@ export default function CreateProjectPage() {
   // ── Verification gate ───────────────────────────────────────────────────
   const missingVerifications = [];
   if (!user.isEmailVerified)         missingVerifications.push({ key: 'email',   icon: '📧', label: 'Verify your email', desc: 'Check your inbox for a verification link', href: '/verify-email' });
-  if (!user.phone?.isVerified)       missingVerifications.push({ key: 'phone',   icon: '📱', label: 'Verify your phone number', desc: 'Add and verify your phone number to post projects', href: '/verify-phone' });
+  if (!user.phone?.isVerified)       missingVerifications.push({ key: 'phone',   icon: '📱', label: 'Verify your phone number', desc: 'Add and verify your phone number to post or join projects', href: '/verify-phone' });
   if (!user.hasDateOfBirth)          missingVerifications.push({ key: 'age',     icon: '🪪', label: 'Add your date of birth', desc: 'Required to confirm you meet our age requirements', href: '/settings?tab=profile' });
 
   if (missingVerifications.length > 0) {
@@ -193,7 +193,7 @@ export default function CreateProjectPage() {
               Verify your account first
             </h1>
             <p className="text-[#6b6b66] text-sm">
-              To keep CrewUp safe for everyone, you must complete the following before posting a project.
+              To keep CrewUp safe for everyone, you must complete the following before posting or joining projects.
             </p>
           </div>
 

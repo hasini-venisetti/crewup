@@ -24,7 +24,7 @@ const roleOptions = [
   { label: 'Other',           value: 'other' },
 ];
 
-const TOTAL_STEPS = 7;
+const TOTAL_STEPS = 8;
 
 const stepPanels = [
   {
@@ -125,6 +125,20 @@ const stepPanels = [
       ],
     },
   },
+  {
+    bg: '#111110', dark: true,
+    label: 'One last step',
+    heading: 'Verify your phone number.',
+    body: 'A verified phone number keeps the platform safe for everyone. It\'s required to post or join projects — you can always add it later from your settings.',
+    safety: {
+      title: '🔒 Your Number Is Private',
+      points: [
+        'Your phone number is never shown publicly to other creators.',
+        'We only use it for account security and identity verification.',
+        'CREWUPFILMS will never call you or share your number with third parties.',
+      ],
+    },
+  },
 ];
 
 export default function SignupPage() {
@@ -143,12 +157,21 @@ export default function SignupPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [usernameError, setUsernameError] = useState('');
 
-  // OTP state (step 7)
+  // OTP state (step 7 — email)
   const [otpCode, setOtpCode]         = useState(['', '', '', '', '', '']);
   const [otpVerifying, setOtpVerifying] = useState(false);
   const [otpResending, setOtpResending] = useState(false);
   const [otpCountdown, setOtpCountdown] = useState(0);
   const otpRefs = useRef([]);
+
+  // Phone state (step 8)
+  const [phoneNumber, setPhoneNumber]       = useState('');
+  const [phoneOtpSent, setPhoneOtpSent]     = useState(false);
+  const [phoneOtp, setPhoneOtp]             = useState(['', '', '', '', '', '']);
+  const [phoneSending, setPhoneSending]     = useState(false);
+  const [phoneOtpVerifying, setPhoneOtpVerifying] = useState(false);
+  const [phoneCountdown, setPhoneCountdown] = useState(0);
+  const phoneOtpRefs = useRef([]);
 
   // Google OAuth
   const [googleIdToken, setGoogleIdToken] = useState('');
@@ -164,12 +187,19 @@ export default function SignupPage() {
     return () => { try { document.head.removeChild(script); } catch {} };
   }, []);
 
-  // OTP countdown timer
+  // Email OTP countdown timer
   useEffect(() => {
     if (otpCountdown <= 0) return;
     const t = setTimeout(() => setOtpCountdown((c) => c - 1), 1000);
     return () => clearTimeout(t);
   }, [otpCountdown]);
+
+  // Phone OTP countdown timer
+  useEffect(() => {
+    if (phoneCountdown <= 0) return;
+    const t = setTimeout(() => setPhoneCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [phoneCountdown]);
 
   /* ── Google handlers ── */
   const handleGoogleSignup = () => {
@@ -323,14 +353,68 @@ export default function SignupPage() {
       const { data } = await authAPI.verifyEmail(fullCode);
       if (data.success) {
         if (loginWithToken && data.token) loginWithToken(data.token, data.user);
-        toast.success('Email verified! Now add your phone number 📱');
-        router.push('/verify-phone');
+        toast.success('Email verified! Now verify your phone number 📱');
+        setCurrentStep(8);
       }
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Invalid or expired code. Try again.');
       setOtpCode(['', '', '', '', '', '']);
       otpRefs.current[0]?.focus();
     } finally { setOtpVerifying(false); }
+  };
+
+  /* ── Step 8: Phone OTP handlers ── */
+  const handleSendPhoneOtp = async () => {
+    if (!phoneNumber.trim()) { toast.error('Please enter your phone number'); return; }
+    setPhoneSending(true);
+    try {
+      await authAPI.sendPhoneOTP(phoneNumber.trim());
+      setPhoneOtpSent(true);
+      setPhoneCountdown(60);
+      toast.success(`Code sent to ${phoneNumber}`);
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Failed to send code. Check the number and try again.');
+    } finally { setPhoneSending(false); }
+  };
+
+  const handlePhoneOtpInput = (idx, val) => {
+    const digit = val.replace(/\D/g, '').slice(-1);
+    const next = [...phoneOtp];
+    next[idx] = digit;
+    setPhoneOtp(next);
+    if (digit && idx < 5) phoneOtpRefs.current[idx + 1]?.focus();
+  };
+
+  const handlePhoneOtpKeyDown = (idx, e) => {
+    if (e.key === 'Backspace' && !phoneOtp[idx] && idx > 0) {
+      phoneOtpRefs.current[idx - 1]?.focus();
+    }
+  };
+
+  const handlePhoneOtpPaste = (e) => {
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (pasted.length === 6) {
+      setPhoneOtp(pasted.split(''));
+      phoneOtpRefs.current[5]?.focus();
+    }
+  };
+
+  const handleVerifyPhone = async () => {
+    const fullCode = phoneOtp.join('');
+    if (fullCode.length < 6) { toast.error('Please enter the 6-digit code'); return; }
+    setPhoneOtpVerifying(true);
+    try {
+      const { data } = await authAPI.verifyPhone(fullCode);
+      if (data.success) {
+        if (loginWithToken && data.token) loginWithToken(data.token, data.user);
+        toast.success('Phone verified! Your account is fully set up 🎬');
+        router.push('/dashboard');
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Invalid or expired code. Try again.');
+      setPhoneOtp(['', '', '', '', '', '']);
+      phoneOtpRefs.current[0]?.focus();
+    } finally { setPhoneOtpVerifying(false); }
   };
 
   const handleResendOtp = async () => {
@@ -410,6 +494,7 @@ export default function SignupPage() {
                   'Set up your profile',
                   'Secure your account',
                   'Verify your email',
+                  'Add your phone number',
                 ][currentStep - 1]}
               </h1>
 
@@ -599,7 +684,102 @@ export default function SignupPage() {
                   {/* Skip */}
                   <p className="text-center text-xs text-[#a3a39e]">
                     <Link href="/dashboard" className="hover:text-[#6b6b66] transition-colors">
-                      Skip for now — verify later from dashboard
+                      Skip — you won't be able to post or join projects
+                    </Link>
+                  </p>
+                </div>
+              )}
+
+              {/* ── Step 8 — Phone Verification ── */}
+              {currentStep === 8 && (
+                <div className="form-anim" style={{ animationDelay: '0.16s' }}>
+                  {!phoneOtpSent ? (
+                    <>
+                      <p className="text-sm text-[#6b6b66] mb-6 leading-relaxed">
+                        Add your phone number to post and join projects. You can skip this for now and add it later from your settings.
+                      </p>
+                      <label className="block text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-2">
+                        Phone Number (with country code)
+                      </label>
+                      <input
+                        type="tel"
+                        placeholder="+91 98765 43210"
+                        className="field-input mb-2"
+                        value={phoneNumber}
+                        onChange={(e) => setPhoneNumber(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSendPhoneOtp()}
+                        autoFocus
+                      />
+                      <p className="text-xs text-[#a3a39e] mb-6">Include your country code, e.g. +91 for India.</p>
+
+                      <button
+                        onClick={handleSendPhoneOtp}
+                        disabled={phoneSending || !phoneNumber.trim()}
+                        className="w-full bg-[#111110] text-white text-sm font-medium py-3.5 hover:bg-[#2d2d2b] transition disabled:opacity-50 mb-4">
+                        {phoneSending ? (
+                          <span className="flex items-center justify-center gap-2">
+                            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            Sending code…
+                          </span>
+                        ) : 'Send Verification Code →'}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm text-[#6b6b66] mb-1 leading-relaxed">
+                        We sent a 6-digit code to{' '}
+                        <strong className="text-[#111110]">{phoneNumber}</strong>.{' '}
+                        <button
+                          onClick={() => { setPhoneOtpSent(false); setPhoneOtp(['','','','','','']); }}
+                          className="text-[#6b6b66] underline hover:text-[#111110] transition text-xs">
+                          Change number
+                        </button>
+                      </p>
+
+                      {/* Phone OTP inputs */}
+                      <div className="flex gap-2 justify-between mb-6 mt-6" onPaste={handlePhoneOtpPaste}>
+                        {phoneOtp.map((digit, idx) => (
+                          <input
+                            key={idx}
+                            ref={(el) => (phoneOtpRefs.current[idx] = el)}
+                            type="text" inputMode="numeric" maxLength={1}
+                            value={digit}
+                            onChange={(e) => handlePhoneOtpInput(idx, e.target.value)}
+                            onKeyDown={(e) => handlePhoneOtpKeyDown(idx, e)}
+                            className={`otp-box ${digit ? 'filled' : ''}`}
+                            autoFocus={idx === 0}
+                          />
+                        ))}
+                      </div>
+
+                      {/* Verify button */}
+                      <button
+                        onClick={handleVerifyPhone}
+                        disabled={phoneOtpVerifying || phoneOtp.join('').length < 6}
+                        className="w-full bg-[#111110] text-white text-sm font-medium py-3.5 hover:bg-[#2d2d2b] transition disabled:opacity-50 mb-4">
+                        {phoneOtpVerifying ? (
+                          <span className="flex items-center justify-center gap-2">
+                            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            Verifying…
+                          </span>
+                        ) : 'Verify Phone →'}
+                      </button>
+
+                      {/* Resend */}
+                      <p className="text-center text-sm text-[#6b6b66] mb-6">
+                        Didn't receive it?{' '}
+                        <button onClick={handleSendPhoneOtp} disabled={phoneSending || phoneCountdown > 0}
+                          className="text-[#111110] font-semibold hover:underline disabled:opacity-50 disabled:no-underline">
+                          {phoneSending ? 'Sending…' : phoneCountdown > 0 ? `Resend in ${phoneCountdown}s` : 'Resend code'}
+                        </button>
+                      </p>
+                    </>
+                  )}
+
+                  {/* Skip */}
+                  <p className="text-center text-xs text-[#a3a39e]">
+                    <Link href="/dashboard" className="hover:text-[#6b6b66] transition-colors">
+                      Skip — you won't be able to post or join projects
                     </Link>
                   </p>
                 </div>

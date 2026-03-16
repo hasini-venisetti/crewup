@@ -418,7 +418,31 @@ function ProjectDetailContent() {
     }
   };
 
+  // Returns true if user can post/join projects; shows toast otherwise
+  const checkVerification = () => {
+    if (!user?.isEmailVerified && !user?.phone?.isVerified) {
+      toast.error('Verify your email and phone number to post or join projects.', {
+        duration: 5000, icon: '🔒',
+      });
+      return false;
+    }
+    if (!user?.isEmailVerified) {
+      toast.error('Please verify your email before joining projects.', {
+        duration: 5000, icon: '📧',
+      });
+      return false;
+    }
+    if (!user?.phone?.isVerified) {
+      toast.error('Please verify your phone number before joining projects.', {
+        duration: 5000, icon: '📱',
+      });
+      return false;
+    }
+    return true;
+  };
+
   const handleWaitlist = async (role) => {
+    if (!checkVerification()) return;
     setWaitlistLoading(true); setWaitlistMsg('');
     try { await waitlistAPI.join(id, role); setWaitlistMsg(`You're on the waitlist for ${role}!`); }
     catch (err) { setWaitlistMsg(err.response?.data?.message || 'Could not join waitlist'); }
@@ -569,7 +593,9 @@ function ProjectDetailContent() {
                   {user && <p className="text-xs text-white/40">Join the waitlist for an open role below ↓</p>}
                 </div>
               ) : user ? (
-                <button onClick={() => setShowModal(true)} disabled={applied}
+                <button
+                  onClick={() => { if (checkVerification()) setShowModal(true); }}
+                  disabled={applied}
                   className="text-sm font-semibold px-6 py-2.5 rounded-lg bg-[#6C63FF] hover:bg-[#7C75FF] text-white shadow-lg shadow-[#6C63FF]/20 transition-all active:scale-[0.98] disabled:opacity-60">
                   {applied ? '✓ Applied' : 'Apply Now'}
                 </button>
