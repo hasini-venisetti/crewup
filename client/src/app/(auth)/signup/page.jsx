@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
@@ -24,13 +24,14 @@ const roleOptions = [
   { label: 'Other',           value: 'other' },
 ];
 
+const TOTAL_STEPS = 7;
+
 const stepPanels = [
   {
-    bg: '#111110',
-    dark: true,
+    bg: '#111110', dark: true,
     label: 'Welcome to CREWUPFILMS',
     heading: 'Where your creative journey begins.',
-    body: "CREWUPFILMS is a platform built for independent creators — directors, editors, musicians, photographers, and everyone in between. Your profile is your identity here. It's how other creators discover you and decide to collaborate.",
+    body: "CREWUPFILMS is built for independent creators — directors, editors, musicians, photographers, and everyone in between. Your profile is your identity here.",
     safety: {
       title: '🔒 Check Profiles & Reviews',
       points: [
@@ -41,8 +42,7 @@ const stepPanels = [
     },
   },
   {
-    bg: '#111110',
-    dark: true,
+    bg: '#111110', dark: true,
     label: 'Your craft on CREWUPFILMS',
     heading: 'Every great project needs every kind of creator.',
     body: "From short films and music videos to brand shoots and podcasts — CREWUPFILMS is home to creators across every discipline. Your role helps project owners find exactly who they're looking for.",
@@ -56,26 +56,24 @@ const stepPanels = [
     },
   },
   {
-    bg: '#111110',
-    dark: true,
+    bg: '#111110', dark: true,
     label: 'A global creative community',
     heading: 'Creativity has no borders — but location matters.',
-    body: 'Many projects are local — on-site shoots, studio sessions, live events. Sharing your city helps creators nearby find you. You can also collaborate remotely with creators worldwide.',
+    body: 'Many projects are local — on-site shoots, studio sessions, live events. Sharing your city helps creators nearby find you. You can also collaborate remotely worldwide.',
     safety: {
       title: '🔒 Meet Safely in Person',
       points: [
         'For first in-person meetings, choose public locations like coffee shops or studios.',
         "Let someone you trust know where you'll be meeting.",
-        'Video calls are a great way to connect and verify before meeting in person.',
+        'Video calls are a great way to connect before meeting in person.',
       ],
     },
   },
   {
-    bg: '#111110',
-    dark: true,
+    bg: '#111110', dark: true,
     label: 'Get discovered',
     heading: 'Your skills are your story.',
-    body: 'Skills are how project owners search for collaborators. The more specific and honest you are, the better your matches. Think beyond job titles — tools, techniques, and genres you actually work in.',
+    body: 'Skills are how project owners search for collaborators. The more specific and honest you are, the better your matches. Think beyond job titles — tools, techniques, and genres.',
     safety: {
       title: '🔒 Keep Contact Info Private Early On',
       points: [
@@ -86,11 +84,24 @@ const stepPanels = [
     },
   },
   {
-    bg: '#111110',
-    dark: true,
-    label: 'Almost there',
-    heading: 'Your account is the key to your crew.',
-    body: "Once you're in, you can apply to projects, message creators, build your portfolio, and start collaborating. CREWUPFILMS is free — no hidden fees, no paywalls for core features.",
+    bg: '#111110', dark: true,
+    label: 'Your profile',
+    heading: 'Set up your public identity.',
+    body: "Your username is how the community knows you. Your date of birth confirms you meet our age requirements — it's never shown publicly.",
+    safety: {
+      title: '🔒 Protect Your Identity',
+      points: [
+        'Your username is permanent — choose something you\'re happy with.',
+        'Date of birth is private and only used for age verification.',
+        'Optional gender info helps us personalise your experience.',
+      ],
+    },
+  },
+  {
+    bg: '#111110', dark: true,
+    label: 'Secure your account',
+    heading: 'Your email is your key.',
+    body: "Use an email you check regularly — we'll send your verification code there. Choose a strong password you don't use anywhere else.",
     safety: {
       title: '🔒 Protect Your Account',
       points: [
@@ -101,17 +112,16 @@ const stepPanels = [
     },
   },
   {
-    bg: '#111110',
-    dark: true,
-    label: 'Final step',
-    heading: 'One last check before you join.',
-    body: "We'll verify your email and phone so your account stays secure. Verification unlocks posting projects and applying to paid opportunities.",
+    bg: '#111110', dark: true,
+    label: 'Almost done',
+    heading: 'Check your inbox.',
+    body: "We sent a 6-digit code to your email. Enter it below to activate your account. The code is valid for 10 minutes.",
     safety: {
-      title: '🔒 Why We Verify',
+      title: '🔒 Keep Your Code Safe',
       points: [
-        'Email verification confirms your identity and keeps your account recoverable.',
-        'Phone verification is required before posting projects or paid collaborations.',
-        'Your personal details are never shared with other creators on the platform.',
+        'CREWUPFILMS will never ask for this code via chat, email, or phone.',
+        'If someone asks for your verification code, it\'s a scam — report it.',
+        'Didn\'t get the code? Check your spam folder or request a new one.',
       ],
     },
   },
@@ -127,44 +137,58 @@ export default function SignupPage() {
     skills: [], username: '', email: '', password: '',
     dateOfBirth: '', gender: '',
   });
-  const [skillInput, setSkillInput] = useState('');
+  const [skillInput, setSkillInput]     = useState('');
   const [otherRoleText, setOtherRoleText] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading]       = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [usernameError, setUsernameError] = useState('');
-  // Google OAuth pending state (username pick)
-  const [googleIdToken, setGoogleIdToken] = useState('');
-  const [googleStep, setGoogleStep] = useState(false); // show username picker
 
+  // OTP state (step 7)
+  const [otpCode, setOtpCode]         = useState(['', '', '', '', '', '']);
+  const [otpVerifying, setOtpVerifying] = useState(false);
+  const [otpResending, setOtpResending] = useState(false);
+  const [otpCountdown, setOtpCountdown] = useState(0);
+  const otpRefs = useRef([]);
+
+  // Google OAuth
+  const [googleIdToken, setGoogleIdToken] = useState('');
+  const [googleStep, setGoogleStep]       = useState(false);
+
+  // Load Google GSI script
   useEffect(() => {
     if (!GOOGLE_CLIENT_ID) return;
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
+    script.async = true; script.defer = true;
     document.head.appendChild(script);
     return () => { try { document.head.removeChild(script); } catch {} };
   }, []);
 
+  // OTP countdown timer
+  useEffect(() => {
+    if (otpCountdown <= 0) return;
+    const t = setTimeout(() => setOtpCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [otpCountdown]);
+
+  /* ── Google handlers ── */
   const handleGoogleSignup = () => {
     if (!GOOGLE_CLIENT_ID) { toast.error('Google sign-in is not configured yet.'); return; }
     setGoogleLoading(true);
     window.google.accounts.id.initialize({
       client_id: GOOGLE_CLIENT_ID,
-      callback:  async (response) => {
+      callback: async (response) => {
         try {
           const { data } = await authAPI.googleAuth({ idToken: response.credential });
           if (data.success && data.token) {
-            // Existing account — just log in
             loginWithToken(data.token, data.user);
             toast.success(`Welcome, ${data.user.name}! 🎬`);
             router.push('/dashboard');
           } else if (data.needsUsername) {
-            // New Google user — store token and show username step
             setGoogleIdToken(response.credential);
             if (data.name) setFormData((prev) => ({ ...prev, name: data.name, email: data.email || '' }));
             setGoogleStep(true);
-            setCurrentStep(2); // let Google users fill role → location → skills → username
+            setCurrentStep(2);
           }
         } catch (err) {
           toast.error(err?.response?.data?.message || 'Google sign-up failed.');
@@ -180,14 +204,10 @@ export default function SignupPage() {
     setIsLoading(true);
     try {
       const resolvedRole = formData.role === 'other' && otherRoleText.trim()
-        ? otherRoleText.trim().toLowerCase()
-        : (formData.role || 'other');
+        ? otherRoleText.trim().toLowerCase() : (formData.role || 'other');
       const { data } = await authAPI.googleAuth({
-        idToken:  googleIdToken,
-        username: formData.username,
-        role:     resolvedRole,
-        location: formData.location,
-        skills:   formData.skills,
+        idToken: googleIdToken, username: formData.username,
+        role: resolvedRole, location: formData.location, skills: formData.skills,
       });
       if (data.success && data.token) {
         loginWithToken(data.token, data.user);
@@ -211,9 +231,9 @@ export default function SignupPage() {
 
   const panel = stepPanels[currentStep - 1];
 
+  /* ── Step validation & advance ── */
   const handleContinue = () => {
     if (currentStep === 1 && !formData.name.trim()) { toast.error('Please enter your name'); return; }
-    // Auto-suggest username from name when leaving step 1, if not already set
     if (currentStep === 1 && !formData.username) {
       const suggested = formData.name.toLowerCase().trim()
         .replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '').slice(0, 20) || 'creator';
@@ -227,11 +247,11 @@ export default function SignupPage() {
       toast.error('Please enter city and country'); return;
     }
     if (currentStep === 5) {
-      if (!formData.email.trim() || !formData.password.trim()) { toast.error('Email and password are required'); return; }
-      if (formData.password.length < 8) { toast.error('Password must be at least 8 characters'); return; }
+      const uErr = validateUsername(formData.username);
+      if (uErr) { toast.error(uErr); return; }
       if (!formData.dateOfBirth) { toast.error('Date of birth is required'); return; }
     }
-    if (currentStep < 6) setCurrentStep(currentStep + 1);
+    if (currentStep < TOTAL_STEPS) setCurrentStep(currentStep + 1);
   };
 
   const handleAddSkill = (e) => {
@@ -244,17 +264,16 @@ export default function SignupPage() {
     }
   };
 
+  /* ── Step 6: Create account + send OTP ── */
   const handleCreateAccount = async () => {
-    if (!formData.username.trim()) { toast.error('Please choose a username'); return; }
-    const uErr = validateUsername(formData.username);
-    if (uErr) { toast.error(uErr); return; }
-    if (!formData.dateOfBirth) { toast.error('Date of birth is required'); return; }
+    if (!formData.email.trim()) { toast.error('Please enter your email'); return; }
+    if (!formData.password.trim()) { toast.error('Please enter a password'); return; }
+    if (formData.password.length < 8) { toast.error('Password must be at least 8 characters'); return; }
 
     setIsLoading(true);
     try {
       const resolvedRole = formData.role === 'other' && otherRoleText.trim()
-        ? otherRoleText.trim().toLowerCase()
-        : (formData.role || 'other');
+        ? otherRoleText.trim().toLowerCase() : (formData.role || 'other');
       await register({
         name: formData.name, username: formData.username,
         email: formData.email, password: formData.password,
@@ -263,13 +282,67 @@ export default function SignupPage() {
         dateOfBirth: formData.dateOfBirth,
         gender: formData.gender || '',
       });
-      toast.success("Account created! Let's verify your email first 🎬");
-      router.push('/verify-email');
+      toast.success('Account created! Check your email for the verification code 📧');
+      setOtpCountdown(60);
+      setCurrentStep(7);
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Signup failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  /* ── Step 7: OTP input handlers ── */
+  const handleOtpInput = (idx, val) => {
+    const digit = val.replace(/\D/g, '').slice(-1);
+    const next = [...otpCode];
+    next[idx] = digit;
+    setOtpCode(next);
+    if (digit && idx < 5) otpRefs.current[idx + 1]?.focus();
+  };
+
+  const handleOtpKeyDown = (idx, e) => {
+    if (e.key === 'Backspace' && !otpCode[idx] && idx > 0) {
+      otpRefs.current[idx - 1]?.focus();
+    }
+  };
+
+  const handleOtpPaste = (e) => {
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (pasted.length === 6) {
+      setOtpCode(pasted.split(''));
+      otpRefs.current[5]?.focus();
+    }
+  };
+
+  const handleVerifyEmail = async () => {
+    const fullCode = otpCode.join('');
+    if (fullCode.length < 6) { toast.error('Please enter the 6-digit code'); return; }
+    setOtpVerifying(true);
+    try {
+      const { data } = await authAPI.verifyEmail(fullCode);
+      if (data.success) {
+        if (loginWithToken && data.token) loginWithToken(data.token, data.user);
+        toast.success('Email verified! Now add your phone number 📱');
+        router.push('/verify-phone');
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Invalid or expired code. Try again.');
+      setOtpCode(['', '', '', '', '', '']);
+      otpRefs.current[0]?.focus();
+    } finally { setOtpVerifying(false); }
+  };
+
+  const handleResendOtp = async () => {
+    if (otpCountdown > 0) return;
+    setOtpResending(true);
+    try {
+      await authAPI.sendEmailOTP();
+      toast.success('New code sent to your email');
+      setOtpCountdown(60);
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Failed to resend. Please try again.');
+    } finally { setOtpResending(false); }
   };
 
   return (
@@ -292,13 +365,14 @@ export default function SignupPage() {
         }
         .field-input:focus { border-color: #111110; box-shadow: 0 0 0 3px rgba(17,17,16,0.06); }
         .field-input::placeholder { color: #a3a39e; }
-        .field-input-dark {
-          width: 100%; background: #1a1a19; border: 1px solid #2d2d2b;
-          color: white; font-size: 14px; padding: 14px 16px;
-          outline: none; transition: border-color 0.2s; font-family: inherit;
+        .otp-box {
+          width: 46px; height: 54px; text-align: center; font-size: 22px;
+          font-weight: 700; border: 2px solid #e0e0dd; background: white;
+          color: #111110; outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+          font-family: monospace;
         }
-        .field-input-dark:focus { border-color: #6b6b66; }
-        .field-input-dark::placeholder { color: #444442; }
+        .otp-box:focus { border-color: #111110; box-shadow: 0 0 0 3px rgba(17,17,16,0.08); }
+        .otp-box.filled { border-color: #111110; background: #f5f5f3; }
       `}</style>
 
       <div className="flex h-screen bg-white overflow-hidden">
@@ -309,7 +383,7 @@ export default function SignupPage() {
           {/* Progress bar */}
           <div className="sticky top-0 z-10 h-1 bg-[#efefed] flex-shrink-0">
             <div className="h-full bg-[#111110] transition-all duration-500"
-              style={{ width: `${(currentStep / 6) * 100}%` }} />
+              style={{ width: `${(currentStep / TOTAL_STEPS) * 100}%` }} />
           </div>
 
           {/* Logo */}
@@ -323,15 +397,23 @@ export default function SignupPage() {
 
               <p className="form-anim text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-4"
                 style={{ animationDelay: '0s' }}>
-                Step {currentStep} of 6
+                Step {currentStep} of {TOTAL_STEPS}
               </p>
 
               <h1 className="form-anim text-3xl md:text-4xl font-[Playfair_Display] text-[#111110] mb-8 leading-tight"
                 style={{ animationDelay: '0.08s' }}>
-                {["What's your name?", 'What best describes you?', 'Where are you based?', 'What are your main skills?', 'Create your account', 'Verify your identity'][currentStep - 1]}
+                {[
+                  "What's your name?",
+                  'What best describes you?',
+                  'Where are you based?',
+                  'What are your main skills?',
+                  'Set up your profile',
+                  'Secure your account',
+                  'Verify your email',
+                ][currentStep - 1]}
               </h1>
 
-              {/* Step 1 — Name */}
+              {/* ── Step 1 — Name ── */}
               {currentStep === 1 && (
                 <div className="form-anim" style={{ animationDelay: '0.16s' }}>
                   <label className="block text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-2">Full name</label>
@@ -341,7 +423,7 @@ export default function SignupPage() {
                 </div>
               )}
 
-              {/* Step 2 — Role */}
+              {/* ── Step 2 — Role ── */}
               {currentStep === 2 && (
                 <div className="form-anim" style={{ animationDelay: '0.16s' }}>
                   <div className="grid grid-cols-2 gap-2.5 mb-4">
@@ -362,25 +444,17 @@ export default function SignupPage() {
                   </div>
                   {formData.role === 'other' && (
                     <div className="mb-8">
-                      <label className="block text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-2">
-                        Describe your role
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Lighting Technician, Stunt Coordinator…"
-                        className="field-input"
-                        value={otherRoleText}
-                        onChange={(e) => setOtherRoleText(e.target.value)}
-                        maxLength={50}
-                        autoFocus
-                      />
+                      <label className="block text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-2">Describe your role</label>
+                      <input type="text" placeholder="e.g. Lighting Technician, Stunt Coordinator…"
+                        className="field-input" value={otherRoleText}
+                        onChange={(e) => setOtherRoleText(e.target.value)} maxLength={50} autoFocus />
                     </div>
                   )}
                   {formData.role !== 'other' && <div className="mb-4" />}
                 </div>
               )}
 
-              {/* Step 3 — Location */}
+              {/* ── Step 3 — Location ── */}
               {currentStep === 3 && (
                 <div className="form-anim" style={{ animationDelay: '0.16s' }}>
                   <label className="block text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-2">City</label>
@@ -394,13 +468,12 @@ export default function SignupPage() {
                 </div>
               )}
 
-              {/* Step 4 — Skills */}
+              {/* ── Step 4 — Skills ── */}
               {currentStep === 4 && (
                 <div className="form-anim" style={{ animationDelay: '0.16s' }}>
                   <label className="block text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-2">Add a skill</label>
                   <input type="text" placeholder="Type a skill and press Enter"
-                    className="field-input mb-4"
-                    value={skillInput}
+                    className="field-input mb-4" value={skillInput}
                     onChange={(e) => setSkillInput(e.target.value)}
                     onKeyDown={handleAddSkill} />
                   <div className="flex flex-wrap gap-2 mb-4 min-h-[32px]">
@@ -416,24 +489,20 @@ export default function SignupPage() {
                 </div>
               )}
 
-              {/* Step 5 — Account */}
+              {/* ── Step 5 — Username + DOB + Gender ── */}
               {currentStep === 5 && (
                 <div className="form-anim" style={{ animationDelay: '0.16s' }}>
                   <label className="block text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-2">Username</label>
                   <div className="relative mb-1">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#a3a39e] text-sm pointer-events-none">@</span>
-                    <input
-                      type="text"
-                      placeholder="your_username"
-                      className="field-input pl-8"
+                    <input type="text" placeholder="your_username" className="field-input pl-8"
                       value={formData.username}
                       onChange={(e) => {
                         const val = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
                         setFormData({ ...formData, username: val });
                         setUsernameError(validateUsername(val));
                       }}
-                      maxLength={30}
-                    />
+                      maxLength={30} />
                   </div>
                   {usernameError
                     ? <p className="text-xs text-red-400 mb-4">{usernameError}</p>
@@ -441,102 +510,131 @@ export default function SignupPage() {
                       ? <p className="text-xs text-green-600 mb-4">Looks good!</p>
                       : <p className="text-xs text-[#a3a39e] mb-4">Letters, numbers, and underscores only.</p>
                   }
-                  <label className="block text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-2">Email address</label>
-                  <input type="email" placeholder="you@example.com" className="field-input mb-4"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
-                  <label className="block text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-2">Password</label>
-                  <input type="password" placeholder="Min. 8 characters" className="field-input mb-2"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })} />
-                  <p className="text-xs text-[#a3a39e] mb-4">At least 8 characters. Never shared with anyone.</p>
 
                   <label className="block text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-2">
                     Date of Birth <span className="text-red-500 normal-case">· required</span>
                   </label>
-                  <input
-                    type="date"
-                    className="field-input mb-1"
+                  <input type="date" className="field-input mb-1"
                     value={formData.dateOfBirth}
                     max={new Date().toISOString().split('T')[0]}
-                    onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
-                  />
-                  <p className="text-xs text-[#a3a39e] mb-4">Used to confirm your age and protect minors. Never shown publicly.</p>
+                    onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })} />
+                  <p className="text-xs text-[#a3a39e] mb-4">Used to confirm your age. Never shown publicly.</p>
 
                   <label className="block text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-2">Gender</label>
-                  <select
-                    className="field-input mb-1"
-                    value={formData.gender}
-                    onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
-                  >
+                  <select className="field-input mb-1" value={formData.gender}
+                    onChange={(e) => setFormData({ ...formData, gender: e.target.value })}>
                     <option value="">Prefer not to say</option>
                     <option value="male">Male</option>
                     <option value="female">Female</option>
                     <option value="non-binary">Non-binary</option>
                     <option value="prefer-not-to-say">Prefer not to say</option>
                   </select>
-                  <p className="text-xs text-[#a3a39e] mb-4">Optional. Never shown publicly.</p>
-
-                  <div className="p-4 bg-[#f5f5f3] rounded-xl mb-4">
-                    <p className="text-xs text-[#6b6b66] leading-relaxed">
-                      📱 <strong className="text-[#111110]">Phone verification</strong> is the next step after email. You can skip it now but it's required before posting projects.
-                    </p>
-                  </div>
+                  <p className="text-xs text-[#a3a39e] mb-8">Optional. Never shown publicly.</p>
                 </div>
               )}
 
-              {/* Step 6 — Verification summary */}
+              {/* ── Step 6 — Email + Password ── */}
               {currentStep === 6 && (
                 <div className="form-anim" style={{ animationDelay: '0.16s' }}>
-                  <div className="flex flex-col gap-3 mb-6">
-                    {[
-                      { icon: '📧', label: 'Email', detail: formData.email || '—', note: 'We\'ll send a 6-digit code to verify' },
-                      { icon: '🪪', label: 'Date of Birth', detail: formData.dateOfBirth || '(not entered)', note: formData.dateOfBirth ? 'Confirmed ✓' : 'Go back and add your date of birth' },
-                      { icon: '📱', label: 'Phone', detail: 'Verify after email', note: 'You\'ll add and verify your phone on the next screen — or skip and do it later' },
-                    ].map((item) => (
-                      <div key={item.label} className="flex items-start gap-3 p-4 border border-[#e0e0dd] rounded-xl">
-                        <span className="text-xl mt-0.5">{item.icon}</span>
-                        <div>
-                          <p className="text-sm font-semibold text-[#111110]">{item.label}: <span className="font-normal text-[#6b6b66]">{item.detail}</span></p>
-                          <p className="text-xs text-[#a3a39e] mt-0.5">{item.note}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl mb-6">
-                    <p className="text-xs text-amber-800 font-semibold mb-1">⚠️ Verification required to post projects</p>
-                    <p className="text-xs text-amber-700">After creating your account, you must verify your email and phone before you can post a project or apply to paid opportunities.</p>
-                  </div>
+                  <label className="block text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-2">Email address</label>
+                  <input type="email" placeholder="you@example.com" className="field-input mb-4"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+
+                  <label className="block text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-2">Password</label>
+                  <input type="password" placeholder="Min. 8 characters" className="field-input mb-2"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })} />
+                  <p className="text-xs text-[#a3a39e] mb-8">At least 8 characters. Never shared with anyone.</p>
                 </div>
               )}
 
-              {/* Buttons */}
-              <div className="form-anim flex gap-3" style={{ animationDelay: '0.24s' }}>
-                {currentStep > 1 && (
-                  <button onClick={() => setCurrentStep(currentStep - 1)}
-                    className="flex-1 border border-[#e0e0dd] text-[#6b6b66] text-sm font-medium py-3 hover:border-[#111110] hover:text-[#111110] transition">
-                    ← Back
-                  </button>
-                )}
-                {currentStep < 6 ? (
-                  <button onClick={handleContinue}
-                    className="flex-1 bg-[#111110] text-white text-sm font-medium py-3 hover:bg-[#2d2d2b] transition">
-                    Continue →
-                  </button>
-                ) : (
-                  <button onClick={googleStep ? handleGoogleFinish : handleCreateAccount} disabled={isLoading}
-                    className="flex-1 bg-[#111110] text-white text-sm font-medium py-3 hover:bg-[#2d2d2b] transition disabled:opacity-60">
-                    {isLoading ? (
+              {/* ── Step 7 — Email OTP ── */}
+              {currentStep === 7 && (
+                <div className="form-anim" style={{ animationDelay: '0.16s' }}>
+                  <p className="text-sm text-[#6b6b66] mb-6 leading-relaxed">
+                    We sent a 6-digit code to{' '}
+                    <strong className="text-[#111110]">{formData.email}</strong>.
+                    Enter it below to activate your account.
+                  </p>
+
+                  {/* OTP inputs */}
+                  <div className="flex gap-2 justify-between mb-6" onPaste={handleOtpPaste}>
+                    {otpCode.map((digit, idx) => (
+                      <input
+                        key={idx}
+                        ref={(el) => (otpRefs.current[idx] = el)}
+                        type="text" inputMode="numeric" maxLength={1}
+                        value={digit}
+                        onChange={(e) => handleOtpInput(idx, e.target.value)}
+                        onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                        className={`otp-box ${digit ? 'filled' : ''}`}
+                        autoFocus={idx === 0}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Verify button */}
+                  <button
+                    onClick={handleVerifyEmail}
+                    disabled={otpVerifying || otpCode.join('').length < 6}
+                    className="w-full bg-[#111110] text-white text-sm font-medium py-3.5 hover:bg-[#2d2d2b] transition disabled:opacity-50 mb-4">
+                    {otpVerifying ? (
                       <span className="flex items-center justify-center gap-2">
                         <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Creating…
+                        Verifying…
                       </span>
-                    ) : 'Create Account & Verify →'}
+                    ) : 'Verify Email →'}
                   </button>
-                )}
-              </div>
 
-              {/* Google Sign-Up — shown on step 1 only, not in google flow */}
+                  {/* Resend */}
+                  <p className="text-center text-sm text-[#6b6b66] mb-6">
+                    Didn't receive it?{' '}
+                    <button onClick={handleResendOtp} disabled={otpResending || otpCountdown > 0}
+                      className="text-[#111110] font-semibold hover:underline disabled:opacity-50 disabled:no-underline">
+                      {otpResending ? 'Sending…' : otpCountdown > 0 ? `Resend in ${otpCountdown}s` : 'Resend code'}
+                    </button>
+                  </p>
+
+                  {/* Skip */}
+                  <p className="text-center text-xs text-[#a3a39e]">
+                    <Link href="/dashboard" className="hover:text-[#6b6b66] transition-colors">
+                      Skip for now — verify later from dashboard
+                    </Link>
+                  </p>
+                </div>
+              )}
+
+              {/* ── Buttons ── */}
+              {currentStep < 7 && (
+                <div className="form-anim flex gap-3" style={{ animationDelay: '0.24s' }}>
+                  {currentStep > 1 && (
+                    <button onClick={() => setCurrentStep(currentStep - 1)}
+                      className="flex-1 border border-[#e0e0dd] text-[#6b6b66] text-sm font-medium py-3 hover:border-[#111110] hover:text-[#111110] transition">
+                      ← Back
+                    </button>
+                  )}
+                  {currentStep < 6 ? (
+                    <button onClick={handleContinue}
+                      className="flex-1 bg-[#111110] text-white text-sm font-medium py-3 hover:bg-[#2d2d2b] transition">
+                      Continue →
+                    </button>
+                  ) : (
+                    /* Step 6 — create account */
+                    <button onClick={googleStep ? handleGoogleFinish : handleCreateAccount} disabled={isLoading}
+                      className="flex-1 bg-[#111110] text-white text-sm font-medium py-3 hover:bg-[#2d2d2b] transition disabled:opacity-60">
+                      {isLoading ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Creating…
+                        </span>
+                      ) : 'Create Account →'}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Sign in link — shown on step 6 */}
               {currentStep === 6 && (
                 <p className="text-xs text-center mt-5 text-[#6b6b66]">
                   Already have an account?{' '}
@@ -544,6 +642,7 @@ export default function SignupPage() {
                 </p>
               )}
 
+              {/* Google sign-up — step 1 only */}
               {currentStep === 1 && !googleStep && (
                 <div className="mt-5">
                   <div className="flex items-center gap-3 mb-4">
@@ -556,18 +655,23 @@ export default function SignupPage() {
                     {googleLoading ? (
                       <span className="w-4 h-4 border-2 border-gray-300 border-t-gray-700 rounded-full animate-spin" />
                     ) : (
-                      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v8.51h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.14z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="#FBBC05" d="M10.53 28.59c-.5-1.45-.79-3-.79-4.59s.29-3.14.79-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.55 10.78l7.98-6.19z"/><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.55 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/></svg>
+                      <svg width="18" height="18" viewBox="0 0 48 48">
+                        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v8.51h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.14z"/>
+                        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                        <path fill="#FBBC05" d="M10.53 28.59c-.5-1.45-.79-3-.79-4.59s.29-3.14.79-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.55 10.78l7.98-6.19z"/>
+                        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.55 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                      </svg>
                     )}
                     Sign up with Google
                   </button>
                 </div>
               )}
 
-              {/* Google finish — pick username */}
+              {/* Google finish hint */}
               {googleStep && currentStep === 5 && (
                 <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-xl text-sm">
                   <p className="font-semibold text-blue-800 mb-1">🎉 Google account connected!</p>
-                  <p className="text-blue-600 text-xs">Choose a username above then click <strong>Create Account</strong>.</p>
+                  <p className="text-blue-600 text-xs">Choose a username above then click <strong>Continue</strong>.</p>
                 </div>
               )}
 
@@ -581,7 +685,6 @@ export default function SignupPage() {
           className="hidden md:flex w-[52%] flex-col justify-between p-14 relative overflow-hidden panel-anim"
           style={{ backgroundColor: panel.bg }}
         >
-          {/* Dark step dot grid */}
           {panel.dark && (
             <div className="absolute inset-0 pointer-events-none"
               style={{
@@ -590,12 +693,10 @@ export default function SignupPage() {
               }} />
           )}
 
-          {/* Top label */}
           <p className={`relative text-xs uppercase tracking-widest font-medium ${panel.dark ? 'text-[#444442]' : 'text-[#a3a39e]'}`}>
             {panel.label}
           </p>
 
-          {/* Main content */}
           <div className="relative">
             <h2 className={`text-3xl md:text-4xl font-[Playfair_Display] leading-snug mb-5 ${panel.dark ? 'text-white' : 'text-[#111110]'}`}>
               {panel.heading}
@@ -603,8 +704,6 @@ export default function SignupPage() {
             <p className="text-sm leading-relaxed mb-10 max-w-xs text-[#6b6b66]">
               {panel.body}
             </p>
-
-            {/* Safety card */}
             <div className={`p-5 ${panel.dark ? 'bg-white/5 border border-white/10' : 'bg-white border border-[#efefed]'}`}>
               <p className={`text-xs font-semibold uppercase tracking-widest mb-4 ${panel.dark ? 'text-[#6b6b66]' : 'text-[#111110]'}`}>
                 {panel.safety.title}
@@ -620,9 +719,9 @@ export default function SignupPage() {
             </div>
           </div>
 
-          {/* Step progress dots */}
+          {/* Step dots */}
           <div className="relative flex items-center gap-2">
-            {[1, 2, 3, 4, 5, 6].map((s) => (
+            {Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map((s) => (
               <div key={s}
                 className={`h-1 rounded-full transition-all duration-300 ${
                   s === currentStep
