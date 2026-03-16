@@ -27,6 +27,8 @@ const PUBLIC_PATHS = [
   '/signup',
   '/forgot-password',
   '/reset-password',
+  '/verify-email',
+  '/verify-phone',
 ];
 
 export function middleware(request) {

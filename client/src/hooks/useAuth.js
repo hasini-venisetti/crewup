@@ -34,8 +34,13 @@ export function AuthProvider({ children }) {
 
   const register = async (formData) => {
     const { data } = await authAPI.register(formData);
-    saveAuth(data.token, data.user);
-    setUser(data.user);
+    if (!data?.success) {
+      throw new Error(data?.message || 'Registration failed');
+    }
+    if (data.token && data.user) {
+      saveAuth(data.token, data.user);
+      setUser(data.user);
+    }
     return data;
   };
 
