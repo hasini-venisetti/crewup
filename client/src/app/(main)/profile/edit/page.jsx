@@ -16,7 +16,14 @@ const AVAIL_OPTIONS = [
   { value: 'open-to-offers', label: '🟡 Open to Offers',  desc: 'Interested but not actively looking' },
   { value: 'busy',           label: '🔴 Currently Busy',  desc: 'Not taking new projects right now' },
 ];
-const PORTFOLIO_TYPES = ['video','image','audio','link','other'];
+const PORTFOLIO_TYPES = [
+  { value: 'video',       label: '▶  Video',       desc: 'Film reel, YouTube, Vimeo' },
+  { value: 'image',       label: '🖼  Image',       desc: 'Photo, design, artwork' },
+  { value: 'audio',       label: '🎵  Audio',       desc: 'Music, podcast, demo' },
+  { value: 'certificate', label: '🏆  Certificate', desc: 'Course, award, credential' },
+  { value: 'link',        label: '🔗  Link',        desc: 'Website, article, project' },
+  { value: 'other',       label: '📁  Other',       desc: 'Anything else' },
+];
 const COMMON_SKILLS = ['Premiere Pro','After Effects','DaVinci Resolve','Final Cut Pro','Lightroom','Photoshop','Illustrator','Blender','Cinema 4D','Audacity','Logic Pro','Ableton','Avid','CapCut','Canva','Photography','Videography','Color Grading','Sound Mixing','Motion Graphics','3D Modeling','Scriptwriting','Storyboarding','Directing','Acting','Voice Acting','Narration'];
 const MENTOR_FIELDS = ['Film', 'Music', 'Photography', 'Writing', 'Design', 'Editing', 'Acting', 'Animation'];
 
@@ -50,7 +57,7 @@ export default function EditProfilePage() {
   const [uploadingPic, setUploadingPic]     = useState(false);
   const picInputRef = useRef(null);
   const [addingItem, setAddingItem] = useState(false);
-  const [newItem, setNewItem]       = useState({ title: '', description: '', type: 'other', link: '', tags: '' });
+  const [newItem, setNewItem]       = useState({ title: '', description: '', type: 'other', link: '', tags: '', issuer: '', issueDate: '', expiryDate: '', credentialId: '' });
   const [deletingId, setDeletingId] = useState('');
   const [availSlots, setAvailSlots] = useState([]);        // { startDate, endDate, note }
   const [newSlot, setNewSlot]       = useState({ startDate: '', endDate: '', note: '' });
@@ -154,12 +161,13 @@ export default function EditProfilePage() {
 
   const handleAddPortfolioItem = async () => {
     if (!newItem.title.trim()) return toast.error('Title is required');
+    if (newItem.type === 'certificate' && !newItem.issuer.trim()) return toast.error('Issuing organisation is required for certificates');
     try {
       const tags = newItem.tags.split(',').map((t) => t.trim()).filter(Boolean);
       await portfolioAPI.add({ ...newItem, tags });
       const { data } = await profileAPI.getMe();
       setPortfolio(data.data.portfolio || []);
-      setNewItem({ title: '', description: '', type: 'other', link: '', tags: '' });
+      setNewItem({ title: '', description: '', type: 'other', link: '', tags: '', issuer: '', issueDate: '', expiryDate: '', credentialId: '' });
       setAddingItem(false);
       toast.success('Portfolio item added!');
     } catch { toast.error('Failed to add item'); }
@@ -486,41 +494,99 @@ export default function EditProfilePage() {
               </div>
               {addingItem && (
                 <div className="border border-[#6C63FF]/30 bg-[#f0eeff]/20 rounded-xl p-6 mb-6 flex flex-col gap-4">
-                  <h3 className="font-semibold text-[#111110] text-sm">New Portfolio Item</h3>
-                  <div>
-                    <label className={labelCls}>Title *</label>
-                    <input className={inputCls} placeholder="e.g. Short Film Reel 2024" value={newItem.title}
-                      onChange={(e) => setNewItem({ ...newItem, title: e.target.value })} />
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">
+                      {PORTFOLIO_TYPES.find(t => t.value === newItem.type)?.label?.split(' ')[0] || '📁'}
+                    </span>
+                    <h3 className="font-semibold text-[#111110] text-sm">Add Portfolio Item</h3>
                   </div>
+
+                  {/* Type selector — card buttons */}
+                  <div>
+                    <label className={labelCls}>Type</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {PORTFOLIO_TYPES.map((t) => (
+                        <button key={t.value} type="button"
+                          onClick={() => setNewItem({ ...newItem, type: t.value })}
+                          className={`flex flex-col items-start px-3 py-2.5 rounded-xl border text-left transition-all ${
+                            newItem.type === t.value
+                              ? 'border-[#6C63FF] bg-[#f0eeff] text-[#4740CC]'
+                              : 'border-[#e0e0dd] bg-white text-[#6b6b66] hover:border-[#c9c4ff]'
+                          }`}>
+                          <span className="text-base mb-0.5">{t.label.split(' ')[0]}</span>
+                          <span className="text-xs font-semibold">{t.label.split('  ')[1]}</span>
+                          <span className="text-[10px] text-[#a3a39e] leading-tight mt-0.5">{t.desc}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className={labelCls}>
+                      {newItem.type === 'certificate' ? 'Certificate / Award Name *' : 'Title *'}
+                    </label>
+                    <input className={inputCls}
+                      placeholder={newItem.type === 'certificate' ? 'e.g. Cinematography Fundamentals' : 'e.g. Short Film Reel 2024'}
+                      value={newItem.title} onChange={(e) => setNewItem({ ...newItem, title: e.target.value })} />
+                  </div>
+
+                  {/* Certificate-specific fields */}
+                  {newItem.type === 'certificate' && (
+                    <>
+                      <div>
+                        <label className={labelCls}>Issued by *</label>
+                        <input className={inputCls} placeholder="e.g. Coursera, Adobe, FTII, Skillshare"
+                          value={newItem.issuer} onChange={(e) => setNewItem({ ...newItem, issuer: e.target.value })} />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className={labelCls}>Issue Date</label>
+                          <input type="date" className={inputCls}
+                            value={newItem.issueDate} onChange={(e) => setNewItem({ ...newItem, issueDate: e.target.value })} />
+                        </div>
+                        <div>
+                          <label className={labelCls}>Expiry Date <span className="text-[#a3a39e] normal-case">(optional)</span></label>
+                          <input type="date" className={inputCls}
+                            value={newItem.expiryDate} onChange={(e) => setNewItem({ ...newItem, expiryDate: e.target.value })} />
+                        </div>
+                      </div>
+                      <div>
+                        <label className={labelCls}>Credential ID <span className="text-[#a3a39e] normal-case">(optional)</span></label>
+                        <input className={inputCls} placeholder="e.g. ABC-123456"
+                          value={newItem.credentialId} onChange={(e) => setNewItem({ ...newItem, credentialId: e.target.value })} />
+                      </div>
+                    </>
+                  )}
+
                   <div>
                     <label className={labelCls}>Description</label>
-                    <textarea className={`${inputCls} resize-none h-20`} placeholder="Brief description of this work…"
+                    <textarea className={`${inputCls} resize-none h-20`}
+                      placeholder={newItem.type === 'certificate' ? 'What you learned or achieved…' : 'Brief description of this work…'}
                       value={newItem.description} onChange={(e) => setNewItem({ ...newItem, description: e.target.value })} />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className={labelCls}>Type</label>
-                      <select className={inputCls} value={newItem.type} onChange={(e) => setNewItem({ ...newItem, type: e.target.value })}>
-                        {PORTFOLIO_TYPES.map((t) => <option key={t} value={t} className="capitalize">{t}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className={labelCls}>Link <span className="text-[#a3a39e] normal-case">(optional)</span></label>
-                      <input className={inputCls} placeholder="https://…" value={newItem.link}
-                        onChange={(e) => setNewItem({ ...newItem, link: e.target.value })} />
-                    </div>
+
+                  <div>
+                    <label className={labelCls}>
+                      {newItem.type === 'certificate' ? 'Credential URL' : 'Link'}
+                      <span className="text-[#a3a39e] normal-case ml-1">(optional)</span>
+                    </label>
+                    <input className={inputCls}
+                      placeholder={newItem.type === 'certificate' ? 'https://certificate-verify-link…' : 'https://…'}
+                      value={newItem.link} onChange={(e) => setNewItem({ ...newItem, link: e.target.value })} />
                   </div>
+
                   <div>
                     <label className={labelCls}>Tags <span className="text-[#a3a39e] normal-case">(comma-separated)</span></label>
                     <input className={inputCls} placeholder="e.g. cinematography, drama, 2024" value={newItem.tags}
                       onChange={(e) => setNewItem({ ...newItem, tags: e.target.value })} />
                   </div>
+
                   <div className="flex gap-3">
                     <button onClick={handleAddPortfolioItem}
-                      className="text-sm font-semibold px-4 py-2 rounded-lg bg-[#6C63FF] hover:bg-[#7C75FF] text-white transition-all">
+                      className="text-sm font-semibold px-5 py-2 rounded-lg bg-[#6C63FF] hover:bg-[#7C75FF] text-white transition-all">
                       Add to Portfolio
                     </button>
-                    <button onClick={() => setAddingItem(false)}
+                    <button onClick={() => { setAddingItem(false); setNewItem({ title: '', description: '', type: 'other', link: '', tags: '', issuer: '', issueDate: '', expiryDate: '', credentialId: '' }); }}
                       className="text-sm font-semibold px-4 py-2 rounded-lg border border-[#e0e0dd] text-[#111110] hover:border-[#0e0e0d] transition-all">
                       Cancel
                     </button>
@@ -530,10 +596,22 @@ export default function EditProfilePage() {
               {portfolio.length > 0 ? (
                 <div className="flex flex-col gap-3">
                   {portfolio.map((item) => (
-                    <div key={item._id} className="flex items-start gap-4 p-4 border border-[#efefed] hover:border-[#d0d0ce] rounded-xl transition-all">
-                      <span className="text-2xl flex-shrink-0">{{'video':'▶','image':'🖼','audio':'🎵','link':'🔗','other':'📁'}[item.type] || '📁'}</span>
+                    <div key={item._id} className={`flex items-start gap-4 p-4 border rounded-xl transition-all ${item.type === 'certificate' ? 'border-[#fde68a] bg-[#fffbeb] hover:border-[#fcd34d]' : 'border-[#efefed] hover:border-[#d0d0ce]'}`}>
+                      <span className="text-2xl flex-shrink-0">{{'video':'▶','image':'🖼','audio':'🎵','link':'🔗','certificate':'🏆','other':'📁'}[item.type] || '📁'}</span>
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm text-[#111110]">{item.title}</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-semibold text-sm text-[#111110]">{item.title}</p>
+                          <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-[#f7f7f6] text-[#a3a39e] border border-[#e0e0dd] capitalize">{item.type}</span>
+                        </div>
+                        {item.type === 'certificate' && item.issuer && (
+                          <p className="text-xs text-[#92400e] font-semibold mt-0.5">Issued by {item.issuer}</p>
+                        )}
+                        {item.type === 'certificate' && item.issueDate && (
+                          <p className="text-xs text-[#a3a39e] mt-0.5">
+                            {new Date(item.issueDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                            {item.expiryDate && ` — expires ${new Date(item.expiryDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`}
+                          </p>
+                        )}
                         {item.description && <p className="text-xs text-[#6b6b66] mt-0.5 line-clamp-1">{item.description}</p>}
                         {item.link && <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-xs text-[#5750D4] hover:text-[#4740CC] mt-1 block truncate">{item.link}</a>}
                         {item.tags?.length > 0 && (

@@ -64,12 +64,17 @@ const profileSchema = new mongoose.Schema(
     ],
     portfolio: [
       {
-        title:       { type: String, required: true, trim: true },
-        description: { type: String, default: '' },
-        type:        { type: String, enum: ['video', 'image', 'audio', 'link', 'other'], default: 'other' },
-        link:        { type: String, default: '' },
-        tags:        { type: [String], default: [] },
-        createdAt:   { type: Date, default: Date.now },
+        title:        { type: String, required: true, trim: true },
+        description:  { type: String, default: '' },
+        type:         { type: String, enum: ['video', 'image', 'audio', 'link', 'certificate', 'other'], default: 'other' },
+        link:         { type: String, default: '' },
+        tags:         { type: [String], default: [] },
+        // Certificate-specific fields
+        issuer:       { type: String, default: '' },   // e.g. "Coursera", "Adobe", "FTII"
+        issueDate:    { type: String, default: '' },   // YYYY-MM-DD
+        expiryDate:   { type: String, default: '' },   // YYYY-MM-DD (optional)
+        credentialId: { type: String, default: '' },   // optional unique ID
+        createdAt:    { type: Date, default: Date.now },
       },
     ],
 

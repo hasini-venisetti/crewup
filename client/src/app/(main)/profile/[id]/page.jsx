@@ -18,13 +18,14 @@ const AVAIL_CONFIG = {
   'busy':           { label: 'Currently Busy', dot: 'bg-red-500',    badge: 'bg-red-50 text-red-700 border-red-200' },
 };
 
-const TYPE_ICON  = { video: '▶', image: '🖼', audio: '🎵', link: '🔗', other: '📁' };
+const TYPE_ICON  = { video: '▶', image: '🖼', audio: '🎵', link: '🔗', certificate: '🏆', other: '📁' };
 const TYPE_COLOR = {
-  video: 'bg-[#f0eeff] border-[#c9c4ff] text-[#6C63FF]',
-  image: 'bg-[#eff6ff] border-[#bfdbfe] text-[#2563eb]',
-  audio: 'bg-[#f0fdf4] border-[#bbf7d0] text-[#16a34a]',
-  link:  'bg-[#fdf2f8] border-[#f5d0fe] text-[#a21caf]',
-  other: 'bg-[#f7f7f6] border-[#e0e0dd] text-[#6b6b66]',
+  video:       'bg-[#f0eeff] border-[#c9c4ff] text-[#6C63FF]',
+  image:       'bg-[#eff6ff] border-[#bfdbfe] text-[#2563eb]',
+  audio:       'bg-[#f0fdf4] border-[#bbf7d0] text-[#16a34a]',
+  link:        'bg-[#fdf2f8] border-[#f5d0fe] text-[#a21caf]',
+  certificate: 'bg-[#fffbeb] border-[#fde68a] text-[#d97706]',
+  other:       'bg-[#f7f7f6] border-[#e0e0dd] text-[#6b6b66]',
 };
 const SOCIAL_ICON = {
   instagram: { label: 'Instagram', icon: '📸' },
@@ -84,6 +85,7 @@ export default function ProfilePage() {
   const [invitedMap, setInvitedMap]             = useState({});
   const [expandedProject, setExpandedProject]  = useState(null);
   const [showReportModal, setShowReportModal]   = useState(false);
+  const [portfolioFilter, setPortfolioFilter]   = useState('all');
 
   // Load message-request status when viewing another user's profile
   useEffect(() => {
@@ -716,90 +718,230 @@ export default function ProfilePage() {
             })()}
           </div>
 
-          {/* Portfolio */}
-          <div className="md:col-span-2">
-            <div className="bg-white rounded-xl border border-[#efefed] p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#a3a39e] flex items-center gap-2">
-                    <span className="w-3 h-0.5 bg-[#6C63FF] inline-block rounded-full" />
-                    Portfolio
-                  </h2>
-                  {portfolio?.length > 0 && (
-                    <span className="text-[10px] font-bold bg-[#f0eeff] text-[#5750D4] border border-[#c9c4ff] px-2 py-0.5 rounded-full">
-                      {portfolio.length}
-                    </span>
-                  )}
+        </div>
+
+        {/* ── PORTFOLIO — full-width professional section ── */}
+        {(portfolio?.length > 0 || isOwnProfile) && (() => {
+          const certCount   = portfolio?.filter(i => i.type === 'certificate').length || 0;
+          const typesPresent = ['all', ...new Set((portfolio || []).map(i => i.type))];
+          const filtered    = portfolioFilter === 'all' ? (portfolio || []) : (portfolio || []).filter(i => i.type === portfolioFilter);
+          const certs       = filtered.filter(i => i.type === 'certificate');
+          const works       = filtered.filter(i => i.type !== 'certificate');
+
+          return (
+            <div className="mt-8">
+              {/* Section header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+                <div className="flex items-center gap-3">
+                  <div>
+                    <h2 className="text-xl font-[Playfair_Display] text-[#0e0e0d] flex items-center gap-2">
+                      Work & Credentials
+                      {portfolio?.length > 0 && (
+                        <span className="text-sm font-sans font-bold bg-[#0e0e0d] text-white px-2.5 py-0.5 rounded-full">{portfolio.length}</span>
+                      )}
+                    </h2>
+                    {certCount > 0 && (
+                      <p className="text-xs text-[#a3a39e] mt-0.5">{certCount} certificate{certCount !== 1 ? 's' : ''} · {(portfolio?.length || 0) - certCount} work sample{(portfolio?.length || 0) - certCount !== 1 ? 's' : ''}</p>
+                    )}
+                  </div>
                 </div>
-                {isOwnProfile && (
-                  <Link href="/profile/edit#portfolio"
-                    className="text-xs font-semibold text-[#6C63FF] hover:text-[#4740CC] transition-colors flex items-center gap-1">
-                    + Add Work
-                  </Link>
-                )}
+                <div className="flex items-center gap-3">
+                  {isOwnProfile && (
+                    <Link href="/profile/edit#portfolio"
+                      className="text-xs font-semibold text-white bg-[#0e0e0d] hover:bg-[#2d2d2b] px-4 py-2 rounded-lg transition-all flex items-center gap-1.5">
+                      + Add Work
+                    </Link>
+                  )}
+                  {/* Share profile */}
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(window.location.href);
+                      toast.success('Profile link copied!');
+                    }}
+                    className="text-xs font-semibold text-[#6b6b66] border border-[#e0e0dd] hover:border-[#6C63FF] hover:text-[#6C63FF] px-4 py-2 rounded-lg transition-all flex items-center gap-1.5">
+                    🔗 Share Portfolio
+                  </button>
+                </div>
               </div>
-              {portfolio?.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {portfolio.map((item) => {
-                    const typeColor = TYPE_COLOR[item.type] || TYPE_COLOR.other;
-                    const typeIcon  = TYPE_ICON[item.type] || '📁';
+
+              {/* Filter tabs */}
+              {portfolio?.length > 0 && typesPresent.length > 2 && (
+                <div className="flex gap-2 flex-wrap mb-6">
+                  {typesPresent.map((type) => {
+                    const count = type === 'all' ? portfolio.length : portfolio.filter(i => i.type === type).length;
                     return (
-                      <div key={item._id} className="group relative overflow-hidden rounded-xl border border-[#efefed] hover:border-[#c9c4ff] hover:shadow-lg bg-white transition-all duration-200">
-                        <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-[#6C63FF] to-[#c9c4ff] rounded-l-xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <div className="p-4">
-                          <div className="flex items-start gap-3">
-                            <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 border text-lg font-bold ${typeColor}`}>
-                              {typeIcon}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-start justify-between gap-2 mb-1">
-                                <p className="font-bold text-sm text-[#111110] leading-snug">{item.title}</p>
-                                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border capitalize flex-shrink-0 ${typeColor}`}>
-                                  {item.type || 'other'}
-                                </span>
-                              </div>
-                              {item.description && <p className="text-xs text-[#6b6b66] line-clamp-2 leading-relaxed">{item.description}</p>}
-                              {item.tags?.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-2">
-                                  {item.tags.map((t) => (
-                                    <span key={t} className="text-[10px] bg-[#f7f7f6] text-[#6b6b66] px-2 py-0.5 rounded-full border border-[#efefed] font-medium">{t}</span>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          {item.link && (
-                            <a href={item.link.startsWith('http') ? item.link : `https://${item.link}`} target="_blank" rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 text-xs text-[#6C63FF] hover:text-[#4740CC] mt-3 font-semibold transition-colors group/link border border-[#e0e0dd] hover:border-[#c9c4ff] px-3 py-1.5 rounded-lg bg-[#fafaf9] hover:bg-[#f0eeff]">
-                              View Work
-                              <span className="transition-transform group-hover/link:translate-x-0.5">→</span>
-                            </a>
-                          )}
-                        </div>
-                      </div>
+                      <button key={type} onClick={() => setPortfolioFilter(type)}
+                        className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-full border transition-all capitalize ${
+                          portfolioFilter === type
+                            ? 'bg-[#0e0e0d] border-[#0e0e0d] text-white'
+                            : 'bg-white border-[#e0e0dd] text-[#6b6b66] hover:border-[#0e0e0d] hover:text-[#111110]'
+                        }`}>
+                        {type === 'all' ? '✦ All' : `${TYPE_ICON[type] || '📁'} ${type}`}
+                        <span className={`text-[10px] ${portfolioFilter === type ? 'text-white/60' : 'text-[#a3a39e]'}`}>{count}</span>
+                      </button>
                     );
                   })}
                 </div>
-              ) : (
-                <div className="text-center py-14">
+              )}
+
+              {portfolio?.length === 0 ? (
+                <div className="text-center py-16 bg-white rounded-2xl border border-[#efefed]">
                   <div className="w-16 h-16 rounded-2xl bg-[#f0eeff] border border-[#c9c4ff] flex items-center justify-center text-3xl mx-auto mb-4">🎨</div>
-                  <p className="font-semibold text-sm text-[#111110] mb-1">
-                    {isOwnProfile ? 'Show your work' : 'No portfolio items yet'}
-                  </p>
-                  <p className="text-xs text-[#a3a39e] mb-5">
-                    {isOwnProfile ? 'Add videos, images, links and more to showcase your craft.' : 'This creator hasn\'t added portfolio items yet.'}
-                  </p>
-                  {isOwnProfile && (
-                    <Link href="/profile/edit#portfolio"
-                      className="inline-flex items-center gap-1.5 text-xs font-semibold bg-[#0e0e0d] text-white px-4 py-2 rounded-lg hover:bg-[#2d2d2b] transition-all">
-                      + Add Portfolio Item
-                    </Link>
+                  <p className="font-semibold text-sm text-[#111110] mb-1">No work added yet</p>
+                  <p className="text-xs text-[#a3a39e] mb-5 max-w-xs mx-auto">Add videos, images, certificates and links to showcase your skills to collaborators and studios.</p>
+                  <Link href="/profile/edit#portfolio"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold bg-[#0e0e0d] text-white px-4 py-2 rounded-lg hover:bg-[#2d2d2b] transition-all">
+                    + Add Portfolio Item
+                  </Link>
+                </div>
+              ) : filtered.length === 0 ? (
+                <div className="text-center py-10 text-[#a3a39e] text-sm">No items in this category.</div>
+              ) : (
+                <div className="flex flex-col gap-6">
+
+                  {/* ── Certificates ── */}
+                  {certs.length > 0 && (
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-[0.15em] text-[#a3a39e] mb-3 flex items-center gap-2">
+                        <span className="w-3 h-0.5 bg-[#d97706] inline-block rounded-full" />
+                        Certificates & Awards
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {certs.map((item) => {
+                          const isExpired = item.expiryDate && new Date(item.expiryDate) < new Date();
+                          return (
+                            <div key={item._id} className="relative overflow-hidden rounded-xl border-2 border-[#fde68a] bg-gradient-to-br from-[#fffbeb] to-white p-5 hover:shadow-md transition-all">
+                              {/* Decorative corner */}
+                              <div className="absolute top-0 right-0 w-16 h-16 bg-[#fde68a]/30 rounded-full -translate-y-6 translate-x-6 pointer-events-none" />
+                              <div className="absolute top-3 right-3 w-8 h-8 rounded-full bg-[#fef3c7] border border-[#fde68a] flex items-center justify-center">
+                                <span className="text-sm">🏆</span>
+                              </div>
+                              <div className="pr-10">
+                                <p className="font-bold text-sm text-[#111110] leading-snug mb-1">{item.title}</p>
+                                {item.issuer && (
+                                  <p className="text-xs font-semibold text-[#92400e] mb-1">
+                                    Issued by {item.issuer}
+                                  </p>
+                                )}
+                                <div className="flex items-center gap-3 text-xs text-[#a3a39e] mb-2 flex-wrap">
+                                  {item.issueDate && (
+                                    <span>
+                                      {new Date(item.issueDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                                    </span>
+                                  )}
+                                  {item.expiryDate && (
+                                    <span className={`flex items-center gap-1 ${isExpired ? 'text-red-500' : 'text-green-600'}`}>
+                                      · {isExpired ? '⛔ Expired' : '✓ Valid until'} {new Date(item.expiryDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                                    </span>
+                                  )}
+                                  {!item.expiryDate && item.issueDate && (
+                                    <span className="text-green-600">· No expiry</span>
+                                  )}
+                                </div>
+                                {item.credentialId && (
+                                  <p className="text-[10px] text-[#a3a39e] font-mono mb-2">ID: {item.credentialId}</p>
+                                )}
+                                {item.description && (
+                                  <p className="text-xs text-[#6b6b66] line-clamp-2 leading-relaxed mb-2">{item.description}</p>
+                                )}
+                                {item.tags?.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mb-2">
+                                    {item.tags.map((t) => (
+                                      <span key={t} className="text-[10px] bg-[#fef9ee] text-[#92400e] px-2 py-0.5 rounded-full border border-[#fde68a] font-medium">{t}</span>
+                                    ))}
+                                  </div>
+                                )}
+                                {item.link && (
+                                  <a href={item.link.startsWith('http') ? item.link : `https://${item.link}`} target="_blank" rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-xs text-[#d97706] hover:text-[#b45309] font-semibold transition-colors">
+                                    Verify Credential →
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   )}
+
+                  {/* ── Work Samples ── */}
+                  {works.length > 0 && (
+                    <div>
+                      {certs.length > 0 && (
+                        <p className="text-xs font-bold uppercase tracking-[0.15em] text-[#a3a39e] mb-3 flex items-center gap-2">
+                          <span className="w-3 h-0.5 bg-[#6C63FF] inline-block rounded-full" />
+                          Work Samples
+                        </p>
+                      )}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                        {works.map((item) => {
+                          const typeColor = TYPE_COLOR[item.type] || TYPE_COLOR.other;
+                          const typeIcon  = TYPE_ICON[item.type] || '📁';
+                          // Extract YouTube thumbnail if it's a YouTube link
+                          const ytMatch = item.link?.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+                          const ytThumb = ytMatch ? `https://img.youtube.com/vi/${ytMatch[1]}/mqdefault.jpg` : null;
+
+                          return (
+                            <div key={item._id} className="group relative overflow-hidden rounded-xl border border-[#efefed] hover:border-[#c9c4ff] hover:shadow-lg bg-white transition-all duration-200">
+                              <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-[#6C63FF] to-[#c9c4ff] opacity-0 group-hover:opacity-100 transition-opacity" />
+                              {/* YouTube thumbnail */}
+                              {ytThumb && (
+                                <div className="relative w-full aspect-video overflow-hidden bg-[#111110]">
+                                  <img src={ytThumb} alt={item.title} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                                  <div className="absolute inset-0 flex items-center justify-center">
+                                    <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center shadow-lg">
+                                      <span className="text-white text-sm">▶</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                              <div className="p-4">
+                                <div className="flex items-start gap-3">
+                                  {!ytThumb && (
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border text-lg ${typeColor}`}>
+                                      {typeIcon}
+                                    </div>
+                                  )}
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-start justify-between gap-2 mb-1">
+                                      <p className="font-bold text-sm text-[#111110] leading-snug">{item.title}</p>
+                                      {ytThumb ? null : (
+                                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border capitalize flex-shrink-0 ${typeColor}`}>
+                                          {item.type}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {item.description && <p className="text-xs text-[#6b6b66] line-clamp-2 leading-relaxed">{item.description}</p>}
+                                    {item.tags?.length > 0 && (
+                                      <div className="flex flex-wrap gap-1 mt-2">
+                                        {item.tags.map((t) => (
+                                          <span key={t} className="text-[10px] bg-[#f7f7f6] text-[#6b6b66] px-2 py-0.5 rounded-full border border-[#efefed] font-medium">{t}</span>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                {item.link && (
+                                  <a href={item.link.startsWith('http') ? item.link : `https://${item.link}`} target="_blank" rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1.5 text-xs text-[#6C63FF] hover:text-[#4740CC] mt-3 font-semibold transition-colors group/link border border-[#e0e0dd] hover:border-[#c9c4ff] px-3 py-1.5 rounded-lg bg-[#fafaf9] hover:bg-[#f0eeff]">
+                                    {item.type === 'video' ? 'Watch' : item.type === 'audio' ? 'Listen' : 'View Work'}
+                                    <span className="transition-transform group-hover/link:translate-x-0.5">→</span>
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                 </div>
               )}
             </div>
-          </div>
-        </div>
+          );
+        })()}
 
         {/* ── FILMS ─────────────────────────────────────────────────── */}
         {(filmsLoading || films.length > 0) && (

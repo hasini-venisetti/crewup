@@ -97,12 +97,12 @@ const getMyProfile = async (req, res, next) => {
 // @access  Private
 const addPortfolioItem = async (req, res, next) => {
   try {
-    const { title, description, type, link, tags } = req.body;
+    const { title, description, type, link, tags, issuer, issueDate, expiryDate, credentialId } = req.body;
     if (!title) return res.status(400).json({ success: false, message: 'Title is required' });
 
     const profile = await Profile.findOneAndUpdate(
       { user: req.user._id },
-      { $push: { portfolio: { title, description, type, link, tags } } },
+      { $push: { portfolio: { title, description, type, link, tags, issuer, issueDate, expiryDate, credentialId } } },
       { new: true, runValidators: true }
     ).populate('user', 'name username role profileImage');
 
