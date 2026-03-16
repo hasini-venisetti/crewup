@@ -19,6 +19,13 @@ const AVAIL_CONFIG = {
 };
 
 const TYPE_ICON  = { video: '▶', image: '🖼', audio: '🎵', link: '🔗', other: '📁' };
+const TYPE_COLOR = {
+  video: 'bg-[#f0eeff] border-[#c9c4ff] text-[#6C63FF]',
+  image: 'bg-[#eff6ff] border-[#bfdbfe] text-[#2563eb]',
+  audio: 'bg-[#f0fdf4] border-[#bbf7d0] text-[#16a34a]',
+  link:  'bg-[#fdf2f8] border-[#f5d0fe] text-[#a21caf]',
+  other: 'bg-[#f7f7f6] border-[#e0e0dd] text-[#6b6b66]',
+};
 const SOCIAL_ICON = {
   instagram: { label: 'Instagram', icon: '📸' },
   youtube:   { label: 'YouTube',   icon: '▶' },
@@ -310,22 +317,24 @@ export default function ProfilePage() {
 
       {/* Verification completion banner — own profile only */}
       {missingForOwner.length > 0 && (
-        <div className="bg-amber-50 border-b-2 border-amber-300 px-4 py-3">
+        <div className="bg-gradient-to-r from-[#1a1035] to-[#0e0e0d] border-b border-[#6C63FF]/30 px-4 py-4">
           <div className="max-w-[900px] mx-auto">
-            <div className="flex items-start gap-3 mb-2">
-              <span className="text-xl mt-0.5">⚠️</span>
-              <div>
-                <p className="text-sm font-bold text-amber-900">Complete your verification to unlock full access</p>
-                <p className="text-xs text-amber-700 mt-0.5">You can't post projects or apply to paid opportunities until all three steps are done.</p>
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-xl bg-[#6C63FF]/20 border border-[#6C63FF]/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="text-sm">🔐</span>
               </div>
-            </div>
-            <div className="flex flex-wrap gap-2 mt-3 ml-8">
-              {missingForOwner.map((item) => (
-                <a key={item.key} href={item.href}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors">
-                  {item.icon} {item.label} →
-                </a>
-              ))}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-white">Complete your verification to unlock full access</p>
+                <p className="text-xs text-white/50 mt-0.5">You can't post or join projects until verification is complete.</p>
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {missingForOwner.map((item) => (
+                    <a key={item.key} href={item.href}
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 bg-[#6C63FF] hover:bg-[#7C75FF] text-white rounded-lg transition-colors shadow-sm shadow-[#6C63FF]/30">
+                      {item.icon} {item.label} →
+                    </a>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -504,36 +513,48 @@ export default function ProfilePage() {
                 </span>
               </div>
 
-              <p className="text-white/50 text-sm mb-1">
-                @{creator?.username}
-                {creator?.role && <><span className="mx-2 text-white/20">·</span><span className="capitalize text-white/70">{creator.role.replace('-', ' ')}</span></>}
-              </p>
+              <div className="flex items-center gap-2 flex-wrap mb-2">
+                <span className="text-white/40 text-sm">@{creator?.username}</span>
+                {creator?.role && (
+                  <span className="inline-flex items-center text-xs font-semibold px-2.5 py-0.5 rounded-full bg-white/8 border border-white/10 text-white/60 capitalize">
+                    {creator.role.replace('-', ' ')}
+                  </span>
+                )}
+                {experienceLevel && (
+                  <span className="inline-flex items-center text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[#6C63FF]/15 border border-[#6C63FF]/25 text-[#a09aff]">
+                    {EXP_LABEL[experienceLevel] || experienceLevel}
+                  </span>
+                )}
+              </div>
 
-              <div className="flex items-center gap-4 mb-2">
+              <div className="flex items-center gap-4 mb-3">
                 <button
                   onClick={handleShowFollowers}
                   className="text-xs text-white/40 hover:text-white/70 transition-colors cursor-pointer"
                 >
-                  <span className="font-semibold text-white/70">{followCounts.followers}</span> followers
+                  <span className="font-bold text-white/80">{followCounts.followers}</span> followers
                 </button>
                 <button
                   onClick={handleShowFollowing}
                   className="text-xs text-white/40 hover:text-white/70 transition-colors cursor-pointer"
                 >
-                  <span className="font-semibold text-white/70">{followCounts.following}</span> following
+                  <span className="font-bold text-white/80">{followCounts.following}</span> following
                 </button>
                 {avgRating && (
-                  <span className="text-xs text-[#7C75FF] font-semibold">⭐ {avgRating} ({reviews.length})</span>
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold bg-[#6C63FF]/15 border border-[#6C63FF]/25 text-[#a09aff] px-2.5 py-1 rounded-full">
+                    ⭐ {avgRating}
+                    <span className="text-white/30">({reviews.length})</span>
+                  </span>
                 )}
               </div>
 
               {(location?.city || location?.country) && (
-                <p className="text-sm text-white/40 mb-1">📍 {[location.city, location.country].filter(Boolean).join(', ')}</p>
+                <p className="text-sm text-white/40 mb-1 flex items-center gap-1">
+                  <span className="text-base">📍</span>
+                  {[location.city, location.country].filter(Boolean).join(', ')}
+                </p>
               )}
-              {experienceLevel && (
-                <p className="text-sm text-white/40">{EXP_LABEL[experienceLevel] || experienceLevel} level</p>
-              )}
-              {bio && <p className="text-white/60 text-sm leading-relaxed max-w-xl mt-3">{bio}</p>}
+              {bio && <p className="text-white/55 text-sm leading-relaxed max-w-xl mt-3 border-l-2 border-[#6C63FF]/30 pl-3">{bio}</p>}
             </div>
           </div>
 
@@ -568,10 +589,14 @@ export default function ProfilePage() {
           {/* Left column */}
           <div className="flex flex-col gap-5">
             {skills?.length > 0 && (
-              <div className="bg-white rounded-xl border border-[#efefed] p-6">
+              <div className="bg-white rounded-xl border border-[#efefed] p-6 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-20 h-20 bg-[#6C63FF]/4 rounded-full -translate-y-8 translate-x-8 pointer-events-none" />
                 <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#a3a39e] mb-4 flex items-center gap-2">
                   <span className="w-3 h-0.5 bg-[#6C63FF] inline-block rounded-full" />
                   Skills
+                  <span className="ml-auto text-[10px] font-bold bg-[#f0eeff] text-[#5750D4] border border-[#c9c4ff] px-1.5 py-0.5 rounded-full">
+                    {skills.length}
+                  </span>
                 </h2>
                 <div className="flex flex-wrap gap-2">
                   {skills.map((s, idx) => {
@@ -589,11 +614,14 @@ export default function ProfilePage() {
                 </div>
               </div>
             )}
-            <div className="bg-white rounded-xl border border-[#efefed] p-6">
-              <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#a3a39e] mb-3">Member Since</h2>
-              <p className="text-sm text-[#111110]">
-                {creator?.createdAt ? new Date(creator.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '—'}
-              </p>
+            <div className="bg-white rounded-xl border border-[#efefed] p-5 flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-[#f0eeff] border border-[#c9c4ff] flex items-center justify-center flex-shrink-0 text-lg">🗓</div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#a3a39e] mb-0.5">Member Since</p>
+                <p className="text-sm font-semibold text-[#111110]">
+                  {creator?.createdAt ? new Date(creator.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '—'}
+                </p>
+              </div>
             </div>
 
             {upcomingSlots.length > 0 && (
@@ -692,52 +720,79 @@ export default function ProfilePage() {
           <div className="md:col-span-2">
             <div className="bg-white rounded-xl border border-[#efefed] p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#a3a39e]">Portfolio</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#a3a39e] flex items-center gap-2">
+                    <span className="w-3 h-0.5 bg-[#6C63FF] inline-block rounded-full" />
+                    Portfolio
+                  </h2>
+                  {portfolio?.length > 0 && (
+                    <span className="text-[10px] font-bold bg-[#f0eeff] text-[#5750D4] border border-[#c9c4ff] px-2 py-0.5 rounded-full">
+                      {portfolio.length}
+                    </span>
+                  )}
+                </div>
                 {isOwnProfile && (
-                  <Link href="/profile/edit#portfolio" className="text-xs text-[#6b6b66] hover:text-[#111110] transition-colors">+ Add Work</Link>
+                  <Link href="/profile/edit#portfolio"
+                    className="text-xs font-semibold text-[#6C63FF] hover:text-[#4740CC] transition-colors flex items-center gap-1">
+                    + Add Work
+                  </Link>
                 )}
               </div>
               {portfolio?.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {portfolio.map((item) => (
-                    <div key={item._id} className="group relative overflow-hidden rounded-xl border border-[#efefed] hover:border-[#c9c4ff] hover:shadow-md bg-white transition-all duration-200 p-4">
-                      <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-[#6C63FF] to-[#c9c4ff] rounded-l-xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-[#f0eeff] text-xl">
-                          {TYPE_ICON[item.type] || '📁'}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-bold text-sm text-[#111110] truncate">{item.title}</p>
-                          {item.description && <p className="text-xs text-[#6b6b66] mt-1 line-clamp-2 leading-relaxed">{item.description}</p>}
-                          {item.tags?.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-2">
-                              {item.tags.map((t) => (
-                                <span key={t} className="text-[10px] bg-[#f7f7f6] text-[#a3a39e] px-2 py-0.5 rounded-full border border-[#efefed]">{t}</span>
-                              ))}
+                  {portfolio.map((item) => {
+                    const typeColor = TYPE_COLOR[item.type] || TYPE_COLOR.other;
+                    const typeIcon  = TYPE_ICON[item.type] || '📁';
+                    return (
+                      <div key={item._id} className="group relative overflow-hidden rounded-xl border border-[#efefed] hover:border-[#c9c4ff] hover:shadow-lg bg-white transition-all duration-200">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-[#6C63FF] to-[#c9c4ff] rounded-l-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="p-4">
+                          <div className="flex items-start gap-3">
+                            <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 border text-lg font-bold ${typeColor}`}>
+                              {typeIcon}
                             </div>
-                          )}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-start justify-between gap-2 mb-1">
+                                <p className="font-bold text-sm text-[#111110] leading-snug">{item.title}</p>
+                                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border capitalize flex-shrink-0 ${typeColor}`}>
+                                  {item.type || 'other'}
+                                </span>
+                              </div>
+                              {item.description && <p className="text-xs text-[#6b6b66] line-clamp-2 leading-relaxed">{item.description}</p>}
+                              {item.tags?.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-2">
+                                  {item.tags.map((t) => (
+                                    <span key={t} className="text-[10px] bg-[#f7f7f6] text-[#6b6b66] px-2 py-0.5 rounded-full border border-[#efefed] font-medium">{t}</span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
                           {item.link && (
                             <a href={item.link.startsWith('http') ? item.link : `https://${item.link}`} target="_blank" rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-xs text-[#6C63FF] hover:text-[#4740CC] mt-2 font-semibold transition-colors group/link">
+                              className="inline-flex items-center gap-1.5 text-xs text-[#6C63FF] hover:text-[#4740CC] mt-3 font-semibold transition-colors group/link border border-[#e0e0dd] hover:border-[#c9c4ff] px-3 py-1.5 rounded-lg bg-[#fafaf9] hover:bg-[#f0eeff]">
                               View Work
                               <span className="transition-transform group-hover/link:translate-x-0.5">→</span>
                             </a>
                           )}
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
-                <div className="text-center py-12">
-                  <p className="text-4xl mb-3">🎨</p>
-                  <p className="text-sm text-[#6b6b66]">
-                    {isOwnProfile ? 'Add your work to showcase what you can do' : 'No portfolio items yet'}
+                <div className="text-center py-14">
+                  <div className="w-16 h-16 rounded-2xl bg-[#f0eeff] border border-[#c9c4ff] flex items-center justify-center text-3xl mx-auto mb-4">🎨</div>
+                  <p className="font-semibold text-sm text-[#111110] mb-1">
+                    {isOwnProfile ? 'Show your work' : 'No portfolio items yet'}
+                  </p>
+                  <p className="text-xs text-[#a3a39e] mb-5">
+                    {isOwnProfile ? 'Add videos, images, links and more to showcase your craft.' : 'This creator hasn\'t added portfolio items yet.'}
                   </p>
                   {isOwnProfile && (
                     <Link href="/profile/edit#portfolio"
-                      className="inline-block mt-4 text-xs font-semibold border border-[#e0e0dd] text-[#111110] px-4 py-1.5 rounded-lg hover:border-[#0e0e0d] transition-all">
-                      Add Portfolio Item
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold bg-[#0e0e0d] text-white px-4 py-2 rounded-lg hover:bg-[#2d2d2b] transition-all">
+                      + Add Portfolio Item
                     </Link>
                   )}
                 </div>
@@ -750,9 +805,18 @@ export default function ProfilePage() {
         {(filmsLoading || films.length > 0) && (
           <div className="mt-8">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-xl font-[Playfair_Display] text-[#0e0e0d]">🎬 Films</h2>
-              {!filmsLoading && films.length > 0 && (
-                <span className="text-xs text-[#a3a39e] font-medium">{films.length} film{films.length !== 1 ? 's' : ''}</span>
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl font-[Playfair_Display] text-[#0e0e0d]">Films</h2>
+                {!filmsLoading && films.length > 0 && (
+                  <span className="text-xs font-bold bg-[#0e0e0d] text-white px-2.5 py-1 rounded-full">
+                    {films.length}
+                  </span>
+                )}
+              </div>
+              {isOwnProfile && !filmsLoading && (
+                <Link href="/films/upload" className="text-xs font-semibold text-[#6C63FF] hover:text-[#4740CC] transition-colors">
+                  + Upload Film
+                </Link>
               )}
             </div>
 

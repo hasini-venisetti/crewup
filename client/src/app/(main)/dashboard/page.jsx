@@ -200,35 +200,39 @@ export default function DashboardPage() {
 
       {/* Dashboard Header */}
       <div
-        className="bg-[#0e0e0d] pt-8 pb-10 relative overflow-hidden"
+        className="bg-[#0e0e0d] pt-8 pb-12 relative overflow-hidden"
         style={{ backgroundImage: 'radial-gradient(circle, #1a1a18 1px, transparent 1px)', backgroundSize: '24px 24px' }}
       >
-        <div className="absolute top-0 left-1/4 w-72 h-48 bg-[#6C63FF]/8 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 left-1/4 w-96 h-64 bg-[#6C63FF]/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 right-1/3 w-64 h-48 bg-[#6C63FF]/5 rounded-full blur-2xl pointer-events-none" />
         <div className="relative max-w-[1100px] mx-auto px-3 sm:px-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
             <div className="flex items-center gap-4">
               {/* Avatar */}
-              <div className="w-14 h-14 rounded-2xl flex-shrink-0 overflow-hidden bg-gradient-to-br from-[#c9c4ff] to-[#6C63FF] flex items-center justify-center text-xl font-bold text-white shadow-lg shadow-[#6C63FF]/20">
+              <Link href={`/profile/${user._id || user.id}`} className="w-16 h-16 rounded-2xl flex-shrink-0 overflow-hidden bg-gradient-to-br from-[#c9c4ff] to-[#6C63FF] flex items-center justify-center text-2xl font-bold text-white shadow-xl shadow-[#6C63FF]/30 ring-2 ring-[#6C63FF]/30 hover:ring-[#6C63FF]/60 transition-all">
                 {user.profileImage
                   ? <img src={user.profileImage} alt={user.name} className="w-full h-full object-cover" />
                   : user.name?.[0]?.toUpperCase() || '?'}
-              </div>
+              </Link>
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-[#6C63FF] font-bold mb-1">Dashboard</p>
+                <p className="text-[10px] uppercase tracking-[0.25em] text-[#6C63FF] font-bold mb-1 flex items-center gap-1.5">
+                  <span className="w-4 h-px bg-[#6C63FF] inline-block" />
+                  Creator Dashboard
+                </p>
                 <h1 className="text-2xl sm:text-3xl font-[Playfair_Display] text-white leading-tight">
                   Hey, {user.name?.split(' ')[0]} 👋
                 </h1>
-                <p className="text-white/40 mt-0.5 text-xs">@{user.username} · <span className="capitalize">{user.role?.replace('-',' ')}</span></p>
+                <p className="text-white/35 mt-0.5 text-xs">@{user.username} · <span className="capitalize text-white/50">{user.role?.replace('-',' ')}</span></p>
               </div>
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-2.5">
               <Link href="/profile/edit"
-                className="text-sm font-semibold px-5 py-2.5 rounded-xl border border-white/20 text-white/70 hover:border-white/40 hover:text-white transition-all">
+                className="text-sm font-semibold px-4 py-2.5 rounded-xl border border-white/15 text-white/60 hover:border-white/35 hover:text-white transition-all">
                 Edit Profile
               </Link>
               <Link href="/create-project"
-                className="text-sm font-semibold px-5 py-2.5 rounded-xl bg-[#6C63FF] hover:bg-[#7C75FF] text-white shadow-lg shadow-[#6C63FF]/25 transition-all active:scale-[0.98]">
-                + Post Project
+                className="text-sm font-semibold px-5 py-2.5 rounded-xl bg-[#6C63FF] hover:bg-[#7C75FF] text-white shadow-lg shadow-[#6C63FF]/30 transition-all active:scale-[0.98] flex items-center gap-1.5">
+                <span className="text-base font-bold">+</span> Post Project
               </Link>
             </div>
           </div>
@@ -236,15 +240,16 @@ export default function DashboardPage() {
           {/* Stats */}
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 mt-8">
             {[
-              { label: 'My Projects',       value: myProjects.length,     icon: '🎬', highlight: false },
-              { label: 'Applications Sent', value: myApplications.length, icon: '📨', highlight: false },
-              { label: 'Accepted',          value: acceptedCount,         icon: '✅', highlight: acceptedCount > 0 },
-              { label: 'Pending Review',    value: pendingCount,          icon: '⏳', highlight: pendingCount > 0 },
+              { label: 'My Projects',       value: myProjects.length,     icon: '🎬', highlight: false,              href: '#',             desc: 'projects posted' },
+              { label: 'Applications Sent', value: myApplications.length, icon: '📨', highlight: false,              href: '#',             desc: 'roles applied to' },
+              { label: 'Accepted',          value: acceptedCount,         icon: '✅', highlight: acceptedCount > 0,  href: '#',             desc: 'roles accepted' },
+              { label: 'Pending Review',    value: pendingCount,          icon: '⏳', highlight: pendingCount > 0,   href: '#',             desc: 'awaiting decision' },
             ].map((s) => (
-              <div key={s.label} className={`rounded-2xl p-4 sm:p-5 text-center transition-all ${s.highlight ? 'bg-[#6C63FF]/15 border border-[#6C63FF]/30' : 'bg-white/5 border border-white/10 hover:bg-white/8'}`}>
-                <div className="text-xl mb-1">{s.icon}</div>
-                <div className={`text-2xl sm:text-3xl font-black mb-0.5 ${s.highlight ? 'text-[#a09aff]' : 'text-white'}`}>{s.value}</div>
-                <div className="text-[10px] sm:text-xs text-white/40 leading-tight">{s.label}</div>
+              <div key={s.label} className={`rounded-2xl p-4 sm:p-5 relative overflow-hidden transition-all cursor-default ${s.highlight ? 'bg-[#6C63FF]/15 border border-[#6C63FF]/30 shadow-lg shadow-[#6C63FF]/10' : 'bg-white/5 border border-white/10 hover:bg-white/8 hover:border-white/15'}`}>
+                {s.highlight && <div className="absolute top-0 right-0 w-16 h-16 bg-[#6C63FF]/20 rounded-full -translate-y-6 translate-x-6 pointer-events-none" />}
+                <div className="text-2xl mb-2">{s.icon}</div>
+                <div className={`text-3xl sm:text-4xl font-black mb-0.5 leading-none ${s.highlight ? 'text-[#c9c4ff]' : 'text-white'}`}>{s.value}</div>
+                <div className={`text-[11px] font-semibold mt-1 ${s.highlight ? 'text-[#a09aff]' : 'text-white/50'}`}>{s.label}</div>
               </div>
             ))}
           </div>
@@ -444,7 +449,10 @@ export default function DashboardPage() {
         {/* ── Following Feed ── */}
         {tab === 'following' && (
           <div>
-            <p className="text-[#6b6b66] text-sm mb-6">Latest projects from creators you follow.</p>
+            <p className="text-[#6b6b66] text-sm mb-6 flex items-center gap-2">
+              <span className="w-6 h-px bg-[#6C63FF] inline-block" />
+              Latest projects from creators you follow.
+            </p>
             {feedLoading
               ? <SkeletonGrid count={6} />
               : followingFeed.length === 0
@@ -467,26 +475,33 @@ export default function DashboardPage() {
                 {(() => {
                   const avg = (myReviews.reduce((s, r) => s + r.rating, 0) / myReviews.length).toFixed(1);
                   return (
-                    <div className="bg-[#0e0e0d] rounded-2xl p-4 sm:p-6 flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
-                      <div className="text-center flex-shrink-0">
-                        <div className="text-4xl sm:text-5xl font-black text-white">{avg}</div>
-                        <div className="flex gap-0.5 justify-center mt-2">
-                          {[1,2,3,4,5].map((s) => (
-                            <span key={s} className={`text-lg ${s <= Math.round(avg) ? 'text-[#7C75FF]' : 'text-white/20'}`}>★</span>
-                          ))}
+                    <div className="bg-[#0e0e0d] rounded-2xl overflow-hidden relative">
+                      <div className="absolute inset-0 opacity-40" style={{ backgroundImage: 'radial-gradient(circle, #1a1a18 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-[#6C63FF]/10 rounded-full -translate-y-8 translate-x-8 pointer-events-none" />
+                      <div className="relative p-5 sm:p-6 flex flex-col sm:flex-row items-center gap-5 sm:gap-8">
+                        <div className="text-center flex-shrink-0">
+                          <div className="text-5xl sm:text-6xl font-black text-white leading-none">{avg}</div>
+                          <div className="flex gap-0.5 justify-center mt-2">
+                            {[1,2,3,4,5].map((s) => (
+                              <span key={s} className={`text-xl ${s <= Math.round(avg) ? 'text-[#7C75FF]' : 'text-white/15'}`}>★</span>
+                            ))}
+                          </div>
+                          <div className="text-xs text-white/40 mt-1.5">{myReviews.length} rating{myReviews.length !== 1 ? 's' : ''}</div>
                         </div>
-                        <div className="text-xs text-white/40 mt-1">{myReviews.length} rating{myReviews.length !== 1 ? 's' : ''}</div>
+                        <div className="hidden sm:block w-px h-16 bg-white/10" />
+                        <div>
+                          <p className="text-white font-semibold mb-1">Your collaboration score</p>
+                          <p className="text-xs sm:text-sm text-white/45 leading-relaxed max-w-xs">Ratings received from teammates who worked with you on completed collaborative projects.</p>
+                        </div>
                       </div>
-                      <div className="hidden sm:block w-px h-12 bg-white/10" />
-                      <p className="text-xs sm:text-sm text-white/50 text-center sm:text-left">Ratings received from teammates on completed collaborative projects.</p>
                     </div>
                   );
                 })()}
                 {/* Individual reviews */}
                 {myReviews.map((review) => (
-                  <div key={review._id} className="bg-white rounded-xl border border-[#efefed] p-5">
+                  <div key={review._id} className="bg-white rounded-xl border border-[#efefed] p-5 hover:border-[#c9c4ff] hover:shadow-sm transition-all">
                     <div className="flex items-start gap-3">
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#e4e1ff] to-[#f0eeff] text-[#3730A3] text-sm font-bold flex items-center justify-center flex-shrink-0">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#e4e1ff] to-[#f0eeff] border border-[#c9c4ff] text-[#3730A3] text-sm font-bold flex items-center justify-center flex-shrink-0">
                         {review.reviewer?.name?.[0] || '?'}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -496,16 +511,17 @@ export default function DashboardPage() {
                           </Link>
                           <div className="flex gap-0.5">
                             {[1,2,3,4,5].map((s) => (
-                              <span key={s} className={`text-sm ${s <= review.rating ? 'text-[#7C75FF]' : 'text-[#e0e0dd]'}`}>★</span>
+                              <span key={s} className={`text-base ${s <= review.rating ? 'text-[#7C75FF]' : 'text-[#e0e0dd]'}`}>★</span>
                             ))}
                           </div>
                         </div>
-                        <div className="text-xs text-[#6b6b66] mb-2">
-                          on <Link href={`/projects/${review.project?._id}`} className="hover:underline">{review.project?.title || 'a project'}</Link>
-                          {' · '}{new Date(review.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                        <div className="text-xs text-[#a3a39e] mb-2">
+                          on <Link href={`/projects/${review.project?._id}`} className="text-[#6b6b66] hover:text-[#111110] hover:underline font-medium">{review.project?.title || 'a project'}</Link>
+                          <span className="mx-1.5 text-[#d0d0ce]">·</span>
+                          {new Date(review.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                         </div>
                         {review.comment && (
-                          <p className="text-sm text-[#6b6b66] italic leading-relaxed">"{review.comment}"</p>
+                          <p className="text-sm text-[#6b6b66] italic leading-relaxed border-l-2 border-[#c9c4ff] pl-3">"{review.comment}"</p>
                         )}
                       </div>
                     </div>
@@ -519,9 +535,12 @@ export default function DashboardPage() {
         {/* ── Recommended ── */}
         {tab === 'recommended' && (
           <div>
-            <p className="text-[#6b6b66] text-sm mb-6">
-              Matched to your role as a <span className="text-[#111110] font-medium capitalize">{user.role?.replace('-',' ')}</span> — projects you haven't applied to yet.
-            </p>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-8 h-8 rounded-xl bg-[#f0eeff] border border-[#c9c4ff] flex items-center justify-center text-sm flex-shrink-0">✦</div>
+              <p className="text-sm text-[#6b6b66]">
+                Matched for <span className="text-[#111110] font-semibold capitalize">{user.role?.replace('-',' ')}</span> — projects tailored to your skills that you haven't applied to yet.
+              </p>
+            </div>
             {recLoading
               ? <SkeletonGrid count={6} />
               : recommended.length === 0
