@@ -179,8 +179,8 @@ export default function CreateProjectPage() {
 
   // ── Verification gate ───────────────────────────────────────────────────
   const missingVerifications = [];
-  if (!user.isEmailVerified)         missingVerifications.push({ key: 'email',   icon: '📧', label: 'Verify your email', desc: 'Check your inbox for a verification link', href: '/settings?tab=security' });
-  if (!user.phone?.isVerified)       missingVerifications.push({ key: 'phone',   icon: '📱', label: 'Verify your phone number', desc: 'We need to confirm your phone for safety', href: '/settings?tab=security' });
+  if (!user.isEmailVerified)         missingVerifications.push({ key: 'email',   icon: '📧', label: 'Verify your email', desc: 'Check your inbox for a verification link', href: '/verify-email' });
+  if (!user.phone?.isVerified)       missingVerifications.push({ key: 'phone',   icon: '📱', label: 'Verify your phone number', desc: 'Add and verify your phone number to post projects', href: '/verify-phone' });
   if (!user.hasDateOfBirth)          missingVerifications.push({ key: 'age',     icon: '🪪', label: 'Add your date of birth', desc: 'Required to confirm you meet our age requirements', href: '/settings?tab=profile' });
 
   if (missingVerifications.length > 0) {
@@ -199,8 +199,8 @@ export default function CreateProjectPage() {
 
           <div className="flex flex-col gap-3 mb-8">
             {[
-              { key: 'email', icon: '📧', label: 'Email verified', done: user.isEmailVerified, href: '/settings?tab=security', desc: 'Verify your email address' },
-              { key: 'phone', icon: '📱', label: 'Phone verified', done: user.phone?.isVerified, href: '/settings?tab=security', desc: 'Add and verify a phone number' },
+              { key: 'email', icon: '📧', label: 'Email verified', done: user.isEmailVerified, href: '/verify-email', desc: 'Verify your email address' },
+              { key: 'phone', icon: '📱', label: 'Phone verified', done: user.phone?.isVerified, href: '/verify-phone', desc: 'Add and verify a phone number' },
               { key: 'age',   icon: '🪪', label: 'Age confirmed',  done: user.hasDateOfBirth,   href: '/settings?tab=profile',  desc: 'Add your date of birth' },
             ].map((item) => (
               <div key={item.key} className={`flex items-center gap-4 px-5 py-4 rounded-2xl border-2 ${item.done ? 'bg-green-50 border-green-200' : 'bg-white border-[#e0e0dd]'}`}>

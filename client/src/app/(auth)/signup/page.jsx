@@ -125,7 +125,7 @@ export default function SignupPage() {
     name: '', role: '',
     location: { city: '', country: '' },
     skills: [], username: '', email: '', password: '',
-    dateOfBirth: '', phone: '', gender: '',
+    dateOfBirth: '', gender: '',
   });
   const [skillInput, setSkillInput] = useState('');
   const [otherRoleText, setOtherRoleText] = useState('');
@@ -477,17 +477,11 @@ export default function SignupPage() {
                   </select>
                   <p className="text-xs text-[#a3a39e] mb-4">Optional. Never shown publicly.</p>
 
-                  <label className="block text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-2">
-                    Phone Number <span className="text-red-500 normal-case">· required for posting projects</span>
-                  </label>
-                  <input
-                    type="tel"
-                    placeholder="+91 98765 43210"
-                    className="field-input mb-1"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  />
-                  <p className="text-xs text-[#a3a39e] mb-8">Include country code. You'll verify this on the next step.</p>
+                  <div className="p-4 bg-[#f5f5f3] rounded-xl mb-4">
+                    <p className="text-xs text-[#6b6b66] leading-relaxed">
+                      📱 <strong className="text-[#111110]">Phone verification</strong> is the next step after email. You can skip it now but it's required before posting projects.
+                    </p>
+                  </div>
                 </div>
               )}
 
@@ -497,8 +491,8 @@ export default function SignupPage() {
                   <div className="flex flex-col gap-3 mb-6">
                     {[
                       { icon: '📧', label: 'Email', detail: formData.email || '—', note: 'We\'ll send a 6-digit code to verify' },
-                      { icon: '📱', label: 'Phone', detail: formData.phone || '(not entered)', note: formData.phone ? 'You\'ll verify this after email' : 'Add a phone number on the previous step' },
                       { icon: '🪪', label: 'Date of Birth', detail: formData.dateOfBirth || '(not entered)', note: formData.dateOfBirth ? 'Confirmed ✓' : 'Go back and add your date of birth' },
+                      { icon: '📱', label: 'Phone', detail: 'Verify after email', note: 'You\'ll add and verify your phone on the next screen — or skip and do it later' },
                     ].map((item) => (
                       <div key={item.label} className="flex items-start gap-3 p-4 border border-[#e0e0dd] rounded-xl">
                         <span className="text-xl mt-0.5">{item.icon}</span>
