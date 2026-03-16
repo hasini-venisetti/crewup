@@ -481,21 +481,23 @@ export default function ProfilePage() {
 
           {/* Profile header */}
           <div className="flex flex-col sm:flex-row sm:items-start gap-6">
-            <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-[#c9c4ff] to-[#e4e1ff] flex items-center justify-center text-3xl font-bold text-[#3730A3] flex-shrink-0 overflow-hidden">
-              {creator?.profileImage
-                ? <img src={creator.profileImage} alt={creator.name} className="w-24 h-24 object-cover" />
-                : creator?.name?.[0]?.toUpperCase() || '?'
-              }
+            <div className="relative flex-shrink-0">
+              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-gradient-to-br from-[#c9c4ff] to-[#6C63FF] flex items-center justify-center text-3xl sm:text-4xl font-bold text-white flex-shrink-0 overflow-hidden ring-4 ring-white/10 shadow-xl shadow-black/40">
+                {creator?.profileImage
+                  ? <img src={creator.profileImage} alt={creator.name} className="w-full h-full object-cover" />
+                  : creator?.name?.[0]?.toUpperCase() || '?'
+                }
+              </div>
+              {isVerified && (
+                <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-blue-500 border-2 border-[#0e0e0d] flex items-center justify-center" title="Verified Creator">
+                  <span className="text-xs">✓</span>
+                </div>
+              )}
             </div>
 
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-start gap-3 mb-2">
                 <h1 className="text-2xl sm:text-3xl font-[Playfair_Display] text-white">{creator?.name}</h1>
-                {isVerified && (
-                  <span title="Verified Creator" className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-500/20 border border-blue-400/40 text-blue-300">
-                    ✅ Verified
-                  </span>
-                )}
                 <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border ${avail.badge}`}>
                   <span className={`w-2 h-2 rounded-full ${avail.dot}`} />
                   {avail.label}
@@ -543,14 +545,14 @@ export default function ProfilePage() {
                 const cfg = SOCIAL_ICON[key];
                 return (
                   <a key={key} href={val.startsWith('http') ? val : `https://${val}`} target="_blank" rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-xs text-white/50 hover:text-white border border-white/15 hover:border-white/30 px-3 py-1.5 rounded-full transition-all">
+                    className="inline-flex items-center gap-1.5 text-xs font-medium text-white/60 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/25 px-3.5 py-2 rounded-full transition-all backdrop-blur-sm">
                     <span>{cfg?.icon}</span><span>{cfg?.label || key}</span>
                   </a>
                 );
               })}
               {portfolioLinks?.map((lnk) => lnk.url && (
                 <a key={lnk.url} href={lnk.url.startsWith('http') ? lnk.url : `https://${lnk.url}`} target="_blank" rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs text-white/50 hover:text-white border border-white/15 hover:border-white/30 px-3 py-1.5 rounded-full transition-all">
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-white/60 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/25 px-3.5 py-2 rounded-full transition-all backdrop-blur-sm">
                   🔗 {lnk.label || 'Portfolio'}
                 </a>
               ))}
@@ -567,11 +569,23 @@ export default function ProfilePage() {
           <div className="flex flex-col gap-5">
             {skills?.length > 0 && (
               <div className="bg-white rounded-xl border border-[#efefed] p-6">
-                <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#a3a39e] mb-4">Skills</h2>
+                <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#a3a39e] mb-4 flex items-center gap-2">
+                  <span className="w-3 h-0.5 bg-[#6C63FF] inline-block rounded-full" />
+                  Skills
+                </h2>
                 <div className="flex flex-wrap gap-2">
-                  {skills.map((s) => (
-                    <span key={s} className="text-xs px-3 py-1.5 bg-[#f7f7f6] border border-[#e0e0dd] text-[#111110] font-medium rounded-full">{s}</span>
-                  ))}
+                  {skills.map((s, idx) => {
+                    const colors = [
+                      'bg-[#f0eeff] border-[#c9c4ff] text-[#4740CC]',
+                      'bg-[#f0fdf4] border-[#bbf7d0] text-[#15803d]',
+                      'bg-[#fef9ee] border-[#fde68a] text-[#92400e]',
+                      'bg-[#fdf2f8] border-[#f0abfc] text-[#86198f]',
+                      'bg-[#eff6ff] border-[#bfdbfe] text-[#1e40af]',
+                    ];
+                    return (
+                      <span key={s} className={`text-xs px-3 py-1.5 font-semibold rounded-full border ${colors[idx % colors.length]}`}>{s}</span>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -686,23 +700,27 @@ export default function ProfilePage() {
               {portfolio?.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {portfolio.map((item) => (
-                    <div key={item._id} className="border border-[#efefed] hover:border-[#b0a9ff] hover:shadow-sm rounded-xl p-4 group transition-all">
+                    <div key={item._id} className="group relative overflow-hidden rounded-xl border border-[#efefed] hover:border-[#c9c4ff] hover:shadow-md bg-white transition-all duration-200 p-4">
+                      <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-[#6C63FF] to-[#c9c4ff] rounded-l-xl opacity-0 group-hover:opacity-100 transition-opacity" />
                       <div className="flex items-start gap-3">
-                        <span className="text-xl flex-shrink-0">{TYPE_ICON[item.type] || '📁'}</span>
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-[#f0eeff] text-xl">
+                          {TYPE_ICON[item.type] || '📁'}
+                        </div>
                         <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-sm text-[#111110] truncate">{item.title}</p>
-                          {item.description && <p className="text-xs text-[#6b6b66] mt-1 line-clamp-2">{item.description}</p>}
+                          <p className="font-bold text-sm text-[#111110] truncate">{item.title}</p>
+                          {item.description && <p className="text-xs text-[#6b6b66] mt-1 line-clamp-2 leading-relaxed">{item.description}</p>}
                           {item.tags?.length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-2">
                               {item.tags.map((t) => (
-                                <span key={t} className="text-[11px] bg-[#f7f7f6] text-[#a3a39e] px-2 py-0.5 rounded-full">{t}</span>
+                                <span key={t} className="text-[10px] bg-[#f7f7f6] text-[#a3a39e] px-2 py-0.5 rounded-full border border-[#efefed]">{t}</span>
                               ))}
                             </div>
                           )}
                           {item.link && (
                             <a href={item.link.startsWith('http') ? item.link : `https://${item.link}`} target="_blank" rel="noopener noreferrer"
-                              className="text-xs text-[#5750D4] hover:text-[#4740CC] mt-2 inline-block font-semibold">
-                              View Work →
+                              className="inline-flex items-center gap-1 text-xs text-[#6C63FF] hover:text-[#4740CC] mt-2 font-semibold transition-colors group/link">
+                              View Work
+                              <span className="transition-transform group-hover/link:translate-x-0.5">→</span>
                             </a>
                           )}
                         </div>

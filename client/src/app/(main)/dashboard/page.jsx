@@ -206,20 +206,28 @@ export default function DashboardPage() {
         <div className="absolute top-0 left-1/4 w-72 h-48 bg-[#6C63FF]/8 rounded-full blur-3xl pointer-events-none" />
         <div className="relative max-w-[1100px] mx-auto px-3 sm:px-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
-            <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-[#6C63FF] font-bold mb-2">Dashboard</p>
-              <h1 className="text-3xl sm:text-4xl font-[Playfair_Display] text-white">
-                Hey, {user.name?.split(' ')[0]}
-              </h1>
-              <p className="text-white/40 mt-1 text-sm">@{user.username} · <span className="capitalize">{user.role?.replace('-',' ')}</span></p>
+            <div className="flex items-center gap-4">
+              {/* Avatar */}
+              <div className="w-14 h-14 rounded-2xl flex-shrink-0 overflow-hidden bg-gradient-to-br from-[#c9c4ff] to-[#6C63FF] flex items-center justify-center text-xl font-bold text-white shadow-lg shadow-[#6C63FF]/20">
+                {user.profileImage
+                  ? <img src={user.profileImage} alt={user.name} className="w-full h-full object-cover" />
+                  : user.name?.[0]?.toUpperCase() || '?'}
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-[#6C63FF] font-bold mb-1">Dashboard</p>
+                <h1 className="text-2xl sm:text-3xl font-[Playfair_Display] text-white leading-tight">
+                  Hey, {user.name?.split(' ')[0]} 👋
+                </h1>
+                <p className="text-white/40 mt-0.5 text-xs">@{user.username} · <span className="capitalize">{user.role?.replace('-',' ')}</span></p>
+              </div>
             </div>
             <div className="flex gap-3">
               <Link href="/profile/edit"
-                className="text-sm font-semibold px-5 py-2.5 rounded-lg border border-white/20 text-white/70 hover:border-white/40 hover:text-white transition-all">
+                className="text-sm font-semibold px-5 py-2.5 rounded-xl border border-white/20 text-white/70 hover:border-white/40 hover:text-white transition-all">
                 Edit Profile
               </Link>
               <Link href="/create-project"
-                className="text-sm font-semibold px-5 py-2.5 rounded-lg bg-[#6C63FF] hover:bg-[#7C75FF] text-white shadow-lg shadow-[#6C63FF]/20 transition-all active:scale-[0.98]">
+                className="text-sm font-semibold px-5 py-2.5 rounded-xl bg-[#6C63FF] hover:bg-[#7C75FF] text-white shadow-lg shadow-[#6C63FF]/25 transition-all active:scale-[0.98]">
                 + Post Project
               </Link>
             </div>
@@ -228,13 +236,14 @@ export default function DashboardPage() {
           {/* Stats */}
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 mt-8">
             {[
-              { label: 'My Projects',       value: myProjects.length,     highlight: false },
-              { label: 'Applications Sent', value: myApplications.length, highlight: false },
-              { label: 'Accepted',          value: acceptedCount,         highlight: acceptedCount > 0 },
-              { label: 'Pending Review',    value: pendingCount,          highlight: pendingCount > 0 },
+              { label: 'My Projects',       value: myProjects.length,     icon: '🎬', highlight: false },
+              { label: 'Applications Sent', value: myApplications.length, icon: '📨', highlight: false },
+              { label: 'Accepted',          value: acceptedCount,         icon: '✅', highlight: acceptedCount > 0 },
+              { label: 'Pending Review',    value: pendingCount,          icon: '⏳', highlight: pendingCount > 0 },
             ].map((s) => (
-              <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl p-3 sm:p-5 text-center hover:bg-white/8 transition-colors">
-                <div className={`text-2xl sm:text-3xl font-black mb-0.5 sm:mb-1 ${s.highlight ? 'text-[#7C75FF]' : 'text-white'}`}>{s.value}</div>
+              <div key={s.label} className={`rounded-2xl p-4 sm:p-5 text-center transition-all ${s.highlight ? 'bg-[#6C63FF]/15 border border-[#6C63FF]/30' : 'bg-white/5 border border-white/10 hover:bg-white/8'}`}>
+                <div className="text-xl mb-1">{s.icon}</div>
+                <div className={`text-2xl sm:text-3xl font-black mb-0.5 ${s.highlight ? 'text-[#a09aff]' : 'text-white'}`}>{s.value}</div>
                 <div className="text-[10px] sm:text-xs text-white/40 leading-tight">{s.label}</div>
               </div>
             ))}
@@ -249,13 +258,13 @@ export default function DashboardPage() {
 
         {/* Tabs */}
         <div className="w-full overflow-x-auto mb-8 -mx-0">
-          <div className="flex gap-1 bg-white border border-[#efefed] rounded-xl p-1 shadow-sm w-max min-w-full sm:w-fit">
+          <div className="flex gap-0 border-b border-[#efefed] w-max min-w-full sm:w-auto">
             {tabs.map((t) => (
               <button key={t.key} onClick={() => setTab(t.key)}
-                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap ${
+                className={`px-4 sm:px-5 py-3 text-xs sm:text-sm font-semibold transition-all whitespace-nowrap border-b-2 -mb-px ${
                   tab === t.key
-                    ? 'bg-[#0e0e0d] text-white shadow-sm'
-                    : 'text-[#6b6b66] hover:text-[#111110] hover:bg-[#f7f7f6]'
+                    ? 'border-[#0e0e0d] text-[#111110]'
+                    : 'border-transparent text-[#a3a39e] hover:text-[#6b6b66]'
                 }`}>
                 {t.label}
               </button>
@@ -552,34 +561,32 @@ function ProfileCompletenessBanner({ user }) {
   if (score >= 90 && user?.isEmailVerified) return null;
 
   return (
-    <div className="mb-6 bg-white border border-[#efefed] rounded-2xl p-5 shadow-sm">
+    <div className="mb-6 bg-gradient-to-r from-[#f0eeff] to-white border border-[#c9c4ff] rounded-2xl p-5 shadow-sm">
       <div className="flex items-center justify-between mb-3">
         <div>
-          <p className="text-sm font-semibold text-[#111110]">Profile Completeness</p>
-          <p className="text-xs text-[#6b6b66]">{label} — {score}% complete</p>
+          <p className="text-sm font-bold text-[#3730A3]">✦ Profile Completeness</p>
+          <p className="text-xs text-[#5750D4] mt-0.5">{label} — {score}% complete</p>
         </div>
-        <Link href="/profile/edit" className="text-xs font-semibold text-[#6C63FF] hover:underline">
-          Complete Profile →
+        <Link href="/profile/edit" className="text-xs font-bold text-[#6C63FF] hover:text-[#4740CC] hover:underline transition-colors">
+          Complete →
         </Link>
       </div>
-      {/* Progress bar */}
-      <div className="h-2 bg-[#f0f0ee] rounded-full overflow-hidden mb-3">
+      <div className="h-2 bg-[#e4e0ff] rounded-full overflow-hidden mb-3">
         <div
-          className="h-full rounded-full transition-all duration-500"
+          className="h-full rounded-full transition-all duration-700"
           style={{ width: `${score}%`, backgroundColor: color }}
         />
       </div>
-      {/* Missing items */}
       {missing.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {!user?.isEmailVerified && (
             <Link href="/verify-email"
-              className="text-xs px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 font-medium hover:bg-amber-100 transition-colors">
+              className="text-xs px-3 py-1.5 rounded-full bg-amber-100 border border-amber-300 text-amber-800 font-semibold hover:bg-amber-200 transition-colors">
               ⚠️ Verify email
             </Link>
           )}
           {missing.filter(m => m !== 'Verified email').slice(0, 4).map((m) => (
-            <span key={m} className="text-xs px-2.5 py-1 rounded-full bg-[#f5f5f3] border border-[#e0e0dd] text-[#6b6b66]">
+            <span key={m} className="text-xs px-3 py-1.5 rounded-full bg-white border border-[#c9c4ff] text-[#5750D4] font-medium">
               + {m}
             </span>
           ))}
