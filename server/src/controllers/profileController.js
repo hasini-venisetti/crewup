@@ -29,11 +29,14 @@ const updateProfile = async (req, res, next) => {
     const {
       bio, skills, location, portfolioLinks, experienceLevel, availability, socialLinks,
       isMentor, mentorFields, mentorBio, mentorRate, mentorCurrency, availabilitySlots,
+      locationVisible,
     } = req.body;
 
     const updateData = {
       bio, skills, location, portfolioLinks, experienceLevel, availability, socialLinks,
     };
+
+    if (typeof locationVisible === 'boolean') updateData.locationVisible = locationVisible;
 
     // Only include mentor fields if they are explicitly sent
     if (typeof isMentor === 'boolean')     updateData.isMentor        = isMentor;

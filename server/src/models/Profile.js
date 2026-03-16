@@ -25,6 +25,7 @@ const profileSchema = new mongoose.Schema(
       city: { type: String, default: '' },
       country: { type: String, default: '' },
     },
+    locationVisible: { type: Boolean, default: true }, // controls visibility on the Creator Map
     portfolioLinks: [
       {
         label: { type: String, default: '' },

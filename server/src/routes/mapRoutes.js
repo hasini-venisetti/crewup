@@ -7,6 +7,7 @@ router.get('/', async (req, res, next) => {
   try {
     const profiles = await Profile.find({
       'location.city': { $exists: true, $ne: '' },
+      locationVisible: { $ne: false },   // exclude creators who opted out
     })
       .populate('user', 'name username role profileImage')
       .select('user location skills availability experienceLevel')

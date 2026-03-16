@@ -39,6 +39,7 @@ export default function EditProfilePage() {
     socialLinks: { instagram: '', youtube: '', vimeo: '', linkedin: '', website: '' },
     portfolioLinks: [{ label: '', url: '' }],
     isMentor: false, mentorBio: '', mentorFields: [], mentorRate: '', mentorCurrency: 'INR',
+    locationVisible: true,
     // Phase 5: Emergency contact & verification links
     emergencyContact: { name: '', phone: '', relationship: '' },
     verificationLinks: { imdb: '', instagram: '' },
@@ -75,6 +76,7 @@ export default function EditProfilePage() {
           experienceLevel: p.experienceLevel  || 'beginner',
           availability:    p.availability     || 'available',
           location:        p.location         || { city: '', country: '' },
+          locationVisible: p.locationVisible  !== false, // default true if not set
           skills:          p.skills           || [],
           socialLinks:     p.socialLinks      || { instagram: '', youtube: '', vimeo: '', linkedin: '', website: '' },
           portfolioLinks:  p.portfolioLinks?.length ? p.portfolioLinks : [{ label: '', url: '' }],
@@ -116,6 +118,7 @@ export default function EditProfilePage() {
         isMentor: form.isMentor, mentorBio: form.mentorBio, mentorFields: form.mentorFields,
         mentorRate: form.mentorRate !== '' ? Number(form.mentorRate) : null,
         mentorCurrency: form.mentorCurrency,
+        locationVisible: form.locationVisible,
         // Phase 5: Emergency contact & verification links
         emergencyContact:  form.emergencyContact,
         verificationLinks: form.verificationLinks,
@@ -333,10 +336,38 @@ export default function EditProfilePage() {
             </div>
             <div>
               <label className={labelCls}>Location</label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 mb-3">
                 <input className={inputCls} placeholder="City"    value={form.location.city}    onChange={(e) => setLoc('city', e.target.value)} />
                 <input className={inputCls} placeholder="Country" value={form.location.country} onChange={(e) => setLoc('country', e.target.value)} />
               </div>
+              {/* Map visibility toggle */}
+              <button
+                type="button"
+                onClick={() => set('locationVisible', !form.locationVisible)}
+                className={`w-full flex items-center justify-between gap-4 px-4 py-3 rounded-xl border transition-all ${
+                  form.locationVisible
+                    ? 'bg-[#f0fdf4] border-[#bbf7d0] hover:border-[#86efac]'
+                    : 'bg-[#fafaf9] border-[#e0e0dd] hover:border-[#c0c0be]'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">{form.locationVisible ? '🗺️' : '🙈'}</span>
+                  <div className="text-left">
+                    <p className={`text-sm font-semibold ${form.locationVisible ? 'text-[#15803d]' : 'text-[#6b6b66]'}`}>
+                      {form.locationVisible ? 'Visible on Creator Map' : 'Hidden from Creator Map'}
+                    </p>
+                    <p className="text-xs text-[#a3a39e] mt-0.5">
+                      {form.locationVisible
+                        ? 'Other creators can find you by city on the map.'
+                        : 'Your pin won\'t appear on the map — location still saved for display on your profile.'}
+                    </p>
+                  </div>
+                </div>
+                {/* Toggle pill */}
+                <div className={`relative w-11 h-6 rounded-full flex-shrink-0 transition-colors ${form.locationVisible ? 'bg-green-500' : 'bg-[#d0d0ce]'}`}>
+                  <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${form.locationVisible ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                </div>
+              </button>
             </div>
           </div>
         )}
@@ -706,44 +737,6 @@ export default function EditProfilePage() {
               <p className="text-xs text-[#a3a39e] mt-3">After saving, our team will review your links and may grant a Verified Creator badge. This may take 1–3 business days.</p>
             </div>
 
-            {/* Emergency Contact */}
-            <div className="bg-white rounded-2xl border border-[#efefed] p-6 shadow-sm">
-              <h3 className="font-bold text-[#111110] text-sm mb-1">Emergency Contact</h3>
-              <p className="text-xs text-[#a3a39e] mb-4">Stored privately and never shown on your public profile. Used only for the Safe Check-In feature.</p>
-              <div className="flex flex-col gap-3">
-                <div>
-                  <label className="text-xs text-[#6b6b66] font-medium block mb-1">Contact Name</label>
-                  <input type="text" placeholder="e.g. Priya (sister)"
-                    className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF]"
-                    value={form.emergencyContact.name}
-                    onChange={(e) => setForm(f => ({ ...f, emergencyContact: { ...f.emergencyContact, name: e.target.value } }))} />
-                </div>
-                <div>
-                  <label className="text-xs text-[#6b6b66] font-medium block mb-1">Contact Phone</label>
-                  <input type="tel" placeholder="+91 98765 43210"
-                    className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF]"
-                    value={form.emergencyContact.phone}
-                    onChange={(e) => setForm(f => ({ ...f, emergencyContact: { ...f.emergencyContact, phone: e.target.value } }))} />
-                </div>
-                <div>
-                  <label className="text-xs text-[#6b6b66] font-medium block mb-1">Relationship</label>
-                  <input type="text" placeholder="e.g. Sister, Friend, Parent"
-                    className="w-full rounded-lg border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF]"
-                    value={form.emergencyContact.relationship}
-                    onChange={(e) => setForm(f => ({ ...f, emergencyContact: { ...f.emergencyContact, relationship: e.target.value } }))} />
-                </div>
-              </div>
-            </div>
-
-            {/* Safety guide link */}
-            <div className="flex items-center gap-3 p-4 bg-[#f5f5f3] rounded-2xl">
-              <span className="text-2xl">🛡</span>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-[#111110]">Read our Safety Guide</p>
-                <p className="text-xs text-[#6b6b66]">Tips on evaluating casting calls, safe meeting practices, and how to report issues.</p>
-              </div>
-              <a href="/safety" className="text-xs font-semibold text-[#6C63FF] hover:underline flex-shrink-0">Read →</a>
-            </div>
           </div>
         )}
 
