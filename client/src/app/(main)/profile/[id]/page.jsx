@@ -581,10 +581,10 @@ export default function ProfilePage() {
 
       {/* Body */}
       <div className="max-w-[900px] mx-auto px-3 sm:px-6 py-10">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="flex flex-col md:flex-row gap-6 items-start">
 
-          {/* Left column */}
-          <div className="flex flex-col gap-3">
+          {/* Sidebar */}
+          <div className="w-full md:w-60 lg:w-64 flex-shrink-0 flex flex-col gap-3">
 
             {/* Quick-info strip: member since + location */}
             <div className="bg-white rounded-xl border border-[#efefed] divide-y divide-[#f5f5f3]">
@@ -740,9 +740,10 @@ export default function ProfilePage() {
             })()}
           </div>
 
-        </div>
+          {/* Main content */}
+          <div className="flex-1 min-w-0 flex flex-col gap-8">
 
-        {/* ── PORTFOLIO — full-width professional section ── */}
+        {/* ── PORTFOLIO ── */}
         {(portfolio?.length > 0 || isOwnProfile) && (() => {
           const certCount   = portfolio?.filter(i => i.type === 'certificate').length || 0;
           const typesPresent = ['all', ...new Set((portfolio || []).map(i => i.type))];
@@ -751,7 +752,7 @@ export default function ProfilePage() {
           const works       = filtered.filter(i => i.type !== 'certificate');
 
           return (
-            <div className="mt-8">
+            <div>
               {/* Section header */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
                 <div className="flex items-center gap-3">
@@ -967,7 +968,7 @@ export default function ProfilePage() {
 
         {/* ── FILMS ─────────────────────────────────────────────────── */}
         {(filmsLoading || films.length > 0) && (
-          <div className="mt-8">
+          <div>
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-3">
                 <h2 className="text-xl font-[Playfair_Display] text-[#0e0e0d]">Films</h2>
@@ -1360,7 +1361,7 @@ export default function ProfilePage() {
         )}
 
         {/* Reviews */}
-        <div className="mt-8">
+        <div>
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-xl font-[Playfair_Display] text-[#0e0e0d]">
               Reviews
@@ -1418,6 +1419,9 @@ export default function ProfilePage() {
             </div>
           )}
         </div>
+
+          </div>{/* end main content */}
+        </div>{/* end flex row */}
       </div>
 
       {/* Followers Modal */}
