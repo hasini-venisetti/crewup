@@ -100,6 +100,21 @@ const stepPanels = [
       ],
     },
   },
+  {
+    bg: '#111110',
+    dark: true,
+    label: 'Final step',
+    heading: 'One last check before you join.',
+    body: "We'll verify your email and phone so your account stays secure. Verification unlocks posting projects and applying to paid opportunities.",
+    safety: {
+      title: '🔒 Why We Verify',
+      points: [
+        'Email verification confirms your identity and keeps your account recoverable.',
+        'Phone verification is required before posting projects or paid collaborations.',
+        'Your personal details are never shared with other creators on the platform.',
+      ],
+    },
+  },
 ];
 
 export default function SignupPage() {
