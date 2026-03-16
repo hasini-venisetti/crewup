@@ -522,11 +522,6 @@ export default function ProfilePage() {
                     {creator.role.replace('-', ' ')}
                   </span>
                 )}
-                {experienceLevel && (
-                  <span className="inline-flex items-center text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[#6C63FF]/15 border border-[#6C63FF]/25 text-[#a09aff]">
-                    {EXP_LABEL[experienceLevel] || experienceLevel}
-                  </span>
-                )}
               </div>
 
               <div className="flex items-center gap-4 mb-3">
@@ -551,8 +546,8 @@ export default function ProfilePage() {
               </div>
 
               {(location?.city || location?.country) && (
-                <p className="text-sm text-white/40 mb-1 flex items-center gap-1">
-                  <span className="text-base">📍</span>
+                <p className="text-xs text-white/35 mb-2 flex items-center gap-1.5">
+                  <span>📍</span>
                   {[location.city, location.country].filter(Boolean).join(', ')}
                 </p>
               )}
@@ -589,18 +584,52 @@ export default function ProfilePage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
           {/* Left column */}
-          <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-3">
+
+            {/* Quick-info strip: member since + location */}
+            <div className="bg-white rounded-xl border border-[#efefed] divide-y divide-[#f5f5f3]">
+              <div className="flex items-center gap-3 px-4 py-3">
+                <span className="text-base flex-shrink-0">🗓</span>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#a3a39e]">Member Since</p>
+                  <p className="text-xs font-semibold text-[#111110] truncate">
+                    {creator?.createdAt ? new Date(creator.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—'}
+                  </p>
+                </div>
+              </div>
+              {(location?.city || location?.country) && (
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <span className="text-base flex-shrink-0">📍</span>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#a3a39e]">Location</p>
+                    <p className="text-xs font-semibold text-[#111110] truncate">
+                      {[location.city, location.country].filter(Boolean).join(', ')}
+                    </p>
+                  </div>
+                </div>
+              )}
+              {experienceLevel && (
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <span className="text-base flex-shrink-0">⚡</span>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#a3a39e]">Level</p>
+                    <p className="text-xs font-semibold text-[#111110] capitalize">{EXP_LABEL[experienceLevel] || experienceLevel}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Skills */}
             {skills?.length > 0 && (
-              <div className="bg-white rounded-xl border border-[#efefed] p-6 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-20 h-20 bg-[#6C63FF]/4 rounded-full -translate-y-8 translate-x-8 pointer-events-none" />
-                <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#a3a39e] mb-4 flex items-center gap-2">
-                  <span className="w-3 h-0.5 bg-[#6C63FF] inline-block rounded-full" />
-                  Skills
-                  <span className="ml-auto text-[10px] font-bold bg-[#f0eeff] text-[#5750D4] border border-[#c9c4ff] px-1.5 py-0.5 rounded-full">
-                    {skills.length}
-                  </span>
-                </h2>
-                <div className="flex flex-wrap gap-2">
+              <div className="bg-white rounded-xl border border-[#efefed] p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#a3a39e] flex items-center gap-1.5">
+                    <span className="w-2.5 h-0.5 bg-[#6C63FF] inline-block rounded-full" />
+                    Skills
+                  </p>
+                  <span className="text-[10px] font-bold bg-[#f0eeff] text-[#5750D4] border border-[#c9c4ff] px-1.5 py-0.5 rounded-full">{skills.length}</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
                   {skills.map((s, idx) => {
                     const colors = [
                       'bg-[#f0eeff] border-[#c9c4ff] text-[#4740CC]',
@@ -610,54 +639,49 @@ export default function ProfilePage() {
                       'bg-[#eff6ff] border-[#bfdbfe] text-[#1e40af]',
                     ];
                     return (
-                      <span key={s} className={`text-xs px-3 py-1.5 font-semibold rounded-full border ${colors[idx % colors.length]}`}>{s}</span>
+                      <span key={s} className={`text-[11px] px-2.5 py-1 font-semibold rounded-full border ${colors[idx % colors.length]}`}>{s}</span>
                     );
                   })}
                 </div>
               </div>
             )}
-            <div className="bg-white rounded-xl border border-[#efefed] p-5 flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-[#f0eeff] border border-[#c9c4ff] flex items-center justify-center flex-shrink-0 text-lg">🗓</div>
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#a3a39e] mb-0.5">Member Since</p>
-                <p className="text-sm font-semibold text-[#111110]">
-                  {creator?.createdAt ? new Date(creator.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '—'}
-                </p>
-              </div>
-            </div>
 
+            {/* Availability */}
             {upcomingSlots.length > 0 && (
-              <div className="bg-white rounded-xl border border-[#efefed] p-6">
-                <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#a3a39e] mb-4">📅 Availability</h2>
-                <div className="space-y-2.5">
+              <div className="bg-white rounded-xl border border-[#efefed] p-4">
+                <div className="flex items-center justify-between mb-2.5">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#a3a39e] flex items-center gap-1.5">
+                    <span className="w-2.5 h-0.5 bg-green-500 inline-block rounded-full" />
+                    Availability
+                  </p>
+                  {isOwnProfile && (
+                    <Link href="/profile/edit" className="text-[10px] text-[#5750D4] hover:text-[#4740CC] font-semibold transition-colors">
+                      Edit →
+                    </Link>
+                  )}
+                </div>
+                <div className="space-y-1.5">
                   {upcomingSlots.map((slot, i) => {
                     const active = isSlotActive(slot);
                     return (
-                      <div key={i} className={`rounded-lg px-3 py-2.5 ${active ? 'bg-green-50 border border-green-200' : 'bg-[#f7f7f6] border border-[#efefed]'}`}>
-                        <div className="flex items-center justify-between gap-2">
-                          <span className={`text-xs font-semibold ${active ? 'text-green-700' : 'text-[#111110]'}`}>
-                            {fmtSlotDate(slot.startDate)} – {fmtSlotDate(slot.endDate)}
+                      <div key={i} className={`flex items-center justify-between gap-2 rounded-lg px-3 py-2 ${active ? 'bg-green-50 border border-green-200' : 'bg-[#f7f7f6] border border-[#efefed]'}`}>
+                        <span className={`text-[11px] font-semibold ${active ? 'text-green-700' : 'text-[#111110]'}`}>
+                          {fmtSlotDate(slot.startDate)} – {fmtSlotDate(slot.endDate)}
+                        </span>
+                        {active && (
+                          <span className="flex items-center gap-1 text-[10px] font-bold text-green-600 bg-green-100 px-1.5 py-0.5 rounded-full flex-shrink-0">
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block" />
+                            Now
                           </span>
-                          {active && (
-                            <span className="flex items-center gap-1 text-[10px] font-bold text-green-600 bg-green-100 px-1.5 py-0.5 rounded-full">
-                              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block" />
-                              Now
-                            </span>
-                          )}
-                        </div>
-                        {slot.note && <p className="text-[11px] text-[#6b6b66] mt-1 truncate">{slot.note}</p>}
+                        )}
                       </div>
                     );
                   })}
                 </div>
-                {isOwnProfile && (
-                  <Link href="/profile/edit" className="inline-block mt-3 text-[11px] text-[#5750D4] hover:text-[#4740CC] font-semibold transition-colors">
-                    Manage availability →
-                  </Link>
-                )}
               </div>
             )}
 
+            {/* Mentoring */}
             {isMentor && mentorFields?.length > 0 && (() => {
               const mStatus = isOwnProfile ? mentorStatusVal : (mentorStatus || 'open');
               const STATUS_CFG = {
@@ -667,48 +691,46 @@ export default function ProfilePage() {
               };
               const sc = STATUS_CFG[mStatus] || STATUS_CFG.open;
               return (
-                <div className="bg-[#f0eeff] rounded-xl border border-[#c9c4ff] p-6">
-                  {/* Header row */}
-                  <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#5750D4]">🎓 Mentoring</h2>
-                    <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border ${sc.badge}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />
+                <div className="bg-[#f0eeff] rounded-xl border border-[#c9c4ff] p-4">
+                  <div className="flex items-center justify-between mb-2.5">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#5750D4] flex items-center gap-1.5">
+                      🎓 Mentoring
+                    </p>
+                    <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${sc.badge}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${sc.dot} flex-shrink-0`} />
                       {sc.label}
                     </span>
                   </div>
 
-                  {mentorBio && <p className="text-xs text-[#4b4b47] mb-3 leading-relaxed">{mentorBio}</p>}
-                  <div className="flex flex-wrap gap-1.5 mb-3">
+                  {/* Fields + rate inline */}
+                  <div className="flex flex-wrap gap-1 mb-2">
                     {mentorFields.map((f) => (
-                      <span key={f} className="text-[11px] px-2.5 py-1 bg-[#e4e0ff] text-[#4740CC] rounded-full font-medium">{f}</span>
+                      <span key={f} className="text-[10px] px-2 py-0.5 bg-[#e4e0ff] text-[#4740CC] rounded-full font-semibold">{f}</span>
                     ))}
+                    {mentorRate !== null && mentorRate !== undefined && (
+                      <span className="text-[10px] px-2 py-0.5 bg-[#5750D4] text-white rounded-full font-bold">
+                        {mentorRate === 0 ? 'Free' : `₹${mentorRate.toLocaleString('en-IN')}/hr`}
+                      </span>
+                    )}
                   </div>
-                  {mentorRate !== null && mentorRate !== undefined && (
-                    <p className="text-xs font-semibold text-[#3730A3] mb-3">
-                      {mentorRate === 0 ? 'Free' : `₹${mentorRate.toLocaleString('en-IN')} / hr`}
-                      {mentorRate > 0 && mentorCurrency && mentorCurrency !== 'INR' && ` (${mentorCurrency})`}
-                    </p>
-                  )}
 
-                  {/* Own profile: status toggle buttons */}
+                  {mentorBio && <p className="text-[11px] text-[#4b4b47] leading-relaxed mb-2.5 line-clamp-2">{mentorBio}</p>}
+
+                  {/* Own profile: compact toggle */}
                   {isOwnProfile && (
-                    <div className="flex gap-2 mt-2 pt-3 border-t border-[#ddd8ff]">
+                    <div className="flex gap-1.5 pt-2.5 border-t border-[#ddd8ff]">
                       {[
-                        { key: 'open',   label: '🟢 Open',   tip: 'Taking new mentees' },
-                        { key: 'paused', label: '⏸ Paused', tip: 'Temporarily unavailable' },
-                        { key: 'closed', label: '🔴 Closed', tip: 'Not taking applications' },
-                      ].map(({ key, label }) => (
-                        <button
-                          key={key}
-                          onClick={() => handleMentorStatus(key)}
-                          disabled={mentorStatusLoading}
-                          className={`text-[11px] font-semibold px-3 py-1.5 rounded-lg transition-all disabled:opacity-50 ${
+                        { key: 'open',   label: 'Open',   icon: '🟢' },
+                        { key: 'paused', label: 'Paused', icon: '⏸' },
+                        { key: 'closed', label: 'Closed', icon: '🔴' },
+                      ].map(({ key, label, icon }) => (
+                        <button key={key} onClick={() => handleMentorStatus(key)} disabled={mentorStatusLoading}
+                          className={`flex-1 text-[10px] font-bold py-1.5 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-1 ${
                             mentorStatusVal === key
                               ? 'bg-[#5750D4] text-white shadow-sm'
                               : 'bg-white border border-[#c9c4ff] text-[#5750D4] hover:bg-[#e4e0ff]'
-                          }`}
-                        >
-                          {label}
+                          }`}>
+                          {icon} {label}
                         </button>
                       ))}
                     </div>
