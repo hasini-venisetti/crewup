@@ -493,7 +493,7 @@ export default function MessagesPage() {
                   <div className="mx-4 mt-3 flex items-start gap-2.5 px-3.5 py-2.5 rounded-xl bg-amber-50 border border-amber-200">
                     <span className="text-base flex-shrink-0 mt-0.5">💡</span>
                     <p className="text-xs text-amber-700 leading-relaxed">
-                      <strong>Heads up:</strong> You're sharing contact info. Only exchange personal details with people you fully trust on this platform.
+                      <strong>Heads up:</strong> Only share personal contact details after you've met and built trust with this person. Connect on-platform first.
                     </p>
                   </div>
                 );
