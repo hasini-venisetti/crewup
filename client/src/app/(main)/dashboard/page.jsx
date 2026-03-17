@@ -72,7 +72,7 @@ function ApplicationCard({ app, onDecision }) {
 
 function EmptyState({ icon, title, body, cta, href }) {
   return (
-    <div className="bg-white rounded-2xl border border-[#efefed] text-center py-10 sm:py-20 px-4 sm:px-8">
+    <div className="bg-white rounded-2xl border border-[#efefed] shadow-sm text-center py-12 px-8">
       <div className="text-4xl sm:text-5xl mb-3 sm:mb-4">{icon}</div>
       <p className="font-bold text-[#111110] mb-2">{title}</p>
       <p className="text-[#6b6b66] text-sm mb-6 sm:mb-8 max-w-xs mx-auto leading-relaxed">{body}</p>
@@ -323,9 +323,9 @@ export default function DashboardPage() {
           myProjects.length === 0
             ? <EmptyState icon="🎬" title="No projects yet" body="Post your first project and start building a team." cta="Post a Project" href="/create-project" />
             : (
-              <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                 {myProjects.map((p) => (
-                  <div key={p._id} className="flex flex-col gap-2">
+                  <div key={p._id} className="flex flex-col gap-2 bg-white rounded-2xl border border-[#efefed] p-3 hover:shadow-md transition-all">
                     <ProjectCard project={p} />
                     {/* Auto-suspended badge (reported by a user, awaiting admin review) */}
                     {p.autoSuspended && (
@@ -334,29 +334,40 @@ export default function DashboardPage() {
                         <span>Temporarily suspended — reported by a user, admin is reviewing</span>
                       </div>
                     )}
+                    {/* Stage badge */}
+                    <div className="px-1">
+                      <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                        p.timelineStage === 'released' ? 'bg-green-100 text-green-700' :
+                        p.timelineStage === 'production' ? 'bg-orange-100 text-orange-700' :
+                        'bg-[#f0eeff] text-[#5750D4]'
+                      }`}>
+                        {p.timelineStage === 'released' ? '🚀' : p.timelineStage === 'production' ? '🎬' : '📋'}
+                        <span className="capitalize">{(p.timelineStage || 'planning').replace('-', ' ')}</span>
+                      </span>
+                    </div>
                     {p.timelineStage === 'released' ? (
-                      <div className="flex gap-1.5 sm:gap-2">
+                      <div className="flex gap-2 pt-1">
                         <Link href={`/projects/${p._id}`}
-                          className="flex-1 flex items-center justify-center gap-1 text-[10px] sm:text-xs font-semibold bg-green-500 text-white py-2 sm:py-2.5 px-2 rounded-lg hover:bg-green-600 transition-colors">
-                          🚀 <span className="hidden sm:inline">View </span>Done
+                          className="flex-1 text-center text-xs font-semibold bg-green-50 text-green-700 border border-green-200 py-2 rounded-xl hover:bg-green-100 transition-colors">
+                          View Project
                         </Link>
                         <Link href={`/projects/${p._id}`}
-                          className="flex-1 flex items-center justify-center gap-1 text-[10px] sm:text-xs font-semibold border border-green-200 text-green-700 py-2 sm:py-2.5 px-2 rounded-lg hover:bg-green-50 transition-colors">
-                          ⭐ Rate
+                          className="flex-1 text-center text-xs font-semibold bg-[#f0eeff] text-[#5750D4] border border-[#c9c4ff] py-2 rounded-xl hover:bg-[#e4e0ff] transition-colors">
+                          ⭐ Rate Team
                         </Link>
                       </div>
                     ) : (
-                      <div className="flex gap-1.5 sm:gap-2">
+                      <div className="flex gap-2 pt-1">
                         <Link href={`/projects/${p._id}/team?tab=chat`}
-                          className="flex-1 flex items-center justify-center gap-1 text-[10px] sm:text-xs font-semibold bg-[#0e0e0d] text-white py-2 sm:py-2.5 px-2 rounded-lg hover:bg-[#2d2d2b] transition-colors">
+                          className="flex-1 text-center text-xs font-semibold bg-[#6C63FF] text-white py-2 rounded-xl hover:bg-[#5750D4] transition-colors">
                           💬 Chat
                         </Link>
                         <Link href={`/projects/${p._id}/team`}
-                          className="flex-1 flex items-center justify-center gap-1 text-[10px] sm:text-xs font-semibold border border-[#e0e0dd] text-[#111110] py-2 sm:py-2.5 px-2 rounded-lg hover:border-[#0e0e0d] transition-colors">
+                          className="flex-1 text-center text-xs font-semibold border border-[#e0e0dd] text-[#111110] py-2 rounded-xl hover:border-[#6C63FF] hover:text-[#6C63FF] transition-colors">
                           👥 Team
                         </Link>
                         <Link href={`/projects/${p._id}/applications`}
-                          className="flex-1 flex items-center justify-center gap-1 text-[10px] sm:text-xs font-semibold border border-[#e0e0dd] text-[#111110] py-2 sm:py-2.5 px-2 rounded-lg hover:border-[#6C63FF] hover:text-[#6C63FF] transition-colors">
+                          className="flex-1 text-center text-xs font-semibold border border-[#e0e0dd] text-[#6b6b66] py-2 rounded-xl hover:border-[#111110] hover:text-[#111110] transition-colors">
                           📬 Apps
                         </Link>
                       </div>
@@ -369,12 +380,12 @@ export default function DashboardPage() {
 
         {/* ── Incoming ── */}
         {tab === 'incoming' && (
-          <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-4">
             {myProjects.map((project) => {
               const apps = incomingApps[project._id] || [];
               if (apps.length === 0) return null;
               return (
-                <div key={project._id} className="bg-white rounded-2xl border border-[#efefed] p-6">
+                <div key={project._id} className="bg-white rounded-2xl border border-[#efefed] p-5 shadow-sm">
                   <div className="flex items-center justify-between mb-5 pb-5 border-b border-[#efefed]">
                     <Link href={`/projects/${project._id}`} className="font-bold text-[#111110] hover:underline">{project.title}</Link>
                     <div className="flex items-center gap-2">
@@ -407,7 +418,7 @@ export default function DashboardPage() {
               ? <EmptyState icon="🔍" title="No applications sent" body="Browse open projects and apply to join a creative team." cta="Explore Projects" href="/projects" />
               : myApplications.map((app) => (
                   <div key={app._id}
-                    className={`bg-white rounded-xl border p-5 flex flex-col sm:flex-row sm:items-center gap-4 hover:shadow-sm transition-all ${
+                    className={`bg-white rounded-2xl border p-5 flex flex-col sm:flex-row sm:items-center gap-4 hover:shadow-md transition-all ${
                       app.project?.timelineStage === 'released' ? 'border-green-200' : 'border-[#efefed]'
                     }`}>
                     {app.project?.timelineStage === 'released' && (
@@ -459,7 +470,7 @@ export default function DashboardPage() {
         {tab === 'mentorship' && (
           <div className="flex flex-col gap-5">
             {/* Mentor status quick-toggle */}
-            <div className="bg-white rounded-2xl border border-[#efefed] p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="bg-white rounded-2xl border border-[#efefed] p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <p className="font-semibold text-[#111110] text-sm">Mentorship Availability</p>
                 <p className="text-xs text-[#6b6b66] mt-0.5">Control whether people can apply to you as a mentor.</p>
@@ -490,15 +501,15 @@ export default function DashboardPage() {
         {/* ── Following Feed ── */}
         {tab === 'following' && (
           <div>
-            <p className="text-[#6b6b66] text-sm mb-6 flex items-center gap-2">
-              <span className="w-6 h-px bg-[#6C63FF] inline-block" />
-              Latest projects from creators you follow.
+            <p className="text-[#6b6b66] text-sm mb-5 flex items-center gap-2">
+              <span className="w-5 h-px bg-[#6C63FF] inline-block" />
+              Latest projects from creators you follow
             </p>
             {feedLoading
               ? <SkeletonGrid count={6} />
               : followingFeed.length === 0
                 ? <EmptyState icon="👥" title="Your feed is empty" body="Follow creators on the Explore page to see their projects here." cta="Explore Creators" href="/explore" />
-                : <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">{followingFeed.map((p) => <ProjectCard key={p._id} project={p} />)}</div>
+                : <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">{followingFeed.map((p) => <div key={p._id} className="bg-white rounded-2xl border border-[#efefed] p-3 hover:shadow-md transition-all"><ProjectCard project={p} /></div>)}</div>
             }
           </div>
         )}
@@ -576,22 +587,21 @@ export default function DashboardPage() {
         {/* ── Recommended ── */}
         {tab === 'recommended' && (
           <div>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-8 h-8 rounded-xl bg-[#f0eeff] border border-[#c9c4ff] flex items-center justify-center text-sm flex-shrink-0">✦</div>
-              <p className="text-sm text-[#6b6b66]">
-                Matched for <span className="text-[#111110] font-semibold capitalize">{user.role?.replace('-',' ')}</span> — projects tailored to your skills that you haven't applied to yet.
+            <div className="flex items-center gap-3 mb-5 bg-[#f0eeff] border border-[#c9c4ff] rounded-2xl px-4 py-3">
+              <span className="text-lg">✦</span>
+              <p className="text-sm text-[#5750D4]">
+                Matched for <strong className="text-[#3730A3] capitalize">{user.role?.replace('-',' ')}</strong> — projects tailored to your skills that you haven't applied to yet.
               </p>
             </div>
             {recLoading
               ? <SkeletonGrid count={6} />
               : recommended.length === 0
                 ? <EmptyState icon="✦" title="No recommendations yet" body="Complete your profile with your role to get matched with relevant projects." cta="Edit Profile" href="/profile/edit" />
-                : <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">{recommended.map((p) => <ProjectCard key={p._id} project={p} />)}</div>
+                : <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">{recommended.map((p) => <div key={p._id} className="bg-white rounded-2xl border border-[#efefed] p-3 hover:shadow-md transition-all"><ProjectCard project={p} /></div>)}</div>
             }
             {recommended.length > 0 && (
-              <div className="mt-8 text-center">
-                <Link href="/projects"
-                  className="inline-block border border-[#e0e0dd] text-[#0e0e0d] font-semibold text-sm px-6 py-2.5 rounded-lg hover:border-[#0e0e0d] transition-all">
+              <div className="mt-6 text-center">
+                <Link href="/projects" className="inline-block border border-[#e0e0dd] text-[#111110] font-semibold text-sm px-6 py-2.5 rounded-xl hover:border-[#6C63FF] hover:text-[#6C63FF] transition-all">
                   Browse All Projects →
                 </Link>
               </div>
