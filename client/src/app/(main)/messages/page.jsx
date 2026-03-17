@@ -187,6 +187,10 @@ export default function MessagesPage() {
       const errMsg  = err?.response?.data?.message || 'Failed to send message.';
       if (errCode === 'MINOR_PROTECTION') {
         toast.error(errMsg, { duration: 8000, icon: '🔒' });
+      } else if (errCode === 'BLOCKED_BY_OTHER') {
+        toast.error('You cannot send messages to this person.', { duration: 5000, icon: '🚫' });
+      } else if (errCode === 'BLOCKED_BY_YOU') {
+        toast.error('Unblock this conversation to send messages.', { duration: 5000, icon: '🚫' });
       } else {
         toast.error(errMsg);
       }

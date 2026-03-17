@@ -157,6 +157,20 @@ const sendMessage = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
+    // ── Block check: if anyone in this conversation has blocked it, no messages allowed ──
+    if (Array.isArray(conversation.blockedBy) && conversation.blockedBy.length > 0) {
+      const myId = req.user._id.toString();
+      const iBlockedThem = conversation.blockedBy.some((id) => id.toString() === myId);
+      const theyBlockedMe = conversation.blockedBy.some((id) => id.toString() !== myId);
+
+      if (iBlockedThem) {
+        return res.status(403).json({ success: false, message: 'You have blocked this conversation. Unblock to send messages.', code: 'BLOCKED_BY_YOU' });
+      }
+      if (theyBlockedMe) {
+        return res.status(403).json({ success: false, message: 'You cannot send messages to this person.', code: 'BLOCKED_BY_OTHER' });
+      }
+    }
+
     // ── Minor Protection: if any other member is a minor, sender must be verified ──
     const otherMemberIds = conversation.members
       .map(String)
