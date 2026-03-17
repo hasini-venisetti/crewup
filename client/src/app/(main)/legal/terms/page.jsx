@@ -76,8 +76,14 @@ export default function TermsOfService() {
         </div>
 
         <div className="mt-16 pt-12 border-t border-[#efefed]">
-          <p className="text-[#6b6b66] text-sm">
-            <Link href="/legal/privacy" className="text-[#111110] underline hover:no-underline">Privacy Policy</Link> | <Link href="/legal/guidelines" className="text-[#111110] underline hover:no-underline">Community Guidelines</Link> | <Link href="/contact" className="text-[#111110] underline hover:no-underline">Contact Us</Link>
+          <p className="text-[#6b6b66] text-sm flex flex-wrap gap-x-4 gap-y-2">
+            <Link href="/legal/privacy"     className="text-[#111110] underline hover:no-underline">Privacy Policy</Link>
+            <span className="text-[#d0d0cc]">|</span>
+            <Link href="/legal/disclaimer"  className="text-[#111110] underline hover:no-underline">Disclaimer</Link>
+            <span className="text-[#d0d0cc]">|</span>
+            <Link href="/legal/guidelines"  className="text-[#111110] underline hover:no-underline">Community Guidelines</Link>
+            <span className="text-[#d0d0cc]">|</span>
+            <Link href="/contact"           className="text-[#111110] underline hover:no-underline">Contact Us</Link>
           </p>
         </div>
       </div>

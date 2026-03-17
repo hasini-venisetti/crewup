@@ -68,9 +68,10 @@ export default function Footer() {
               <li><Link href="/safety"                     className={footerLink}>🛡 Safety Guide</Link></li>
               <li><Link href="/report"                     className={footerLink}>Report an Issue</Link></li>
               <li><Link href="/support"                    className={footerLink}>Support</Link></li>
-              <li><Link href="/legal/privacy"              className={footerLink}>Privacy Policy</Link></li>
-              <li><Link href="/legal/terms"                className={footerLink}>Terms of Service</Link></li>
-              <li><Link href="/legal/community-guidelines" className={footerLink}>Community Guidelines</Link></li>
+              <li><Link href="/legal/privacy"     className={footerLink}>Privacy Policy</Link></li>
+              <li><Link href="/legal/terms"       className={footerLink}>Terms of Service</Link></li>
+              <li><Link href="/legal/disclaimer"  className={footerLink}>Disclaimer</Link></li>
+              <li><Link href="/legal/guidelines"  className={footerLink}>Community Guidelines</Link></li>
             </ul>
           </div>
         </div>

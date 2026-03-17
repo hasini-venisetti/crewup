@@ -69,8 +69,14 @@ export default function PrivacyPolicy() {
         </div>
 
         <div className="mt-16 pt-12 border-t border-[#efefed]">
-          <p className="text-[#6b6b66] text-sm">
-            <Link href="/legal/terms" className="text-[#111110] underline hover:no-underline">Terms of Service</Link> | <Link href="/legal/cookies" className="text-[#111110] underline hover:no-underline">Cookie Policy</Link> | <Link href="/contact" className="text-[#111110] underline hover:no-underline">Contact Us</Link>
+          <p className="text-[#6b6b66] text-sm flex flex-wrap gap-x-4 gap-y-2">
+            <Link href="/legal/terms"       className="text-[#111110] underline hover:no-underline">Terms of Service</Link>
+            <span className="text-[#d0d0cc]">|</span>
+            <Link href="/legal/disclaimer"  className="text-[#111110] underline hover:no-underline">Disclaimer</Link>
+            <span className="text-[#d0d0cc]">|</span>
+            <Link href="/legal/cookies"     className="text-[#111110] underline hover:no-underline">Cookie Policy</Link>
+            <span className="text-[#d0d0cc]">|</span>
+            <Link href="/contact"           className="text-[#111110] underline hover:no-underline">Contact Us</Link>
           </p>
         </div>
       </div>

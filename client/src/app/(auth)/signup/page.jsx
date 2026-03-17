@@ -157,6 +157,7 @@ export default function SignupPage() {
   const [isLoading, setIsLoading]       = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [usernameError, setUsernameError] = useState('');
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   // OTP state (step 7 — email)
   const [otpCode, setOtpCode]         = useState(['', '', '', '', '', '']);
@@ -317,6 +318,7 @@ export default function SignupPage() {
     if (!formData.email.trim()) { toast.error('Please enter your email'); return; }
     if (!formData.password.trim()) { toast.error('Please enter a password'); return; }
     if (formData.password.length < 8) { toast.error('Password must be at least 8 characters'); return; }
+    if (!agreedToTerms) { toast.error('Please accept the Terms of Service, Privacy Policy, and Disclaimer to continue.'); return; }
 
     setIsLoading(true);
     try {
@@ -648,7 +650,56 @@ export default function SignupPage() {
                   <input type="password" placeholder="Min. 8 characters" className="field-input mb-2"
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })} />
-                  <p className="text-xs text-[#a3a39e] mb-8">At least 8 characters. Never shared with anyone.</p>
+                  <p className="text-xs text-[#a3a39e] mb-6">At least 8 characters. Never shared with anyone.</p>
+
+                  {/* ── T&C Acceptance ── */}
+                  <label
+                    className={`flex items-start gap-3 cursor-pointer p-4 border-2 transition-all select-none ${
+                      agreedToTerms
+                        ? 'border-[#111110] bg-[#f5f5f3]'
+                        : 'border-[#e0e0dd] hover:border-[#a3a39e]'
+                    }`}
+                  >
+                    <div className="relative flex-shrink-0 mt-0.5">
+                      <input
+                        type="checkbox"
+                        className="sr-only"
+                        checked={agreedToTerms}
+                        onChange={(e) => setAgreedToTerms(e.target.checked)}
+                      />
+                      <div className={`w-5 h-5 border-2 flex items-center justify-center transition-all ${
+                        agreedToTerms ? 'bg-[#111110] border-[#111110]' : 'border-[#d0d0cc] bg-white'
+                      }`}>
+                        {agreedToTerms && (
+                          <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                            <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        )}
+                      </div>
+                    </div>
+                    <span className="text-xs text-[#6b6b66] leading-relaxed">
+                      I have read and agree to the{' '}
+                      <a href="/legal/terms" target="_blank" rel="noopener noreferrer"
+                        className="text-[#111110] font-semibold underline hover:no-underline"
+                        onClick={(e) => e.stopPropagation()}>
+                        Terms of Service
+                      </a>
+                      ,{' '}
+                      <a href="/legal/privacy" target="_blank" rel="noopener noreferrer"
+                        className="text-[#111110] font-semibold underline hover:no-underline"
+                        onClick={(e) => e.stopPropagation()}>
+                        Privacy Policy
+                      </a>
+                      , and{' '}
+                      <a href="/legal/disclaimer" target="_blank" rel="noopener noreferrer"
+                        className="text-[#111110] font-semibold underline hover:no-underline"
+                        onClick={(e) => e.stopPropagation()}>
+                        Disclaimer
+                      </a>
+                      . I understand that CREWUPFILMS does not vet users or guarantee collaboration outcomes.
+                    </span>
+                  </label>
+                  <div className="mb-6" />
                 </div>
               )}
 
@@ -819,7 +870,7 @@ export default function SignupPage() {
                     </button>
                   ) : (
                     /* Step 6 — create account */
-                    <button onClick={googleStep ? handleGoogleFinish : handleCreateAccount} disabled={isLoading}
+                    <button onClick={googleStep ? handleGoogleFinish : handleCreateAccount} disabled={isLoading || !agreedToTerms}
                       className="flex-1 bg-[#111110] text-white text-sm font-medium py-3 hover:bg-[#2d2d2b] transition disabled:opacity-60">
                       {isLoading ? (
                         <span className="flex items-center justify-center gap-2">
