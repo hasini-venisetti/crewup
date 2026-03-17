@@ -278,6 +278,7 @@ export default function CreateProjectPage() {
                 value={form.title}
                 onChange={(e) => set('title', e.target.value)}
                 required
+                maxLength={150}
               />
             </div>
 

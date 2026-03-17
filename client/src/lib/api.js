@@ -44,6 +44,9 @@ export const authAPI = {
   // Phone OTP verification
   sendPhoneOTP:    (phone)    => api.post('/auth/send-phone-otp', { phone }),
   verifyPhone:     (code)     => api.post('/auth/verify-phone', { code }),
+  // Password reset
+  forgotPassword:  (email)    => api.post('/auth/forgot-password', { email }),
+  resetPassword:   (data)     => api.post('/auth/reset-password', data),
 };
 
 /* ── Profile ── */

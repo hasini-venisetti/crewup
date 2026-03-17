@@ -4,7 +4,7 @@ const { validationResult } = require('express-validator');
 const User                 = require('../models/User');
 const Profile              = require('../models/Profile');
 const generateToken        = require('../utils/generateToken');
-const { sendEmailOTP }       = require('../utils/emailService');
+const { sendEmailOTP, sendPasswordReset } = require('../utils/emailService');
 const { sendPhoneOTPSMS }    = require('../utils/smsService');
 
 /* ── helpers ──────────────────────────────────────────────────────────── */
@@ -376,4 +376,95 @@ const updateMe = async (req, res, next) => {
   }
 };
 
-module.exports = { register, login, googleAuth, getMe, updateMe, sendEmailVerificationOTP, verifyEmail, sendPhoneOTP, verifyPhone };
+/* ── POST /api/auth/forgot-password ────────────────────────────────────────
+   Body: { email }
+   Generates a hashed reset token, saves it, and emails a reset link.
+   Always returns success to prevent email enumeration.
+   ─────────────────────────────────────────────────────────────────────── */
+const forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() })
+      .select('+resetPasswordToken +resetPasswordExpires');
+
+    // Always respond the same way to prevent email enumeration
+    const successMsg = 'If an account with that email exists, a reset link has been sent.';
+
+    if (!user || user.authProvider === 'google') {
+      return res.status(200).json({ success: true, message: successMsg });
+    }
+
+    // Rate-limit: don't resend if a token was issued in the last 60 seconds
+    if (user.resetPasswordExpires && user.resetPasswordExpires.getTime() - Date.now() > 59 * 60 * 1000) {
+      return res.status(429).json({ success: false, message: 'A reset link was already sent recently. Please wait 60 seconds before trying again.' });
+    }
+
+    // Generate token
+    const resetToken    = crypto.randomBytes(32).toString('hex');
+    const hashedToken   = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+    user.resetPasswordToken   = hashedToken;
+    user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await user.save({ validateBeforeSave: false });
+
+    const clientUrl = (process.env.CLIENT_URL || 'http://localhost:3000').split(',')[0].trim();
+    const resetUrl  = `${clientUrl}/reset-password?token=${resetToken}`;
+
+    await sendPasswordReset(user.email, user.name, resetUrl).catch((err) => {
+      console.error('[FORGOT-PW] Email failed:', err.message);
+    });
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[DEV] Password reset link for ${user.email}: ${resetUrl}`);
+    }
+
+    res.status(200).json({ success: true, message: successMsg });
+  } catch (error) { next(error); }
+};
+
+/* ── POST /api/auth/reset-password ────────────────────────────────────────
+   Body: { token, password }
+   Validates the reset token and sets a new password.
+   ─────────────────────────────────────────────────────────────────────── */
+const resetPassword = async (req, res, next) => {
+  try {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+      return res.status(400).json({ success: false, message: 'Token and new password are required' });
+    }
+    if (password.length < 8) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 8 characters' });
+    }
+
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    const user = await User.findOne({
+      resetPasswordToken:   hashedToken,
+      resetPasswordExpires: { $gt: new Date() },
+    }).select('+resetPasswordToken +resetPasswordExpires');
+
+    if (!user) {
+      return res.status(400).json({ success: false, message: 'This reset link is invalid or has expired. Please request a new one.' });
+    }
+
+    user.password             = password;
+    user.resetPasswordToken   = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    const jwtToken = generateToken(user._id);
+    res.status(200).json({
+      success: true,
+      message: 'Password reset successfully. You are now logged in.',
+      token:   jwtToken,
+      user:    userPayload(user),
+    });
+  } catch (error) { next(error); }
+};
+
+module.exports = { register, login, googleAuth, getMe, updateMe, sendEmailVerificationOTP, verifyEmail, sendPhoneOTP, verifyPhone, forgotPassword, resetPassword };

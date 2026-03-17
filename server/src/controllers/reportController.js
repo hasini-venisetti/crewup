@@ -39,29 +39,46 @@ const submitReport = async (req, res, next) => {
     );
 
     // ── Post-approval project monitoring ────────────────────────────────────
-    // If a live (approved) project gets reported → auto-suspend it immediately
-    // and alert all admins so they can act fast.
+    // A project is auto-suspended only after 3+ distinct user reports.
+    // This prevents a single malicious user from hiding legitimate projects.
     if (targetType === 'project') {
       const project = await Project.findById(targetId).populate('createdBy', 'name username').lean();
       if (project && project.moderationStatus === 'approved') {
-        // Suspend the project
-        await Project.findByIdAndUpdate(targetId, {
-          moderationStatus: 'pending',
-          autoSuspended:    true,
-          moderationNote:   'Auto-suspended: reported after approval',
-        });
+        // Count total distinct reports for this project
+        const reportCount = await Report.countDocuments({ targetId, targetType: 'project' });
 
-        // Alert all admins immediately
-        const admins = await User.find({ isAdmin: true }).select('_id').lean();
-        await Promise.all(admins.map((admin) =>
-          Notification.create({
-            recipient: admin._id,
-            type:      'platform_update',
-            title:     `🚨 Project auto-suspended: "${project.title}"`,
-            message:   `Reported by a user (reason: ${reason}). Project has been hidden from public and needs your review.`,
-            link:      '/admin?tab=moderation',
-          })
-        ));
+        if (reportCount >= 3) {
+          // Suspend the project once it hits 3 reports
+          await Project.findByIdAndUpdate(targetId, {
+            moderationStatus: 'pending',
+            autoSuspended:    true,
+            moderationNote:   `Auto-suspended: ${reportCount} reports received`,
+          });
+
+          // Alert all admins immediately
+          const admins = await User.find({ isAdmin: true }).select('_id').lean();
+          await Promise.all(admins.map((admin) =>
+            Notification.create({
+              recipient: admin._id,
+              type:      'platform_update',
+              title:     `🚨 Project auto-suspended: "${project.title}"`,
+              message:   `${reportCount} users reported this project (latest reason: ${reason}). It has been hidden and needs your review.`,
+              link:      '/admin?tab=moderation',
+            })
+          ));
+        } else {
+          // Not yet at threshold — just notify admins silently so they can monitor
+          const admins = await User.find({ isAdmin: true }).select('_id').lean();
+          await Promise.all(admins.map((admin) =>
+            Notification.create({
+              recipient: admin._id,
+              type:      'platform_update',
+              title:     `⚠️ Project report #${reportCount}: "${project.title}"`,
+              message:   `Report reason: ${reason}. Project remains live (auto-suspend triggers at 3 reports).`,
+              link:      '/admin?tab=moderation',
+            })
+          ));
+        }
       }
     }
 

@@ -171,7 +171,7 @@ export default function LoginPage() {
               </div>
 
               <div className="anim-4 flex justify-end mb-8">
-                <a href="#" className="text-xs text-[#6b6b66] hover:text-[#111110] transition">Forgot password?</a>
+                <a href="/forgot-password" className="text-xs text-[#6b6b66] hover:text-[#111110] transition">Forgot password?</a>
               </div>
 
               <button type="submit" disabled={isLoading}

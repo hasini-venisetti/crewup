@@ -79,6 +79,9 @@ const getComments = async (req, res, next) => {
   }
 };
 
+// Regex patterns to strip contact info from comments
+const CONTACT_INFO_PATTERN = /(\+?[\d\s\-().]{7,}|[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}|(?:wa\.me|whatsapp\.com|t\.me|telegram\.me)\/\S+)/gi;
+
 // @desc   Add a comment to a film
 // @route  POST /api/films/:id/comments
 // @access Private
@@ -88,16 +91,32 @@ const addComment = async (req, res, next) => {
     if (!text?.trim()) {
       return res.status(400).json({ success: false, message: 'Comment text is required' });
     }
+    if (text.trim().length > 1000) {
+      return res.status(400).json({ success: false, message: 'Comment cannot exceed 1000 characters' });
+    }
+
+    // Spam cooldown: 30 seconds between comments per user per film
+    const COOLDOWN_MS = 30 * 1000;
+    const recent = await FilmComment.findOne({
+      project: req.params.id,
+      author:  req.user._id,
+    }).sort({ createdAt: -1 }).select('createdAt');
+    if (recent && Date.now() - new Date(recent.createdAt).getTime() < COOLDOWN_MS) {
+      return res.status(429).json({ success: false, message: 'Please wait a moment before commenting again.' });
+    }
 
     const project = await Project.findById(req.params.id).select('youtubeLink');
     if (!project || !project.youtubeLink) {
       return res.status(404).json({ success: false, message: 'Film not found' });
     }
 
+    // Strip phone numbers, emails, and messaging links from comment text
+    const sanitizedText = text.trim().replace(CONTACT_INFO_PATTERN, '[contact info removed]');
+
     const comment = await FilmComment.create({
       project: req.params.id,
       author:  req.user._id,
-      text:    text.trim(),
+      text:    sanitizedText,
     });
 
     await comment.populate('author', 'name username profileImage');

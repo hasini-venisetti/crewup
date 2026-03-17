@@ -1,6 +1,6 @@
 const express = require('express');
 const { body } = require('express-validator');
-const { register, login, googleAuth, getMe, updateMe, sendEmailVerificationOTP, verifyEmail, sendPhoneOTP, verifyPhone } = require('../controllers/authController');
+const { register, login, googleAuth, getMe, updateMe, sendEmailVerificationOTP, verifyEmail, sendPhoneOTP, verifyPhone, forgotPassword, resetPassword } = require('../controllers/authController');
 const { protect } = require('../middleware/auth');
 
 const router = express.Router();
@@ -50,5 +50,15 @@ router.post('/send-phone-otp', protect, [
 router.post('/verify-phone', protect, [
   body('code').notEmpty().withMessage('Verification code is required'),
 ], verifyPhone);
+
+// ── Password Reset ─────────────────────────────────────────────────────────────
+router.post('/forgot-password', [
+  body('email').isEmail().withMessage('Valid email is required').normalizeEmail(),
+], forgotPassword);
+
+router.post('/reset-password', [
+  body('token').notEmpty().withMessage('Token is required'),
+  body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
+], resetPassword);
 
 module.exports = router;

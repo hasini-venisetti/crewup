@@ -386,6 +386,26 @@ const sendProjectEditedNotice = async (applicantEmail, applicantName, projectTit
   }
 };
 
+const sendPasswordReset = async (email, name, resetUrl) => {
+  try {
+    const html = transactionalHtml(`
+      <p style="margin:0 0 8px;font-size:16px;font-weight:600;color:#111110;">Hi ${name},</p>
+      <p style="margin:0 0 20px;font-size:15px;color:#444444;line-height:1.6;">
+        We received a request to reset your CREWUPFILMS password. Click below to set a new one. This link expires in <strong>1 hour</strong>.
+      </p>
+      <a href="${resetUrl}" style="display:inline-block;background:#111110;color:#ffffff;padding:11px 24px;text-decoration:none;border-radius:6px;font-size:14px;font-weight:600;">Reset Password</a>
+      <p style="margin:24px 0 0;font-size:13px;color:#999999;line-height:1.6;">
+        If you didn't request this, you can safely ignore this email. Your password won't change.
+      </p>
+    `);
+    const text = `Hi ${name},\n\nClick the link below to reset your password (expires in 1 hour):\n${resetUrl}\n\nIf you didn't request this, ignore this email.\n\n— CREWUPFILMS`;
+    await sendEmail(email, 'Reset your CREWUPFILMS password', html, text);
+    console.log(`[EMAIL SENT] sendPasswordReset to ${email}`);
+  } catch (error) {
+    console.error('[EMAIL ERROR] sendPasswordReset:', error.message);
+  }
+};
+
 module.exports = {
   sendEmail,
   sendApplicationReceived,
@@ -397,4 +417,5 @@ module.exports = {
   sendProjectApproved,
   sendProjectRejected,
   sendProjectEditedNotice,
+  sendPasswordReset,
 };
