@@ -147,8 +147,28 @@ const socketHandler = (io) => {
         const chat = await ProjectChat.findById(projectChatId);
         if (!chat) return socket.emit('error', { message: 'Chat not found' });
 
-        const isMember = chat.members.some((m) => m.toString() === userId);
-        if (!isMember) return socket.emit('error', { message: 'Not authorized' });
+        // Primary: check if already in chat.members
+        const isChatMember = chat.members.some((m) => m.toString() === userId);
+
+        // Fallback: check if the user is the project owner or an accepted team member.
+        // This handles the case where the socket reconnected without re-emitting joinProjectRoom.
+        let authorized = isChatMember;
+        if (!isChatMember) {
+          const Project = require('../models/Project');
+          const project = await Project.findById(chat.project);
+          const inProject = project && (
+            project.createdBy.toString() === userId ||
+            project.teamMembers.some((m) => m.user.toString() === userId)
+          );
+          if (inProject) {
+            // Auto-heal: add to members and join the room so future messages work seamlessly
+            await ProjectChat.findByIdAndUpdate(projectChatId, { $addToSet: { members: userId } });
+            socket.join(`project:${projectChatId}`);
+            authorized = true;
+          }
+        }
+
+        if (!authorized) return socket.emit('error', { message: 'Not authorized' });
 
         const message = await Message.create({
           sender:        socket.user._id,
