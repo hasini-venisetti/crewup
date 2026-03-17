@@ -243,14 +243,7 @@ export default function SignupPage() {
 
   /* ── Google handlers ── */
   const handleGoogleSignup = () => {
-    if (!IS_CONFIGURED) { toast.error('Google sign-in is not configured yet. Contact support.'); return; }
-    const gBtn = googleBtnRef.current?.querySelector('[role="button"]') ||
-                 googleBtnRef.current?.querySelector('div[tabindex="0"]');
-    if (gBtn) {
-      gBtn.click();
-    } else {
-      toast.error('Google sign-in is loading, please try again in a moment.');
-    }
+    if (!IS_CONFIGURED) { toast.error('Google sign-in is not configured yet. Contact support.'); }
   };
 
   const handleGoogleFinish = async () => {
@@ -856,10 +849,11 @@ export default function SignupPage() {
                     <div className="flex-1 h-px bg-[#efefed]" />
                   </div>
                   <div className="relative">
-                    {/* Hidden container — Google's renderButton renders its real button here */}
-                    <div ref={googleBtnRef} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0, pointerEvents: 'none', overflow: 'hidden' }} aria-hidden="true" />
-                    <button onClick={handleGoogleSignup} disabled={googleLoading}
-                      className="w-full flex items-center justify-center gap-3 border border-[#e0e0dd] bg-white hover:bg-[#fafaf9] text-[#111110] text-sm font-medium py-3 rounded transition-all disabled:opacity-60">
+                    {/* Our visible styled button — pointer-events:none so clicks reach Google iframe */}
+                    <div
+                      style={{ pointerEvents: IS_CONFIGURED ? 'none' : 'auto', opacity: googleLoading ? 0.6 : 1 }}
+                      onClick={handleGoogleSignup}
+                      className="w-full flex items-center justify-center gap-3 border border-[#e0e0dd] bg-white text-[#111110] text-sm font-medium py-3 rounded transition-all cursor-pointer select-none">
                       {googleLoading ? (
                         <span className="w-4 h-4 border-2 border-gray-300 border-t-gray-700 rounded-full animate-spin" />
                       ) : (
@@ -871,7 +865,16 @@ export default function SignupPage() {
                         </svg>
                       )}
                       Sign up with Google
-                    </button>
+                    </div>
+                    {/* Google's iframe sits on top — transparent but receives all clicks */}
+                    <div
+                      ref={googleBtnRef}
+                      style={{
+                        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                        opacity: 0.01, overflow: 'hidden',
+                        pointerEvents: googleLoading ? 'none' : 'auto',
+                      }}
+                    />
                   </div>
                 </div>
               )}

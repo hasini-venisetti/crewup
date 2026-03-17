@@ -77,18 +77,10 @@ export default function LoginPage() {
     }
   }, [handleGoogleCallback]);
 
-  // Our custom button click — delegates to Google's rendered button
+  // Only used when Google is not configured
   const handleGoogleLogin = () => {
     if (!IS_CONFIGURED) {
       toast.error('Google sign-in is not configured yet. Contact support.');
-      return;
-    }
-    const gBtn = googleBtnRef.current?.querySelector('[role="button"]') ||
-                 googleBtnRef.current?.querySelector('div[tabindex="0"]');
-    if (gBtn) {
-      gBtn.click();
-    } else {
-      toast.error('Google sign-in is loading, please try again in a moment.');
     }
   };
 
@@ -201,18 +193,27 @@ export default function LoginPage() {
 
             {/* Google Sign-In */}
             <div className="anim-6 relative mb-4">
-              {/* Hidden container — Google's renderButton renders its real button here */}
-              <div ref={googleBtnRef} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0, pointerEvents: 'none', overflow: 'hidden' }} aria-hidden="true" />
-              {/* Our styled button — clicks through to Google's rendered button */}
-              <button onClick={handleGoogleLogin} disabled={googleLoading}
-                className="w-full flex items-center justify-center gap-3 border border-[#e0e0dd] bg-white hover:bg-[#fafaf9] text-[#111110] text-sm font-medium py-3 rounded transition-all disabled:opacity-60">
+              {/* Our visible styled button — pointer-events:none so clicks reach Google iframe */}
+              <div
+                style={{ pointerEvents: IS_CONFIGURED ? 'none' : 'auto', opacity: googleLoading ? 0.6 : 1 }}
+                onClick={handleGoogleLogin}
+                className="w-full flex items-center justify-center gap-3 border border-[#e0e0dd] bg-white text-[#111110] text-sm font-medium py-3 rounded transition-all cursor-pointer select-none">
                 {googleLoading ? (
                   <span className="w-4 h-4 border-2 border-gray-300 border-t-gray-700 rounded-full animate-spin" />
                 ) : (
                   <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v8.51h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.14z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="#FBBC05" d="M10.53 28.59c-.5-1.45-.79-3-.79-4.59s.29-3.14.79-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.55 10.78l7.98-6.19z"/><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.55 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/></svg>
                 )}
                 Continue with Google
-              </button>
+              </div>
+              {/* Google's iframe sits on top — transparent but receives all clicks */}
+              <div
+                ref={googleBtnRef}
+                style={{
+                  position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                  opacity: 0.01, overflow: 'hidden',
+                  pointerEvents: googleLoading ? 'none' : 'auto',
+                }}
+              />
             </div>
 
             <p className="anim-6 text-sm text-center text-[#6b6b66]">
