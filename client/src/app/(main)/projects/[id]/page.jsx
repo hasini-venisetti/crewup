@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import toast from 'react-hot-toast';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { projectAPI, applicationAPI, timelineAPI, waitlistAPI, reviewAPI, fillRoleAPI, profileAPI } from '@/lib/api';
 import { useRef } from 'react';
@@ -378,6 +379,20 @@ function ProjectDetailContent() {
       .catch(() => router.push('/projects'))
       .finally(() => setLoading(false));
   }, [id]);
+
+  // Check if logged-in user already applied to this project
+  useEffect(() => {
+    if (!user || !id) return;
+    applicationAPI.getMine()
+      .then(({ data }) => {
+        const apps = data.data || [];
+        const alreadyApplied = apps.some(
+          (app) => app.project?._id === id || app.project === id
+        );
+        if (alreadyApplied) setApplied(true);
+      })
+      .catch(() => {/* silent — applied state stays false */});
+  }, [user, id]);
 
   // Fetch creator's verified status from their Profile
   useEffect(() => {

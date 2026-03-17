@@ -49,7 +49,7 @@ export default function PrivacyPolicy() {
           <div>
             <h2 className="text-xl font-semibold text-[#111110] mt-10 mb-3">6. Your Rights</h2>
             <p className="leading-relaxed text-sm">
-              You have the right to access, update, and delete your personal information. You can control your privacy settings and communication preferences through your account dashboard. You have the right to withdraw consent for certain uses of your data. To exercise these rights, please contact us at hello@crewup.in.
+              You have the right to access, update, and delete your personal information. You can control your privacy settings and communication preferences through your account dashboard. You have the right to withdraw consent for certain uses of your data. To exercise these rights, please contact us at crewupfilms@gmail.com.
             </p>
           </div>
 
@@ -63,7 +63,7 @@ export default function PrivacyPolicy() {
           <div>
             <h2 className="text-xl font-semibold text-[#111110] mt-10 mb-3">8. Contact</h2>
             <p className="leading-relaxed text-sm">
-              If you have questions about this Privacy Policy or our privacy practices, please contact us at hello@crewup.in. We will respond to your inquiry within 30 days. You also have the right to lodge a complaint with your local data protection authority if you believe we have mishandled your data.
+              If you have questions about this Privacy Policy or our privacy practices, please contact us at crewupfilms@gmail.com. We will respond to your inquiry within 30 days. You also have the right to lodge a complaint with your local data protection authority if you believe we have mishandled your data.
             </p>
           </div>
         </div>

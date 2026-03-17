@@ -70,7 +70,7 @@ export default function TermsOfService() {
           <div>
             <h2 className="text-xl font-semibold text-[#111110] mt-10 mb-3">9. Contact</h2>
             <p className="leading-relaxed text-sm">
-              If you have questions about these Terms of Service, please contact us at hello@crewup.in. We welcome your feedback and will address any concerns promptly.
+              If you have questions about these Terms of Service, please contact us at crewupfilms@gmail.com. We welcome your feedback and will address any concerns promptly.
             </p>
           </div>
         </div>

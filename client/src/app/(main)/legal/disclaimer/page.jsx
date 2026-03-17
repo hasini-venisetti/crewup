@@ -109,7 +109,7 @@ export default function Disclaimer() {
             <h2 className="text-xl font-semibold text-[#111110] mt-10 mb-3">11. Contact</h2>
             <p className="leading-relaxed text-sm">
               If you have any questions about this Disclaimer, please reach out to us at{' '}
-              <a href="mailto:hello@crewup.in" className="text-[#111110] underline hover:no-underline">hello@crewup.in</a>.
+              <a href="mailto:crewupfilms@gmail.com" className="text-[#111110] underline hover:no-underline">crewupfilms@gmail.com</a>.
             </p>
           </div>
 

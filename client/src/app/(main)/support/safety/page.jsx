@@ -92,7 +92,7 @@ export default function Safety() {
         <div className="mt-16 pt-12 border-t border-[#efefed]">
           <h3 className="text-lg font-semibold text-[#111110] mb-4">Need Help?</h3>
           <p className="text-[#6b6b66] text-sm mb-4">
-            If you're experiencing harassment, threats, or other safety concerns, contact us immediately at <span className="text-[#111110] font-medium">support@crewup.in</span>.
+            If you're experiencing harassment, threats, or other safety concerns, contact us immediately at <span className="text-[#111110] font-medium">crewupfilms@gmail.com</span>.
           </p>
           <div className="flex gap-4 flex-wrap">
             <Link href="/legal/guidelines" className="text-[#111110] font-medium hover:underline">
