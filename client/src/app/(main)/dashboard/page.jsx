@@ -599,8 +599,9 @@ export default function DashboardPage() {
           </div>
         )}
 
-      </div>
-    </div>
+        </div>{/* /flex-1 main content */}
+      </div>{/* /body layout */}
+    </div>{/* /min-h-screen */}
   );
 }
 
