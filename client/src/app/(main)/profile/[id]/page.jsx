@@ -9,7 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import FollowButton from '@/components/ui/FollowButton';
 import ReportModal  from '@/components/ui/ReportModal';
-import { X } from 'lucide-react';
+import { X, Film, FolderPlus, Upload, ArrowRight, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const AVAIL_CONFIG = {
@@ -63,6 +63,7 @@ export default function ProfilePage() {
   const [loadingFollowing, setLoadingFollowing] = useState(false);
   const [films, setFilms]                       = useState([]);
   const [filmsLoading, setFilmsLoading]         = useState(true);
+  const [showUploadGuide, setShowUploadGuide]   = useState(false);
   const [filmLikes, setFilmLikes]               = useState({});
   const [filmBookmarks, setFilmBookmarks]       = useState({});
   const [commentFilm, setCommentFilm]           = useState(null);
@@ -987,9 +988,12 @@ export default function ProfilePage() {
                 )}
               </div>
               {isOwnProfile && !filmsLoading && (
-                <Link href="/films/upload" className="text-xs font-semibold text-[#6C63FF] hover:text-[#4740CC] transition-colors">
+                <button
+                  onClick={() => setShowUploadGuide(true)}
+                  className="text-xs font-semibold text-[#6C63FF] hover:text-[#4740CC] transition-colors"
+                >
                   + Upload Film
-                </Link>
+                </button>
               )}
             </div>
 
@@ -1576,6 +1580,83 @@ export default function ProfilePage() {
           targetLabel={creator?.name || 'this user'}
           onClose={() => setShowReportModal(false)}
         />
+      )}
+
+      {/* ── Upload Film Guide Modal ── */}
+      {showUploadGuide && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden">
+            {/* Header */}
+            <div className="relative bg-gradient-to-br from-[#6C63FF] to-[#4740CC] px-6 pt-6 pb-8">
+              <button
+                onClick={() => setShowUploadGuide(false)}
+                className="absolute top-4 right-4 p-1.5 rounded-lg bg-white/20 hover:bg-white/30 text-white transition-colors"
+              >
+                <X size={16} />
+              </button>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                  <Film size={20} className="text-white" />
+                </div>
+                <h2 className="text-lg font-bold text-white">How to Upload a Film</h2>
+              </div>
+              <p className="text-sm text-white/80 leading-relaxed">
+                Films on CrewUp are tied to projects. Follow these steps to get your film live on your profile.
+              </p>
+            </div>
+
+            {/* Steps */}
+            <div className="px-6 py-5 space-y-4">
+              {[
+                {
+                  icon: <FolderPlus size={18} className="text-[#6C63FF]" />,
+                  step: '1',
+                  title: 'Create a Project',
+                  desc: 'Go to Projects and create a new project for your film — short film, feature, music video, etc.',
+                },
+                {
+                  icon: <Upload size={18} className="text-[#6C63FF]" />,
+                  step: '2',
+                  title: 'Upload Your Film',
+                  desc: 'Inside your project, paste a YouTube or Vimeo link and fill in details like your role, genre, and description.',
+                },
+                {
+                  icon: <CheckCircle2 size={18} className="text-[#6C63FF]" />,
+                  step: '3',
+                  title: 'It Appears on Your Profile',
+                  desc: 'Once uploaded, your film automatically shows up in the Films section of your profile for everyone to see.',
+                },
+              ].map(({ icon, step, title, desc }) => (
+                <div key={step} className="flex gap-4">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[#f0eeff] flex items-center justify-center">
+                    {icon}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-[#111110]">{title}</p>
+                    <p className="text-xs text-[#6b6b66] mt-0.5 leading-relaxed">{desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* CTA */}
+            <div className="px-6 pb-6 flex gap-3">
+              <button
+                onClick={() => setShowUploadGuide(false)}
+                className="flex-1 py-2.5 rounded-xl border border-[#e0e0dd] text-sm font-semibold text-[#6b6b66] hover:bg-[#f7f7f6] transition-colors"
+              >
+                Maybe Later
+              </button>
+              <Link
+                href="/projects/new"
+                onClick={() => setShowUploadGuide(false)}
+                className="flex-1 py-2.5 rounded-xl bg-[#6C63FF] hover:bg-[#5750D4] text-white text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
+              >
+                Create Project <ArrowRight size={15} />
+              </Link>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
