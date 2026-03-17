@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { conversationAPI, searchAPI, messageRequestAPI } from '@/lib/api';
 import Link from 'next/link';
 import { useSocket } from '@/hooks/useSocket';
-import { Search, X, Send, Plus, ArrowLeft, MoreVertical } from 'lucide-react';
+import { Search, X, Send, Plus, ArrowLeft, MoreVertical, Circle, Ban, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ReportModal from '@/components/ui/ReportModal';
 
@@ -33,10 +33,42 @@ export default function MessagesPage() {
   const [loadingRequests, setLoadingRequests] = useState(false);
   const [respondingId, setRespondingId] = useState(null);
   const messagesEndRef = useRef(null);
+  // Block state: set of convIds blocked by me
+  const [blockedConvIds, setBlockedConvIds] = useState(new Set());
+  // Header menu for the active chat
+  const [showChatMenu, setShowChatMenu] = useState(false);
+  const chatMenuRef = useRef(null);
+  // My online status (local preference)
+  const [myStatus, setMyStatus] = useState('online'); // 'online' | 'offline' | 'busy'
+  const [showStatusMenu, setShowStatusMenu] = useState(false);
+  const statusMenuRef = useRef(null);
 
   /* ─── helpers ────────────────────────────────────────────── */
   const scrollToBottom = () =>
     setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 80);
+
+  /* ─── block helpers ──────────────────────────────────────────── */
+  const isBlocked = (convId) => blockedConvIds.has(convId);
+
+  const handleBlock = async () => {
+    if (!selectedConvId) return;
+    setShowChatMenu(false);
+    try {
+      await conversationAPI.block(selectedConvId);
+      setBlockedConvIds((prev) => new Set([...prev, selectedConvId]));
+      toast('Conversation blocked.', { icon: '🚫', duration: 3000 });
+    } catch { toast.error('Failed to block.'); }
+  };
+
+  const handleUnblock = async () => {
+    if (!selectedConvId) return;
+    setShowChatMenu(false);
+    try {
+      await conversationAPI.unblock(selectedConvId);
+      setBlockedConvIds((prev) => { const s = new Set(prev); s.delete(selectedConvId); return s; });
+      toast('Conversation unblocked.', { icon: '✅', duration: 3000 });
+    } catch { toast.error('Failed to unblock.'); }
+  };
 
   const loadRequests = async () => {
     try {
@@ -89,6 +121,16 @@ export default function MessagesPage() {
       setConversations(list);
       if (list.length > 0 && !selectedConvId) {
         setSelectedConvId(list[0]._id);
+      }
+      // Seed blocked conv IDs from server data
+      if (user) {
+        const myId = (user._id || user.id)?.toString();
+        const blocked = new Set(
+          list
+            .filter((c) => Array.isArray(c.blockedBy) && c.blockedBy.some((id) => id?.toString() === myId))
+            .map((c) => c._id || c.id)
+        );
+        setBlockedConvIds(blocked);
       }
     } catch (err) {
       console.error('loadConversations:', err);
@@ -176,6 +218,16 @@ export default function MessagesPage() {
   useEffect(() => {
     if (sidebarTab === 'requests') loadRequests();
   }, [sidebarTab]);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (chatMenuRef.current && !chatMenuRef.current.contains(e.target)) setShowChatMenu(false);
+      if (statusMenuRef.current && !statusMenuRef.current.contains(e.target)) setShowStatusMenu(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   useEffect(() => {
     if (!selectedConvId) return;
@@ -273,9 +325,43 @@ export default function MessagesPage() {
         ${mobileView === 'chat' ? 'hidden sm:flex' : 'flex'}
       `}>
         {/* Sidebar header */}
-        <div className="px-5 py-4 border-b border-[#efefed]">
-          <h1 className="text-lg font-bold text-[#111110]">Messages</h1>
-          <p className="text-xs text-[#a3a39e] mt-0.5">Visit a profile to send a message request</p>
+        <div className="px-5 py-4 border-b border-[#efefed] flex items-center justify-between gap-2">
+          <div>
+            <h1 className="text-lg font-bold text-[#111110]">Messages</h1>
+            <p className="text-xs text-[#a3a39e] mt-0.5">Visit a profile to send a message request</p>
+          </div>
+          {/* My status toggle */}
+          <div className="relative flex-shrink-0" ref={statusMenuRef}>
+            <button
+              onClick={() => setShowStatusMenu((v) => !v)}
+              title="Change your status"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[#e0e0dd] hover:bg-[#f7f7f6] transition-colors text-xs font-medium text-[#6b6b66]"
+            >
+              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                myStatus === 'online' ? 'bg-green-500' :
+                myStatus === 'busy'   ? 'bg-amber-400' : 'bg-[#c0c0bc]'
+              }`} />
+              {myStatus === 'online' ? 'Online' : myStatus === 'busy' ? 'Busy' : 'Offline'}
+            </button>
+            {showStatusMenu && (
+              <div className="absolute right-0 top-full mt-1.5 w-36 bg-white border border-[#efefed] rounded-xl shadow-lg z-50 overflow-hidden">
+                {[
+                  { key: 'online', label: 'Online',  dot: 'bg-green-500' },
+                  { key: 'busy',   label: 'Busy',    dot: 'bg-amber-400' },
+                  { key: 'offline',label: 'Offline', dot: 'bg-[#c0c0bc]' },
+                ].map(({ key, label, dot }) => (
+                  <button
+                    key={key}
+                    onClick={() => { setMyStatus(key); setShowStatusMenu(false); }}
+                    className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs hover:bg-[#f7f7f6] transition-colors ${myStatus === key ? 'font-semibold text-[#111110]' : 'text-[#6b6b66]'}`}
+                  >
+                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${dot}`} />
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Tabs: Chats / Requests */}
@@ -432,15 +518,49 @@ export default function MessagesPage() {
                 </div>
                 <div>
                   <p className="font-semibold text-[#111110] text-sm">{selectedOtherUser.name}</p>
-                  <p className="text-xs text-[#a3a39e] flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
-                    Active
-                  </p>
+                  {isBlocked(selectedConvId) ? (
+                    <p className="text-xs text-red-400 flex items-center gap-1 font-medium">
+                      <span className="w-1.5 h-1.5 bg-red-400 rounded-full" />
+                      Blocked
+                    </p>
+                  ) : (
+                    <p className="text-xs text-[#a3a39e] flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
+                      Active
+                    </p>
+                  )}
                 </div>
               </div>
-              <button className="p-2 hover:bg-[#f7f7f6] rounded-lg transition-colors">
-                <MoreVertical size={17} className="text-[#6b6b66]" />
-              </button>
+              {/* More options menu */}
+              <div className="relative flex-shrink-0" ref={chatMenuRef}>
+                <button
+                  onClick={() => setShowChatMenu((v) => !v)}
+                  className="p-2 hover:bg-[#f7f7f6] rounded-lg transition-colors"
+                >
+                  <MoreVertical size={17} className="text-[#6b6b66]" />
+                </button>
+                {showChatMenu && (
+                  <div className="absolute right-0 top-full mt-1.5 w-44 bg-white border border-[#efefed] rounded-xl shadow-lg z-50 overflow-hidden">
+                    {isBlocked(selectedConvId) ? (
+                      <button
+                        onClick={handleUnblock}
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs text-green-600 hover:bg-green-50 transition-colors font-medium"
+                      >
+                        <CheckCircle size={14} />
+                        Unblock user
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleBlock}
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs text-red-500 hover:bg-red-50 transition-colors font-medium"
+                      >
+                        <Ban size={14} />
+                        Block user
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Messages */}
@@ -475,8 +595,23 @@ export default function MessagesPage() {
 
             {/* Input */}
             <div className="border-t border-[#efefed] bg-white flex-shrink-0">
+              {/* Blocked banner */}
+              {isBlocked(selectedConvId) && (
+                <div className="mx-4 mt-3 mb-1 flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl bg-red-50 border border-red-200">
+                  <div className="flex items-center gap-2">
+                    <Ban size={14} className="text-red-400 flex-shrink-0" />
+                    <p className="text-xs text-red-600 font-medium">You've blocked this conversation. You can no longer send messages.</p>
+                  </div>
+                  <button
+                    onClick={handleUnblock}
+                    className="text-[10px] font-semibold text-red-500 hover:text-red-700 whitespace-nowrap border border-red-200 rounded-lg px-2.5 py-1 hover:bg-red-100 transition-colors"
+                  >
+                    Unblock
+                  </button>
+                </div>
+              )}
               {/* Inline safety banner — shown only when typing contact info */}
-              {CONTACT_RE.test(messageText) && (() => {
+              {!isBlocked(selectedConvId) && CONTACT_RE.test(messageText) && (() => {
                 const otherIsActor = selectedOtherUser?.role === 'actor';
                 const selfIsActor  = user?.role === 'actor';
                 return otherIsActor || selfIsActor ? (
@@ -504,12 +639,13 @@ export default function MessagesPage() {
                   value={messageText}
                   onChange={(e) => setMessageText(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Type a message… (Enter to send)"
-                  className="flex-1 rounded-xl border border-[#e0e0dd] bg-[#f7f7f6] px-4 py-3 text-sm text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] transition-all"
+                  disabled={isBlocked(selectedConvId)}
+                  placeholder={isBlocked(selectedConvId) ? 'You have blocked this conversation' : 'Type a message… (Enter to send)'}
+                  className="flex-1 rounded-xl border border-[#e0e0dd] bg-[#f7f7f6] px-4 py-3 text-sm text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <button
                   onClick={sendMessage}
-                  disabled={!messageText.trim()}
+                  disabled={!messageText.trim() || isBlocked(selectedConvId)}
                   className="flex-shrink-0 w-11 h-11 rounded-xl bg-[#6C63FF] hover:bg-[#5750D4] disabled:bg-[#efefed] disabled:cursor-not-allowed text-white flex items-center justify-center transition-colors"
                 >
                   <Send size={16} />

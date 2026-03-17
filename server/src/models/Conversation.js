@@ -27,6 +27,13 @@ const conversationSchema = new mongoose.Schema(
       enum:    ['active', 'pending'],
       default: 'active',
     },
+    // Users who have blocked this conversation (their ID appears here)
+    blockedBy: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref:  'User',
+      },
+    ],
   },
   { timestamps: true }
 );

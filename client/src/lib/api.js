@@ -89,6 +89,8 @@ export const conversationAPI = {
   start:           (data)  => api.post('/conversations', data),
   getMessages:     (convId) => api.get(`/messages/${convId}`),
   sendMessage:     (data)  => api.post('/messages', data),
+  block:           (convId) => api.post(`/conversations/${convId}/block`),
+  unblock:         (convId) => api.delete(`/conversations/${convId}/block`),
   getProjectChat:  (projectId) => api.get(`/project-chat/${projectId}`),
   getProjectMsgs:  (projectId) => api.get(`/project-chat/${projectId}/messages`),
 };

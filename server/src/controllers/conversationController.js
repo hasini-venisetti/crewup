@@ -299,6 +299,52 @@ const getProjectChatMessages = async (req, res, next) => {
   }
 };
 
+/* ─────────────────────────────────────────────────────────────────────────
+   BLOCK / UNBLOCK
+   ───────────────────────────────────────────────────────────────────────── */
+
+// @desc    Block a conversation (adds current user to blockedBy)
+// @route   POST /api/conversations/:convId/block
+// @access  Private
+const blockConversation = async (req, res, next) => {
+  try {
+    const conv = await Conversation.findById(req.params.convId);
+    if (!conv) return res.status(404).json({ success: false, message: 'Conversation not found' });
+
+    const userId = req.user._id.toString();
+    if (!conv.members.some((m) => m.toString() === userId)) {
+      return res.status(403).json({ success: false, message: 'Not a member of this conversation' });
+    }
+
+    if (!conv.blockedBy.some((id) => id.toString() === userId)) {
+      conv.blockedBy.push(req.user._id);
+      await conv.save();
+    }
+
+    res.status(200).json({ success: true, message: 'Conversation blocked' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Unblock a conversation (removes current user from blockedBy)
+// @route   DELETE /api/conversations/:convId/block
+// @access  Private
+const unblockConversation = async (req, res, next) => {
+  try {
+    const conv = await Conversation.findById(req.params.convId);
+    if (!conv) return res.status(404).json({ success: false, message: 'Conversation not found' });
+
+    const userId = req.user._id.toString();
+    conv.blockedBy = conv.blockedBy.filter((id) => id.toString() !== userId);
+    await conv.save();
+
+    res.status(200).json({ success: true, message: 'Conversation unblocked' });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getConversations,
   startConversation,
@@ -306,4 +352,6 @@ module.exports = {
   sendMessage,
   getProjectChat,
   getProjectChatMessages,
+  blockConversation,
+  unblockConversation,
 };
