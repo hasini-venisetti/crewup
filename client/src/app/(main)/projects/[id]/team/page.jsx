@@ -156,9 +156,19 @@ function ChatTab({ project, user }) {
 
     socket.on('newProjectMessage', (msg) => {
       setMessages((prev) => {
-        if (prev.find((m) => m._id === msg._id)) return prev;
-        return [...prev, msg];
+        // Replace optimistic message (same text + sender) or skip duplicate real message
+        const filtered = prev.filter((m) =>
+          !(m._id?.toString().startsWith('opt_') &&
+            m.text === msg.text &&
+            (m.sender?._id || m.sender)?.toString() === (msg.sender?._id || msg.sender)?.toString())
+        );
+        if (filtered.find((m) => m._id === msg._id)) return filtered;
+        return [...filtered, msg];
       });
+    });
+
+    socket.on('error', (err) => {
+      console.error('Project chat socket error:', err?.message);
     });
 
     return () => { socket.disconnect(); socketRef.current = null; };
@@ -171,10 +181,20 @@ function ChatTab({ project, user }) {
 
   const sendMessage = async (e) => {
     e.preventDefault();
-    if (!text.trim() || !socketRef.current || !chat) return;
+    const msgText = text.trim();
+    if (!msgText || !socketRef.current || !chat) return;
     setSending(true);
-    socketRef.current.emit('sendProjectMessage', { projectChatId: chat._id, text: text.trim() });
     setText('');
+    // Optimistically add the message so sender sees it immediately
+    const optimistic = {
+      _id: `opt_${Date.now()}`,
+      text: msgText,
+      sender: { _id: user?._id || user?.id, name: user?.name, profileImage: user?.profileImage },
+      createdAt: new Date().toISOString(),
+      projectChatId: chat._id,
+    };
+    setMessages((prev) => [...prev, optimistic]);
+    socketRef.current.emit('sendProjectMessage', { projectChatId: chat._id, text: msgText });
     setSending(false);
   };
 
@@ -664,8 +684,7 @@ function FilesTab({ project, user }) {
 function ProgressTab({ project, setProject, user }) {
   const [updating, setUpdating] = useState(false);
   const isOwner   = project.createdBy?._id === (user?._id || user?.id);
-  const isMember  = project.teamMembers?.some((m) => m.user?._id === (user?._id || user?.id));
-  const canUpdate = isOwner || isMember;
+  const canUpdate = isOwner; // Only the project owner can change the progress stage
   const currentIdx = TIMELINE_STAGES.indexOf(project.timelineStage || 'planning');
 
   const handleUpdate = async (stage) => {
@@ -688,7 +707,10 @@ function ProgressTab({ project, setProject, user }) {
           <p className="text-xs text-white/60 uppercase tracking-widest mb-0.5">Current Stage</p>
           <p className="text-xl font-bold">{STAGE_LABELS[project.timelineStage || 'planning'].label}</p>
         </div>
-        {canUpdate && <p className="ml-auto text-xs text-white/50">Click a stage below to update</p>}
+        {canUpdate
+          ? <p className="ml-auto text-xs text-white/50">Click a stage below to update</p>
+          : <p className="ml-auto text-xs text-white/30">Only the project owner can update progress</p>
+        }
       </div>
 
       {/* Stage pipeline */}

@@ -280,6 +280,23 @@ const getProjectChat = async (req, res, next) => {
       chat = await ProjectChat.findById(chat._id)
         .populate('members',   'name username role profileImage')
         .populate('createdBy', 'name username');
+    } else {
+      // Sync: add any project members who joined after the chat was created
+      const projectMemberIds = [
+        project.createdBy.toString(),
+        ...project.teamMembers.map((m) => m.user.toString()),
+      ];
+      const chatMemberIds = chat.members.map((m) => (m._id || m).toString());
+      const newMemberIds  = projectMemberIds.filter((id) => !chatMemberIds.includes(id));
+      if (newMemberIds.length > 0) {
+        chat = await ProjectChat.findByIdAndUpdate(
+          chat._id,
+          { $addToSet: { members: { $each: newMemberIds } } },
+          { new: true }
+        )
+          .populate('members',   'name username role profileImage')
+          .populate('createdBy', 'name username');
+      }
     }
 
     res.status(200).json({ success: true, data: chat });

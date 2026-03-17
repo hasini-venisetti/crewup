@@ -186,96 +186,137 @@ export default function DashboardPage() {
   if (!user) return null;
 
   const tabs = [
-    { key: 'projects',    label: 'My Projects' },
-    { key: 'incoming',    label: `Incoming${pendingCount > 0 ? ` (${pendingCount})` : ''}` },
-    { key: 'applied',     label: 'My Applications' },
-    ...(isMentor ? [{ key: 'mentorship', label: `🎓 Mentorship${pendingMentorCount > 0 ? ` (${pendingMentorCount})` : ''}` }] : []),
-    { key: 'following',   label: '👥 Following' },
-    { key: 'ratings',     label: `⭐ Ratings${myReviews.length > 0 ? ` (${myReviews.length})` : ''}` },
-    { key: 'recommended', label: '✦ For You' },
+    { key: 'projects',    label: 'My Projects',    icon: '🎬', badge: 0 },
+    { key: 'incoming',    label: 'Incoming',        icon: '📬', badge: pendingCount },
+    { key: 'applied',     label: 'My Applications', icon: '📨', badge: 0 },
+    ...(isMentor ? [{ key: 'mentorship', label: 'Mentorship', icon: '🎓', badge: pendingMentorCount }] : []),
+    { key: 'following',   label: 'Following',       icon: '👥', badge: 0 },
+    { key: 'ratings',     label: 'Ratings',         icon: '⭐', badge: myReviews.length },
+    { key: 'recommended', label: 'For You',         icon: '✦', badge: 0 },
   ];
 
   return (
-    <div className="min-h-screen bg-[#fafaf9]">
+    <div className="min-h-screen bg-[#f5f5f3]">
 
-      {/* Dashboard Header */}
-      <div
-        className="bg-[#0e0e0d] pt-8 pb-12 relative overflow-hidden"
-        style={{ backgroundImage: 'radial-gradient(circle, #1a1a18 1px, transparent 1px)', backgroundSize: '24px 24px' }}
-      >
+      {/* ── Top Header ── */}
+      <div className="bg-[#0e0e0d] relative overflow-hidden"
+        style={{ backgroundImage: 'radial-gradient(circle, #1a1a18 1px, transparent 1px)', backgroundSize: '24px 24px' }}>
         <div className="absolute top-0 left-1/4 w-96 h-64 bg-[#6C63FF]/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 right-1/3 w-64 h-48 bg-[#6C63FF]/5 rounded-full blur-2xl pointer-events-none" />
-        <div className="relative max-w-[1100px] mx-auto px-3 sm:px-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+        <div className="relative max-w-[1200px] mx-auto px-4 sm:px-8 py-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            {/* Identity */}
             <div className="flex items-center gap-4">
-              {/* Avatar */}
-              <Link href={`/profile/${user._id || user.id}`} className="w-16 h-16 rounded-2xl flex-shrink-0 overflow-hidden bg-gradient-to-br from-[#c9c4ff] to-[#6C63FF] flex items-center justify-center text-2xl font-bold text-white shadow-xl shadow-[#6C63FF]/30 ring-2 ring-[#6C63FF]/30 hover:ring-[#6C63FF]/60 transition-all">
-                {user.profileImage
-                  ? <img src={user.profileImage} alt={user.name} className="w-full h-full object-cover" />
-                  : user.name?.[0]?.toUpperCase() || '?'}
+              <Link href={`/profile/${user._id || user.id}`}
+                className="w-14 h-14 rounded-2xl flex-shrink-0 overflow-hidden bg-gradient-to-br from-[#c9c4ff] to-[#6C63FF] flex items-center justify-center text-xl font-bold text-white ring-2 ring-[#6C63FF]/40 hover:ring-[#6C63FF]/70 transition-all">
+                {user.profileImage ? <img src={user.profileImage} alt={user.name} className="w-full h-full object-cover" /> : user.name?.[0]?.toUpperCase() || '?'}
               </Link>
               <div>
-                <p className="text-[10px] uppercase tracking-[0.25em] text-[#6C63FF] font-bold mb-1 flex items-center gap-1.5">
-                  <span className="w-4 h-px bg-[#6C63FF] inline-block" />
-                  Creator Dashboard
-                </p>
-                <h1 className="text-2xl sm:text-3xl font-[Playfair_Display] text-white leading-tight">
-                  Hey, {user.name?.split(' ')[0]} 👋
-                </h1>
-                <p className="text-white/35 mt-0.5 text-xs">@{user.username} · <span className="capitalize text-white/50">{user.role?.replace('-',' ')}</span></p>
+                <p className="text-[10px] text-[#6C63FF] font-bold tracking-[.2em] uppercase mb-0.5">Creator Dashboard</p>
+                <h1 className="text-xl sm:text-2xl font-[Playfair_Display] text-white">Hey, {user.name?.split(' ')[0]} 👋</h1>
+                <p className="text-white/40 text-xs mt-0.5">@{user.username} · <span className="capitalize text-white/55">{user.role?.replace('-',' ')}</span></p>
               </div>
             </div>
-            <div className="flex gap-2.5">
-              <Link href="/profile/edit"
-                className="text-sm font-semibold px-4 py-2.5 rounded-xl border border-white/15 text-white/60 hover:border-white/35 hover:text-white transition-all">
-                Edit Profile
-              </Link>
-              <Link href="/create-project"
-                className="text-sm font-semibold px-5 py-2.5 rounded-xl bg-[#6C63FF] hover:bg-[#7C75FF] text-white shadow-lg shadow-[#6C63FF]/30 transition-all active:scale-[0.98] flex items-center gap-1.5">
-                <span className="text-base font-bold">+</span> Post Project
+            {/* Actions */}
+            <div className="flex gap-2">
+              <Link href="/profile/edit" className="text-xs font-semibold px-4 py-2 rounded-xl border border-white/15 text-white/60 hover:border-white/35 hover:text-white transition-all">Edit Profile</Link>
+              <Link href="/create-project" className="text-xs font-semibold px-4 py-2 rounded-xl bg-[#6C63FF] hover:bg-[#7C75FF] text-white flex items-center gap-1.5 transition-all">
+                <span className="font-bold text-sm">+</span> Post Project
               </Link>
             </div>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 mt-8">
+          {/* Stats Row */}
+          <div className="grid grid-cols-4 gap-3 mt-5 pb-6">
             {[
-              { label: 'My Projects',       value: myProjects.length,     icon: '🎬', highlight: false,              href: '#',             desc: 'projects posted' },
-              { label: 'Applications Sent', value: myApplications.length, icon: '📨', highlight: false,              href: '#',             desc: 'roles applied to' },
-              { label: 'Accepted',          value: acceptedCount,         icon: '✅', highlight: acceptedCount > 0,  href: '#',             desc: 'roles accepted' },
-              { label: 'Pending Review',    value: pendingCount,          icon: '⏳', highlight: pendingCount > 0,   href: '#',             desc: 'awaiting decision' },
+              { label: 'Projects',    value: myProjects.length,     icon: '🎬', hi: false },
+              { label: 'Applied',     value: myApplications.length, icon: '📨', hi: false },
+              { label: 'Accepted',    value: acceptedCount,         icon: '✅', hi: acceptedCount > 0 },
+              { label: 'Inbox',       value: pendingCount,          icon: '📬', hi: pendingCount > 0 },
             ].map((s) => (
-              <div key={s.label} className={`rounded-2xl p-4 sm:p-5 relative overflow-hidden transition-all cursor-default ${s.highlight ? 'bg-[#6C63FF]/15 border border-[#6C63FF]/30 shadow-lg shadow-[#6C63FF]/10' : 'bg-white/5 border border-white/10 hover:bg-white/8 hover:border-white/15'}`}>
-                {s.highlight && <div className="absolute top-0 right-0 w-16 h-16 bg-[#6C63FF]/20 rounded-full -translate-y-6 translate-x-6 pointer-events-none" />}
-                <div className="text-2xl mb-2">{s.icon}</div>
-                <div className={`text-3xl sm:text-4xl font-black mb-0.5 leading-none ${s.highlight ? 'text-[#c9c4ff]' : 'text-white'}`}>{s.value}</div>
-                <div className={`text-[11px] font-semibold mt-1 ${s.highlight ? 'text-[#a09aff]' : 'text-white/50'}`}>{s.label}</div>
+              <div key={s.label} onClick={() => setTab(s.label === 'Projects' ? 'projects' : s.label === 'Applied' ? 'applied' : s.label === 'Inbox' ? 'incoming' : 'applied')}
+                className={`rounded-xl p-3 sm:p-4 cursor-pointer transition-all relative overflow-hidden ${s.hi ? 'bg-[#6C63FF]/20 border border-[#6C63FF]/40' : 'bg-white/5 border border-white/10 hover:bg-white/8'}`}>
+                <div className="text-lg mb-1">{s.icon}</div>
+                <div className={`text-2xl sm:text-3xl font-black leading-none ${s.hi ? 'text-[#c9c4ff]' : 'text-white'}`}>{s.value}</div>
+                <div className={`text-[10px] font-semibold mt-1 ${s.hi ? 'text-[#a09aff]' : 'text-white/45'}`}>{s.label}</div>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      <div className="max-w-[1100px] mx-auto px-3 sm:px-6 py-10">
+      {/* ── Body: Sidebar + Content ── */}
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-8 py-6 flex gap-6 items-start">
 
-        {/* Profile completeness + email verification banner */}
-        <ProfileCompletenessBanner user={user} />
-
-        {/* Tabs */}
-        <div className="w-full overflow-x-auto mb-8 -mx-0">
-          <div className="flex gap-0 border-b border-[#efefed] w-max min-w-full sm:w-auto">
+        {/* ── Left Sidebar Nav ── */}
+        <aside className="hidden lg:flex flex-col gap-1 w-52 flex-shrink-0 sticky top-20">
+          <div className="bg-white rounded-2xl border border-[#efefed] p-2 shadow-sm">
             {tabs.map((t) => (
               <button key={t.key} onClick={() => setTab(t.key)}
-                className={`px-4 sm:px-5 py-3 text-xs sm:text-sm font-semibold transition-all whitespace-nowrap border-b-2 -mb-px ${
+                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all text-left ${
                   tab === t.key
-                    ? 'border-[#0e0e0d] text-[#111110]'
-                    : 'border-transparent text-[#a3a39e] hover:text-[#6b6b66]'
+                    ? 'bg-[#6C63FF] text-white shadow-sm'
+                    : 'text-[#6b6b66] hover:bg-[#f5f5f3] hover:text-[#111110]'
                 }`}>
-                {t.label}
+                <span className="text-base">{t.icon}</span>
+                <span className="truncate">{t.label}</span>
+                {t.badge > 0 && (
+                  <span className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ${tab === t.key ? 'bg-white/25 text-white' : 'bg-red-100 text-red-600'}`}>
+                    {t.badge}
+                  </span>
+                )}
               </button>
             ))}
           </div>
-        </div>
+
+          {/* Quick links */}
+          <div className="bg-white rounded-2xl border border-[#efefed] p-2 shadow-sm mt-1">
+            {[
+              { href: '/projects',     icon: '🔍', label: 'Browse Projects' },
+              { href: '/explore',      icon: '🌐', label: 'Explore Creators' },
+              { href: '/messages',     icon: '💬', label: 'Messages' },
+              { href: '/projects/map', icon: '🗺️', label: 'Project Map' },
+            ].map(({ href, icon, label }) => (
+              <Link key={href} href={href}
+                className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm text-[#6b6b66] hover:bg-[#f5f5f3] hover:text-[#111110] transition-all">
+                <span className="text-base">{icon}</span>
+                <span>{label}</span>
+              </Link>
+            ))}
+          </div>
+        </aside>
+
+        {/* ── Main Content ── */}
+        <div className="flex-1 min-w-0">
+          {/* Profile completeness banner */}
+          <ProfileCompletenessBanner user={user} />
+
+          {/* Mobile tab scroll */}
+          <div className="lg:hidden w-full overflow-x-auto mb-5 -mx-0">
+            <div className="flex gap-1 w-max">
+              {tabs.map((t) => (
+                <button key={t.key} onClick={() => setTab(t.key)}
+                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                    tab === t.key ? 'bg-[#6C63FF] text-white' : 'bg-white border border-[#efefed] text-[#6b6b66] hover:border-[#6C63FF] hover:text-[#6C63FF]'
+                  }`}>
+                  <span>{t.icon}</span> {t.label}
+                  {t.badge > 0 && <span className="bg-red-500 text-white text-[9px] font-bold px-1 py-px rounded-full">{t.badge}</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Section header */}
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-lg font-bold text-[#111110] flex items-center gap-2">
+              <span>{tabs.find(t => t.key === tab)?.icon}</span>
+              {tabs.find(t => t.key === tab)?.label}
+            </h2>
+            {tab === 'projects' && (
+              <Link href="/create-project" className="text-xs font-semibold px-4 py-2 rounded-xl bg-[#111110] text-white hover:bg-[#333] transition-colors flex items-center gap-1">
+                <span className="font-bold">+</span> New Project
+              </Link>
+            )}
+          </div>
 
         {/* ── My Projects ── */}
         {tab === 'projects' && (

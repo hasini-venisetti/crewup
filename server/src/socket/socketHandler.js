@@ -113,11 +113,24 @@ const socketHandler = (io) => {
     // ── Join project chat room ─────────────────────────────────────────────
     socket.on('joinProjectRoom', async ({ projectChatId }) => {
       try {
-        const chat = await ProjectChat.findById(projectChatId);
+        const chat = await ProjectChat.findById(projectChatId).populate('project');
         if (!chat) return socket.emit('error', { message: 'Chat not found' });
 
-        const isMember = chat.members.some((m) => m.toString() === userId);
-        if (!isMember) return socket.emit('error', { message: 'Not a member of this chat' });
+        // Allow if user is in chat.members OR is a project owner/member (handles late-added members)
+        const inChat = chat.members.some((m) => m.toString() === userId);
+        const Project = require('../models/Project');
+        const project = await Project.findById(chat.project?._id || chat.project);
+        const inProject = project && (
+          project.createdBy.toString() === userId ||
+          project.teamMembers.some((m) => m.user.toString() === userId)
+        );
+
+        if (!inChat && !inProject) return socket.emit('error', { message: 'Not a member of this chat' });
+
+        // Auto-add to chat members if not already there
+        if (!inChat) {
+          await ProjectChat.findByIdAndUpdate(projectChatId, { $addToSet: { members: userId } });
+        }
 
         socket.join(`project:${projectChatId}`);
         console.log(`   └─ ${socket.user.username} joined project room ${projectChatId}`);
