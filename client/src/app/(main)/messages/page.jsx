@@ -11,6 +11,9 @@ import ReportModal from '@/components/ui/ReportModal';
 // Navbar height offset
 const NAV_H = 'calc(100vh - 60px)';
 
+// Detect phone numbers or email addresses in a string
+const CONTACT_RE = /(\+?\d[\d\s\-().]{7,}\d|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/;
+
 export default function MessagesPage() {
   const { user, loading: authLoading } = useAuth();
   const socket = useSocket();
@@ -471,8 +474,31 @@ export default function MessagesPage() {
             </div>
 
             {/* Input */}
-            <div className="px-4 py-3.5 border-t border-[#efefed] bg-white flex-shrink-0">
-              <div className="flex gap-2 items-end">
+            <div className="border-t border-[#efefed] bg-white flex-shrink-0">
+              {/* Inline safety banner — shown only when typing contact info */}
+              {CONTACT_RE.test(messageText) && (() => {
+                const otherIsActor = selectedOtherUser?.role === 'actor';
+                const selfIsActor  = user?.role === 'actor';
+                return otherIsActor || selfIsActor ? (
+                  <div className="mx-4 mt-3 flex items-start gap-2.5 px-3.5 py-2.5 rounded-xl bg-red-50 border border-red-200">
+                    <span className="text-base flex-shrink-0 mt-0.5">🔒</span>
+                    <p className="text-xs text-red-700 leading-relaxed">
+                      {selfIsActor
+                        ? <><strong>Safety reminder:</strong> As an actor, avoid sharing personal contact details (phone/email) until after your first in-person meeting with this person.</>
+                        : <><strong>Safety reminder:</strong> <span className="font-semibold capitalize">{selectedOtherUser?.name}</span> is an actor. For their safety, contact info will be removed from this message. Meet in person first before exchanging personal details.</>
+                      }
+                    </p>
+                  </div>
+                ) : (
+                  <div className="mx-4 mt-3 flex items-start gap-2.5 px-3.5 py-2.5 rounded-xl bg-amber-50 border border-amber-200">
+                    <span className="text-base flex-shrink-0 mt-0.5">💡</span>
+                    <p className="text-xs text-amber-700 leading-relaxed">
+                      <strong>Heads up:</strong> You're sharing contact info. Only exchange personal details with people you fully trust on this platform.
+                    </p>
+                  </div>
+                );
+              })()}
+              <div className="px-4 py-3.5 flex gap-2 items-end">
                 <input
                   type="text"
                   value={messageText}

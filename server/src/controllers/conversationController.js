@@ -162,52 +162,64 @@ const sendMessage = async (req, res, next) => {
       .map(String)
       .filter((id) => id !== String(req.user._id));
 
-    if (otherMemberIds.length > 0 && !req.user.isEmailVerified) {
-      const minorInConv = await User.exists({
-        _id: { $in: otherMemberIds },
-        isMinor: true,
+    const otherMembers = otherMemberIds.length > 0
+      ? await User.find({ _id: { $in: otherMemberIds } }).select('role isMinor')
+      : [];
+
+    if (!req.user.isEmailVerified && otherMembers.some((m) => m.isMinor)) {
+      return res.status(403).json({
+        success: false,
+        message: 'You must verify your email before sending messages to users under 18.',
+        code: 'MINOR_PROTECTION',
       });
-      if (minorInConv) {
-        return res.status(403).json({
-          success: false,
-          message: 'You must verify your email before sending messages to users under 18.',
-          code: 'MINOR_PROTECTION',
-        });
-      }
     }
 
-    // Phase 3: Safety checks
-    const isScam = detectScamKeywords(text);
-    const hasContact = hasContactInfo(text);
-    // Filter contact info from the stored text
-    const safeText = filterContactInfo(text);
+    // ── Role-aware contact info policy ──────────────────────────────────────
+    // If an actor is involved (sender OR recipient), contact info is filtered
+    // for their safety. For other roles, contact info passes through with a
+    // caution notice so they can share files / work details freely.
+    const isScam       = detectScamKeywords(text);
+    const hasContact   = hasContactInfo(text);
+    const senderIsActor    = req.user.role === 'actor';
+    const recipientIsActor = otherMembers.some((m) => m.role === 'actor');
+    const actorInvolved    = senderIsActor || recipientIsActor;
+
+    // Strip contact info only when an actor is in the conversation
+    const storedText = (hasContact && actorInvolved) ? filterContactInfo(text) : text;
 
     const message = await Message.create({
-      sender:         req.user._id,
+      sender:              req.user._id,
       conversationId,
-      text:           safeText,
-      // Store flags for dispute resolution (not shown to users)
-      isFlagged:      isScam,
+      text:                storedText,
+      isFlagged:           isScam,
       containsContactInfo: hasContact,
     });
 
     await message.populate('sender', 'name username profileImage');
 
-    // Update conversation preview
     await Conversation.findByIdAndUpdate(conversationId, {
-      lastMessage:   safeText.slice(0, 100),
+      lastMessage:   storedText.slice(0, 100),
       lastMessageAt: new Date(),
     });
 
-    // Return the message + a warning flag if scam keywords detected
+    // Build contextual warning
+    let warning = null;
+    if (isScam) {
+      warning = 'This message was flagged as potentially suspicious. Legitimate productions never ask you to send money.';
+    } else if (hasContact && actorInvolved) {
+      warning = senderIsActor
+        ? '🔒 For your safety, personal contact details were removed. Share your phone or email only after meeting in person.'
+        : '🔒 Contact info was removed — the other person is an actor. Their safety policy keeps personal details off-platform until after a first meeting.';
+    } else if (hasContact) {
+      // Non-actor to non-actor — allowed, but show a caution nudge
+      warning = '💡 Heads up: you shared contact info. Only exchange personal details with people you fully trust.';
+    }
+
     res.status(201).json({
-      success: true,
-      data: message,
-      warning: isScam
-        ? 'This message was flagged as potentially suspicious. Legitimate productions never ask you to send money.'
-        : hasContact
-        ? 'Contact information has been removed from this message. Keep all communication within CREWUPFILMS.'
-        : null,
+      success:             true,
+      data:                message,
+      warning,
+      contactInfoBlocked:  hasContact && actorInvolved,
     });
   } catch (error) {
     next(error);
