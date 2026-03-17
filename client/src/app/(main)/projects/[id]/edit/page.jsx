@@ -88,7 +88,7 @@ const EMPTY_FORM = {
 export default function EditProjectPage() {
   const router = useRouter();
   const { id } = useParams();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   const [form, setForm] = useState(EMPTY_FORM);
   const [roleInput, setRoleInput] = useState('');
@@ -96,15 +96,19 @@ export default function EditProjectPage() {
   const [fetching, setFetching] = useState(true);
 
   useEffect(() => {
-    if (!id) return;
+    if (!id || authLoading) return;
     projectAPI.getById(id)
       .then(({ data }) => {
         const p = data.data;
-        // Redirect non-owners away
-        if (user && p.postedBy?._id !== user.id && p.postedBy !== user.id) {
-          toast.error('You can only edit your own projects.');
-          router.replace(`/projects/${id}`);
-          return;
+        // Only check ownership once user is loaded
+        if (user) {
+          const ownerId = (p.postedBy?._id || p.postedBy || '').toString();
+          const userId  = (user.id || user._id || '').toString();
+          if (ownerId && userId && ownerId !== userId) {
+            toast.error('You can only edit your own projects.');
+            router.replace(`/projects/${id}`);
+            return;
+          }
         }
         const deadline = p.deadline
           ? new Date(p.deadline).toISOString().split('T')[0]
@@ -149,7 +153,7 @@ export default function EditProjectPage() {
         router.replace('/dashboard');
       })
       .finally(() => setFetching(false));
-  }, [id, user]);
+  }, [id, user, authLoading]);
 
   const set = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
   const setLoc = (field, value) => setForm((prev) => ({ ...prev, location: { ...prev.location, [field]: value } }));
