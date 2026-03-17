@@ -530,7 +530,7 @@ function FilmCard({ film, user, router, onBookmarkChange }) {
           <button
             onClick={handleLike}
             disabled={liking}
-            className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
               liked
                 ? 'text-red-400 bg-red-500/10 hover:bg-red-500/15'
                 : 'text-white/40 hover:text-white/70 hover:bg-white/8'
@@ -541,32 +541,31 @@ function FilmCard({ film, user, router, onBookmarkChange }) {
               stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
             </svg>
-            <span className="hidden sm:inline">{likeCount > 0 ? likeCount : 'Like'}</span>
-            <span className="sm:hidden">{likeCount > 0 ? likeCount : ''}</span>
+            <span>{likeCount}</span>
           </button>
 
           {/* Comment */}
           <button
             onClick={handleComment}
-            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium text-white/40 hover:text-white/70 hover:bg-white/8 transition-all"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-white/40 hover:text-white/70 hover:bg-white/8 transition-all"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
             </svg>
-            <span className="hidden sm:inline">{commentCount > 0 ? commentCount : 'Comment'}</span>
-            <span className="sm:hidden">{commentCount > 0 ? commentCount : ''}</span>
+            <span>{commentCount}</span>
           </button>
 
           {/* Share */}
           <div className="relative">
             <button
               onClick={handleShare}
-              className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              title={copied ? 'Copied!' : 'Share'}
+              className={`flex items-center justify-center w-7 h-7 rounded-lg transition-all ${
                 copied
                   ? 'text-green-400 bg-green-500/10'
                   : showShareMenu
                   ? 'text-white/70 bg-white/8'
-                  : 'text-white/40 hover:text-white/70 hover:bg-white/8'
+                  : 'text-white/30 hover:text-white/70 hover:bg-white/8'
               }`}
             >
               {copied ? (
@@ -577,7 +576,6 @@ function FilmCard({ film, user, router, onBookmarkChange }) {
                   <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
                 </svg>
               )}
-              <span className="hidden sm:inline">{copied ? 'Copied!' : 'Share'}</span>
             </button>
 
             {showShareMenu && (
