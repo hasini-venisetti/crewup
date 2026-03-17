@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 import Logo from '@/components/ui/Logo';
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
+const IS_CONFIGURED = GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID !== 'your-google-client-id-here';
 
 const roleOptions = [
   { label: 'Director',        value: 'director' },
@@ -176,16 +177,55 @@ export default function SignupPage() {
   // Google OAuth
   const [googleIdToken, setGoogleIdToken] = useState('');
   const [googleStep, setGoogleStep]       = useState(false);
+  const googleBtnRef = useRef(null);
 
-  // Load Google GSI script
+  // Shared Google callback
+  const handleGoogleCallback = useCallback(async (response) => {
+    setGoogleLoading(true);
+    try {
+      const { data } = await authAPI.googleAuth({ idToken: response.credential });
+      if (data.success && data.token) {
+        loginWithToken(data.token, data.user);
+        toast.success(`Welcome, ${data.user.name}! 🎬`);
+        router.push('/dashboard');
+      } else if (data.needsUsername) {
+        setGoogleIdToken(response.credential);
+        if (data.name) setFormData((prev) => ({ ...prev, name: data.name, email: data.email || '' }));
+        setGoogleStep(true);
+        setCurrentStep(2);
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Google sign-up failed.');
+    } finally { setGoogleLoading(false); }
+  }, [router, loginWithToken]);
+
+  // Load GIS script and render Google's button into hidden container
   useEffect(() => {
-    if (!GOOGLE_CLIENT_ID) return;
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true; script.defer = true;
-    document.head.appendChild(script);
-    return () => { try { document.head.removeChild(script); } catch {} };
-  }, []);
+    if (!IS_CONFIGURED) return;
+    const initGoogle = () => {
+      if (!window.google?.accounts?.id) return;
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleGoogleCallback,
+      });
+      if (googleBtnRef.current) {
+        window.google.accounts.id.renderButton(googleBtnRef.current, {
+          type: 'standard', size: 'large', theme: 'outline',
+          width: String(googleBtnRef.current.offsetWidth || 360),
+        });
+      }
+    };
+    if (window.google?.accounts?.id) {
+      initGoogle();
+    } else {
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true; script.defer = true;
+      script.onload = initGoogle;
+      document.head.appendChild(script);
+      return () => { try { document.head.removeChild(script); } catch {} };
+    }
+  }, [handleGoogleCallback]);
 
   // Email OTP countdown timer
   useEffect(() => {
@@ -203,29 +243,14 @@ export default function SignupPage() {
 
   /* ── Google handlers ── */
   const handleGoogleSignup = () => {
-    if (!GOOGLE_CLIENT_ID) { toast.error('Google sign-in is not configured yet.'); return; }
-    setGoogleLoading(true);
-    window.google.accounts.id.initialize({
-      client_id: GOOGLE_CLIENT_ID,
-      callback: async (response) => {
-        try {
-          const { data } = await authAPI.googleAuth({ idToken: response.credential });
-          if (data.success && data.token) {
-            loginWithToken(data.token, data.user);
-            toast.success(`Welcome, ${data.user.name}! 🎬`);
-            router.push('/dashboard');
-          } else if (data.needsUsername) {
-            setGoogleIdToken(response.credential);
-            if (data.name) setFormData((prev) => ({ ...prev, name: data.name, email: data.email || '' }));
-            setGoogleStep(true);
-            setCurrentStep(2);
-          }
-        } catch (err) {
-          toast.error(err?.response?.data?.message || 'Google sign-up failed.');
-        } finally { setGoogleLoading(false); }
-      },
-    });
-    window.google.accounts.id.prompt();
+    if (!IS_CONFIGURED) { toast.error('Google sign-in is not configured yet. Contact support.'); return; }
+    const gBtn = googleBtnRef.current?.querySelector('[role="button"]') ||
+                 googleBtnRef.current?.querySelector('div[tabindex="0"]');
+    if (gBtn) {
+      gBtn.click();
+    } else {
+      toast.error('Google sign-in is loading, please try again in a moment.');
+    }
   };
 
   const handleGoogleFinish = async () => {
@@ -830,20 +855,24 @@ export default function SignupPage() {
                     <span className="text-xs text-[#a3a39e]">or</span>
                     <div className="flex-1 h-px bg-[#efefed]" />
                   </div>
-                  <button onClick={handleGoogleSignup} disabled={googleLoading}
-                    className="w-full flex items-center justify-center gap-3 border border-[#e0e0dd] bg-white hover:bg-[#fafaf9] text-[#111110] text-sm font-medium py-3 rounded transition-all disabled:opacity-60">
-                    {googleLoading ? (
-                      <span className="w-4 h-4 border-2 border-gray-300 border-t-gray-700 rounded-full animate-spin" />
-                    ) : (
-                      <svg width="18" height="18" viewBox="0 0 48 48">
-                        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v8.51h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.14z"/>
-                        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-                        <path fill="#FBBC05" d="M10.53 28.59c-.5-1.45-.79-3-.79-4.59s.29-3.14.79-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.55 10.78l7.98-6.19z"/>
-                        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.55 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-                      </svg>
-                    )}
-                    Sign up with Google
-                  </button>
+                  <div className="relative">
+                    {/* Hidden container — Google's renderButton renders its real button here */}
+                    <div ref={googleBtnRef} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0, pointerEvents: 'none', overflow: 'hidden' }} aria-hidden="true" />
+                    <button onClick={handleGoogleSignup} disabled={googleLoading}
+                      className="w-full flex items-center justify-center gap-3 border border-[#e0e0dd] bg-white hover:bg-[#fafaf9] text-[#111110] text-sm font-medium py-3 rounded transition-all disabled:opacity-60">
+                      {googleLoading ? (
+                        <span className="w-4 h-4 border-2 border-gray-300 border-t-gray-700 rounded-full animate-spin" />
+                      ) : (
+                        <svg width="18" height="18" viewBox="0 0 48 48">
+                          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v8.51h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.14z"/>
+                          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                          <path fill="#FBBC05" d="M10.53 28.59c-.5-1.45-.79-3-.79-4.59s.29-3.14.79-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.55 10.78l7.98-6.19z"/>
+                          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.55 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                        </svg>
+                      )}
+                      Sign up with Google
+                    </button>
+                  </div>
                 </div>
               )}
 
