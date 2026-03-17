@@ -92,7 +92,7 @@ export default function SearchPage() {
                   className="flex-1 ml-3 bg-transparent focus:outline-none text-[#0e0e0d] placeholder-[#9a9a96]"
                 />
                 {loading && (
-                  <div className="w-5 h-5 border-2 border-[#c9c4ff] border-t-bg-[#f0eeff]0 rounded-full animate-spin" />
+                  <div className="w-5 h-5 border-2 border-[#c9c4ff] border-t-[#5750D4] rounded-full animate-spin" />
                 )}
               </div>
             </div>
@@ -240,7 +240,7 @@ function CreatorCard({ creator }) {
       </div>
       <p className="text-sm text-[#6b6b66] mb-4 line-clamp-2">{creator.bio}</p>
       <a
-        href={`/creators/${creator.id}`}
+        href={`/profile/${creator.id}`}
         className="text-[#5750D4] font-semibold text-sm hover:text-[#4740CC] transition"
       >
         View Profile →
@@ -252,7 +252,7 @@ function CreatorCard({ creator }) {
 function CreatorMiniCard({ creator }) {
   return (
     <a
-      href={`/creators/${creator.id}`}
+      href={`/profile/${creator.id}`}
       className="rounded-xl border border-[#efefed] p-4 hover:bg-[#f0eeff] transition bg-white"
     >
       <div className="flex items-center gap-3">

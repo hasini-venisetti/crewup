@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { contestAPI, contestSubmissionAPI } from '@/lib/api';
+import toast from 'react-hot-toast';
 
 /* ─── helpers ─────────────────────────────────────────────────────────────── */
 function extractVideoId(url) {
@@ -45,15 +46,18 @@ function CommentPanel({ contestId, sub, onClose, user }) {
       const { data } = await contestSubmissionAPI.addComment(contestId, sub._id, text.trim());
       setComments((prev) => [...prev, data.data]);
       setText('');
-    } catch {}
-    finally { setPosting(false); }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Failed to post comment.');
+    } finally { setPosting(false); }
   };
 
   const handleDelete = async (commentId) => {
     try {
       await contestSubmissionAPI.deleteComment(contestId, sub._id, commentId);
       setComments((prev) => prev.filter((c) => c._id !== commentId));
-    } catch {}
+    } catch {
+      toast.error('Failed to delete comment.');
+    }
   };
 
   return (

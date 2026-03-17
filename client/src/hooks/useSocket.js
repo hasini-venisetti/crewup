@@ -43,7 +43,7 @@ export function useSocket() {
     });
 
     socket.on('connect', () => {
-      console.log('🔌 Socket connected:', socket.id);
+      // connected
     });
 
     socket.on('connect_error', (err) => {

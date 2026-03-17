@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import toast from 'react-hot-toast';
 
 export default function Feedback() {
   const [formData, setFormData] = useState({
@@ -11,6 +12,8 @@ export default function Feedback() {
     message: '',
     rating: 0
   });
+  const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -27,10 +30,33 @@ export default function Feedback() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Feedback submitted:', formData);
-    setFormData({ name: '', email: '', feedbackType: '', message: '', rating: 0 });
+    if (!formData.email.trim()) return toast.error('Please enter your email address.');
+    if (!formData.message.trim()) return toast.error('Please enter your feedback message.');
+    setSubmitting(true);
+    try {
+      const ratingLabel = formData.rating > 0 ? `\n\nRating: ${formData.rating}/5 stars` : '';
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/contact`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name:    formData.name.trim() || 'Anonymous',
+          email:   formData.email.trim(),
+          subject: `[Feedback] ${formData.feedbackType || 'General'}`,
+          type:    formData.feedbackType || 'feedback',
+          message: formData.message.trim() + ratingLabel,
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message);
+      setDone(true);
+      setFormData({ name: '', email: '', feedbackType: '', message: '', rating: 0 });
+    } catch (err) {
+      toast.error(err.message || 'Failed to submit. Please email crewupfilms@gmail.com directly.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -127,8 +153,14 @@ export default function Feedback() {
             )}
           </div>
 
-          <button type="submit" className="bg-[#111110] text-white text-sm font-medium px-6 py-3 hover:bg-[#2d2d2b] transition">
-            Send Feedback
+          {done && (
+            <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-3">
+              ✅ Thanks for your feedback! We'll read it carefully.
+            </p>
+          )}
+          <button type="submit" disabled={submitting}
+            className="bg-[#111110] text-white text-sm font-medium px-6 py-3 hover:bg-[#2d2d2b] transition disabled:opacity-60">
+            {submitting ? 'Sending…' : 'Send Feedback'}
           </button>
         </form>
 

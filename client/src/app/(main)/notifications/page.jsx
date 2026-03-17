@@ -2,15 +2,22 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { notificationAPI, messageRequestAPI } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState([]);
   const [isLoading, setIsLoading]         = useState(true);
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
 
   useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      router.replace('/login');
+      return;
+    }
     fetchNotifications();
-  }, []);
+  }, [user, authLoading]);
 
   const fetchNotifications = async () => {
     try {
