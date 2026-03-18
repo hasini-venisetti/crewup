@@ -357,6 +357,27 @@ const TYPE_ACCENT = {
   'commercial': 'bg-orange-500', 'music': 'bg-purple-500', 'web-series': 'bg-cyan-500', 'other': 'bg-slate-500',
 };
 
+const COMP_CONFIG = {
+  'paid':          { icon: '💰', label: 'Paid',          cls: 'bg-green-500/15 text-green-400 border-green-500/30' },
+  'revenue-share': { icon: '📊', label: 'Revenue Share', cls: 'bg-blue-500/15 text-blue-400 border-blue-500/30' },
+  'deferred':      { icon: '⏳', label: 'Deferred Pay',  cls: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30' },
+  'unpaid':        { icon: '🤝', label: 'Unpaid Collab', cls: 'bg-white/10 text-white/60 border-white/20' },
+  'not-specified': { icon: '❓', label: 'TBD',            cls: 'bg-white/10 text-white/60 border-white/20' },
+};
+
+const PROD_TYPE_LABELS = {
+  'student': '🎓 Student', 'indie': '🎬 Indie', 'commercial': '💼 Commercial',
+  'broadcast': '📺 Broadcast', 'other': '📦 Other',
+};
+const AUDITION_LABELS = {
+  'not-applicable': 'N/A', 'online': '💻 Online', 'studio': '🏢 Studio',
+  'production-office': '🏛 Production Office', 'flexible': '🔄 Flexible',
+};
+const SHOOT_LOC_LABELS = {
+  'not-specified': 'TBD', 'studio': '🏢 Studio', 'public-location': '🌆 Public Location',
+  'remote': '🌐 Remote', 'flexible': '🔄 Mix / Flexible',
+};
+
 function ProjectDetailContent() {
   const { id }   = useParams();
   const { user } = useAuth();
@@ -544,9 +565,16 @@ function ProjectDetailContent() {
                 <span className="text-xs font-bold tracking-widest uppercase text-white/60 bg-white/10 px-2.5 py-1 rounded-md">
                   {TYPE_LABELS[project.projectType] || project.projectType}
                 </span>
-                <span className={`text-xs font-bold px-2.5 py-1 rounded-md ${project.isPaid ? 'bg-[#6C63FF]/20 text-[#7C75FF] border border-[#6C63FF]/30' : 'bg-white/10 text-white/60'}`}>
-                  {project.isPaid ? '💰 Paid' : '🤝 Collab'}
-                </span>
+                {project.compensationType && COMP_CONFIG[project.compensationType] && (
+                  <span className={`text-xs font-bold px-2.5 py-1 rounded-md border ${COMP_CONFIG[project.compensationType].cls}`}>
+                    {COMP_CONFIG[project.compensationType].icon} {COMP_CONFIG[project.compensationType].label}
+                  </span>
+                )}
+                {project.productionType && (
+                  <span className="text-xs bg-white/10 text-white/60 px-2.5 py-1 rounded-md">
+                    {PROD_TYPE_LABELS[project.productionType] || project.productionType}
+                  </span>
+                )}
                 <span className="text-xs capitalize bg-white/10 text-white/60 px-2.5 py-1 rounded-md">{project.status}</span>
               </div>
               <h1 className="text-2xl sm:text-4xl font-[Playfair_Display] text-white mb-2 leading-tight">{project.title}</h1>
@@ -681,22 +709,71 @@ function ProjectDetailContent() {
           </div>
 
           {/* Project info */}
-          <div className="bg-white rounded-2xl border border-[#efefed] p-6">
-            <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#a3a39e] mb-5">Project Details</h2>
-            <div className="flex flex-col gap-3 text-sm">
-              {project.location?.isRemote && (
-                <div className="flex justify-between"><span className="text-[#6b6b66]">Location</span><span>🌐 Remote</span></div>
-              )}
-              {project.location?.city && !project.location?.isRemote && (
-                <div className="flex justify-between">
-                  <span className="text-[#6b6b66]">Location</span>
-                  <span>📍 {project.location.city}{project.location.country ? `, ${project.location.country}` : ''}</span>
+          <div className="bg-white rounded-2xl border border-[#efefed] p-6 flex flex-col gap-5">
+            <div>
+              <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#a3a39e] mb-4">Project Details</h2>
+              <div className="flex flex-col gap-3 text-sm">
+                {(project.location?.isRemote || project.location?.city) && (
+                  <div className="flex justify-between items-start gap-3">
+                    <span className="text-[#6b6b66] flex-shrink-0">Location</span>
+                    <span className="text-right">
+                      {project.location.isRemote ? '🌐 Remote' : `📍 ${project.location.city}${project.location.country ? `, ${project.location.country}` : ''}`}
+                    </span>
+                  </div>
+                )}
+                {deadline && (
+                  <div className="flex justify-between items-start gap-3">
+                    <span className="text-[#6b6b66] flex-shrink-0">Deadline</span>
+                    <span className="text-right">{deadline}</span>
+                  </div>
+                )}
+                {project.budget && (
+                  <div className="flex justify-between items-start gap-3">
+                    <span className="text-[#6b6b66] flex-shrink-0">Rate / Budget</span>
+                    <span className="text-green-600 font-semibold text-right">{project.budget}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-start gap-3">
+                  <span className="text-[#6b6b66] flex-shrink-0">Posted</span>
+                  <span className="text-right">{new Date(project.createdAt).toLocaleDateString()}</span>
                 </div>
-              )}
-              {deadline && <div className="flex justify-between"><span className="text-[#6b6b66]">Deadline</span><span>{deadline}</span></div>}
-              {project.budget && <div className="flex justify-between"><span className="text-[#6b6b66]">Budget</span><span className="text-green-600 font-semibold">{project.budget}</span></div>}
-              <div className="flex justify-between"><span className="text-[#6b6b66]">Posted</span><span>{new Date(project.createdAt).toLocaleDateString()}</span></div>
+              </div>
             </div>
+
+            {/* Compensation details */}
+            {project.compensationDetails && (
+              <div className="border-t border-[#f5f5f3] pt-4">
+                <p className="text-xs font-bold uppercase tracking-[0.15em] text-[#a3a39e] mb-2">Compensation Details</p>
+                <p className="text-sm text-[#6b6b66] leading-relaxed">{project.compensationDetails}</p>
+              </div>
+            )}
+
+            {/* Safety & Casting */}
+            {(project.auditionFormat || project.shootingLocationType) && (
+              <div className="border-t border-[#f5f5f3] pt-4">
+                <p className="text-xs font-bold uppercase tracking-[0.15em] text-[#a3a39e] mb-3">Casting & Safety</p>
+                <div className="flex flex-col gap-2 text-sm">
+                  {project.auditionFormat && project.auditionFormat !== 'not-applicable' && (
+                    <div className="flex justify-between items-center gap-3">
+                      <span className="text-[#6b6b66] flex-shrink-0">Audition</span>
+                      <span className="text-right">{AUDITION_LABELS[project.auditionFormat] || project.auditionFormat}</span>
+                    </div>
+                  )}
+                  {project.shootingLocationType && project.shootingLocationType !== 'not-specified' && (
+                    <div className="flex justify-between items-center gap-3">
+                      <span className="text-[#6b6b66] flex-shrink-0">Shoot Location</span>
+                      <span className="text-right">{SHOOT_LOC_LABELS[project.shootingLocationType] || project.shootingLocationType}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="mt-3 flex items-start gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg">
+                  <span className="text-amber-500 text-xs flex-shrink-0 mt-0.5">⚠️</span>
+                  <p className="text-[11px] text-amber-800 leading-relaxed">
+                    Legitimate productions <strong>never</strong> ask applicants to pay fees. <Link href="/support/safety" className="underline">Learn more</Link>
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -711,23 +788,34 @@ function ProjectDetailContent() {
         {/* Team */}
         {project.teamMembers?.length > 0 && (
           <div className="bg-white rounded-2xl border border-[#efefed] p-6 mb-6">
-            <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#a3a39e] mb-5">Team ({project.teamMembers.length})</h2>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#a3a39e]">Team</h2>
+              <span className="text-xs font-semibold bg-[#f7f7f6] border border-[#e0e0dd] text-[#6b6b66] px-2.5 py-1 rounded-full">
+                {project.teamMembers.length} member{project.teamMembers.length !== 1 ? 's' : ''}
+              </span>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {project.teamMembers.map((member) => (
-                <div key={member.user?._id} className="flex items-center gap-3 p-4 bg-[#fafaf9] border border-[#efefed] rounded-xl hover:border-[#d0d0ce] hover:shadow-sm transition-all">
+                <div key={member.user?._id} className="flex items-center gap-3 p-3 bg-[#fafaf9] border border-[#efefed] rounded-xl hover:border-[#d0d0ce] hover:shadow-sm transition-all group">
                   <Link href={`/profile/${member.user?._id}`} className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#c9c4ff] to-[#e4e1ff] text-[#3730A3] text-sm font-bold flex items-center justify-center flex-shrink-0">
-                      {member.user?.name?.[0] || 'U'}
-                    </div>
+                    {member.user?.profileImage ? (
+                      <img src={member.user.profileImage} alt={member.user.name}
+                        className="w-10 h-10 rounded-full object-cover flex-shrink-0 ring-2 ring-[#efefed] group-hover:ring-[#c9c4ff] transition-all" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#c9c4ff] to-[#e4e1ff] text-[#3730A3] text-sm font-bold flex items-center justify-center flex-shrink-0 ring-2 ring-[#efefed] group-hover:ring-[#c9c4ff] transition-all">
+                        {member.user?.name?.[0] || 'U'}
+                      </div>
+                    )}
                     <div className="min-w-0">
-                      <div className="text-sm font-semibold text-[#111110] truncate">{member.user?.name}</div>
-                      <div className="text-xs text-[#6b6b66]">{member.role}</div>
+                      <div className="text-sm font-semibold text-[#111110] truncate group-hover:text-[#6C63FF] transition-colors">{member.user?.name}</div>
+                      <div className="text-xs text-[#a3a39e]">@{member.user?.username || '—'}</div>
+                      <div className="text-[11px] text-[#6b6b66] font-medium mt-0.5">{member.role}</div>
                     </div>
                   </Link>
                   {isOwner && (
                     <button
                       onClick={() => handleRemoveMember(member.user?._id, member.user?.name)}
-                      className="text-xs text-red-400 hover:text-red-600 border border-red-200 hover:border-red-400 px-2 py-1 rounded-lg transition-colors flex-shrink-0"
+                      className="text-xs text-red-400 hover:text-red-600 border border-red-200 hover:border-red-400 px-2 py-1 rounded-lg transition-colors flex-shrink-0 opacity-0 group-hover:opacity-100"
                       title="Remove from project">
                       Remove
                     </button>
@@ -763,14 +851,14 @@ function ProjectDetailContent() {
         )}
 
         {/* Timeline */}
-        <div className="bg-white rounded-2xl border border-[#efefed] p-6">
+        <div className="bg-white rounded-2xl border border-[#efefed] p-6 mb-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#a3a39e]">Production Timeline</h2>
             {(isOwner || isTeamMember) && <p className="text-xs text-[#a3a39e]">Click to update stage</p>}
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
             {TIMELINE_STAGES.map((stage, idx) => {
-              const cfg      = STAGE_LABELS[stage];
+              const cfg       = STAGE_LABELS[stage];
               const isCurrent = project.timelineStage === stage;
               const isPast    = currentStageIdx > idx;
               const canUpdate = isOwner || isTeamMember;
@@ -790,6 +878,21 @@ function ProjectDetailContent() {
               );
             })}
           </div>
+        </div>
+
+        {/* Footer actions */}
+        <div className="flex items-center justify-between py-2 px-1">
+          <p className="text-xs text-[#c0c0bb]">Project ID: {id?.slice(-8)}</p>
+          {!isOwner && user && (
+            <Link
+              href={`/support/report?projectId=${id}&projectTitle=${encodeURIComponent(project.title)}`}
+              className="text-xs text-[#c0c0bb] hover:text-red-500 transition-colors flex items-center gap-1">
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              </svg>
+              Report this project
+            </Link>
+          )}
         </div>
       </div>
     </div>

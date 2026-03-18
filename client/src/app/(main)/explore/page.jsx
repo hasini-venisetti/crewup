@@ -141,6 +141,7 @@ export default function ExplorePage() {
   const { user } = useAuth();
   const [creators, setCreators]   = useState([]);
   const [loading, setLoading]     = useState(false);
+  const [total, setTotal]         = useState(null);
   const [filters, setFilters]     = useState({ q: '', role: 'all', skill: '', location: '', availability: 'all', page: 1 });
   const [hasMore, setHasMore]     = useState(true);
 
@@ -149,10 +150,10 @@ export default function ExplorePage() {
       setLoading(true);
       try {
         const params = {
-          ...(newFilters.q            && { q:            newFilters.q }),
-          ...(newFilters.role !== 'all' && { role:        newFilters.role }),
-          ...(newFilters.skill        && { skill:        newFilters.skill }),
-          ...(newFilters.location     && { location:     newFilters.location }),
+          ...(newFilters.q              && { q:            newFilters.q }),
+          ...(newFilters.role !== 'all' && { role:         newFilters.role }),
+          ...(newFilters.skill          && { skill:        newFilters.skill }),
+          ...(newFilters.location       && { location:     newFilters.location }),
           ...(newFilters.availability !== 'all' && { availability: newFilters.availability }),
           page: newFilters.page,
         };
@@ -160,8 +161,12 @@ export default function ExplorePage() {
         const filtered = myId
           ? (data.data || []).filter((c) => c._id !== myId && c._id?.toString() !== myId)
           : (data.data || []);
-        if (newFilters.page === 1) setCreators(filtered);
-        else setCreators((prev) => [...prev, ...filtered]);
+        if (newFilters.page === 1) {
+          setCreators(filtered);
+          if (data.total != null) setTotal(data.total);
+        } else {
+          setCreators((prev) => [...prev, ...filtered]);
+        }
         setHasMore((data.data?.length ?? 0) === 10);
       } catch {
         toast.error('Failed to load creators');
@@ -182,6 +187,14 @@ export default function ExplorePage() {
 
   const handleLoadMore = () =>
     setFilters((prev) => ({ ...prev, page: prev.page + 1 }));
+
+  const activeFilters = [
+    filters.role !== 'all' && { key: 'role', label: filters.role.replace(/-/g, ' '), clear: () => handleFilterChange('role', 'all') },
+    filters.skill         && { key: 'skill', label: `Skill: ${filters.skill}`, clear: () => handleFilterChange('skill', '') },
+    filters.location      && { key: 'location', label: `📍 ${filters.location}`, clear: () => handleFilterChange('location', '') },
+    filters.availability !== 'all' && { key: 'availability', label: filters.availability.replace(/-/g, ' '), clear: () => handleFilterChange('availability', 'all') },
+    filters.q             && { key: 'q', label: `"${filters.q}"`, clear: () => handleFilterChange('q', '') },
+  ].filter(Boolean);
 
   return (
     <div className="min-h-screen bg-[#fafaf9]">
@@ -226,58 +239,97 @@ export default function ExplorePage() {
       <div className="max-w-7xl mx-auto px-3 sm:px-6 py-10">
 
         {/* Filter panel */}
-        <div className="bg-white rounded-xl border border-[#efefed] p-6 mb-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white rounded-xl border border-[#efefed] p-5 mb-6 shadow-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div>
-              <label className="text-xs font-medium text-[#6b6b66] mb-2 block">Role</label>
+              <label className="text-xs font-semibold text-[#6b6b66] mb-1.5 block">Role</label>
               <select
                 value={filters.role}
                 onChange={(e) => handleFilterChange('role', e.target.value)}
-                className="w-full rounded-lg border border-[#e0e0dd] bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] transition"
+                className="w-full rounded-lg border border-[#e0e0dd] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] transition"
               >
                 <option value="all">All Roles</option>
                 {ROLES.map((role) => (
                   <option key={role} value={role}>
-                    {role.replace(/-/g, ' ').charAt(0).toUpperCase() + role.replace(/-/g, ' ').slice(1)}
+                    {ROLE_ICONS[role]} {role.replace(/-/g, ' ').charAt(0).toUpperCase() + role.replace(/-/g, ' ').slice(1)}
                   </option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium text-[#6b6b66] mb-2 block">Skill</label>
+              <label className="text-xs font-semibold text-[#6b6b66] mb-1.5 block">Skill</label>
               <input
                 type="text"
                 placeholder="e.g. Premiere Pro"
                 value={filters.skill}
                 onChange={(e) => handleFilterChange('skill', e.target.value)}
-                className="w-full rounded-lg border border-[#e0e0dd] bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] transition"
+                className="w-full rounded-lg border border-[#e0e0dd] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] transition"
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-[#6b6b66] mb-2 block">Location</label>
+              <label className="text-xs font-semibold text-[#6b6b66] mb-1.5 block">Location</label>
               <input
                 type="text"
-                placeholder="e.g. Los Angeles"
+                placeholder="e.g. Mumbai, Chennai"
                 value={filters.location}
                 onChange={(e) => handleFilterChange('location', e.target.value)}
-                className="w-full rounded-lg border border-[#e0e0dd] bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] transition"
+                className="w-full rounded-lg border border-[#e0e0dd] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] transition"
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-[#6b6b66] mb-2 block">Availability</label>
+              <label className="text-xs font-semibold text-[#6b6b66] mb-1.5 block">Availability</label>
               <select
                 value={filters.availability}
                 onChange={(e) => handleFilterChange('availability', e.target.value)}
-                className="w-full rounded-lg border border-[#e0e0dd] bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] transition"
+                className="w-full rounded-lg border border-[#e0e0dd] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] transition"
               >
                 {AVAILABILITIES.map((avail) => (
                   <option key={avail} value={avail}>
-                    {avail === 'all' ? 'Any' : avail.replace(/-/g, ' ').charAt(0).toUpperCase() + avail.replace(/-/g, ' ').slice(1)}
+                    {avail === 'all' ? 'Any Availability' : avail.replace(/-/g, ' ').charAt(0).toUpperCase() + avail.replace(/-/g, ' ').slice(1)}
                   </option>
                 ))}
               </select>
             </div>
           </div>
+
+          {/* Active filter chips */}
+          {activeFilters.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-[#f5f5f3]">
+              {activeFilters.map((f) => (
+                <button key={f.key} onClick={f.clear}
+                  className="inline-flex items-center gap-1.5 text-xs font-medium bg-[#6C63FF]/10 text-[#5750D4] border border-[#6C63FF]/20 px-2.5 py-1 rounded-full hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors capitalize">
+                  {f.label}
+                  <span className="text-[10px] font-bold">✕</span>
+                </button>
+              ))}
+              <button onClick={() => setFilters({ q: '', role: 'all', skill: '', location: '', availability: 'all', page: 1 })}
+                className="text-xs text-[#a3a39e] hover:text-red-500 transition-colors px-1">
+                Clear all
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Results header */}
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm text-[#6b6b66]">
+            {loading && creators.length === 0 ? (
+              <span className="inline-flex items-center gap-2">
+                <span className="w-3.5 h-3.5 border-2 border-[#c9c4ff] border-t-[#5750D4] rounded-full animate-spin" />
+                Searching…
+              </span>
+            ) : creators.length === 0 ? 'No creators found' : (
+              <span>
+                Showing <strong className="text-[#111110]">{creators.length}</strong>
+                {total != null && total > creators.length ? ` of ${total}` : ''} creator{creators.length !== 1 ? 's' : ''}
+              </span>
+            )}
+          </p>
+          {activeFilters.length > 0 && (
+            <span className="text-xs bg-[#6C63FF]/10 text-[#5750D4] border border-[#6C63FF]/20 px-2.5 py-1 rounded-full font-medium">
+              {activeFilters.length} filter{activeFilters.length !== 1 ? 's' : ''} active
+            </span>
+          )}
         </div>
 
         {/* Grid */}
@@ -288,24 +340,31 @@ export default function ExplorePage() {
         ) : creators.length === 0 ? (
           <div className="rounded-2xl bg-white border border-[#efefed] text-center py-24">
             <p className="text-5xl mb-4">🔍</p>
-            <p className="font-semibold text-[#111110] mb-1">No creators found</p>
-            <p className="text-sm text-[#6b6b66]">Try adjusting your filters</p>
+            <p className="font-semibold text-[#111110] mb-2">No creators found</p>
+            <p className="text-sm text-[#6b6b66] mb-5">Try adjusting your filters or search term</p>
+            {activeFilters.length > 0 && (
+              <button onClick={() => setFilters({ q: '', role: 'all', skill: '', location: '', availability: 'all', page: 1 })}
+                className="text-sm font-semibold text-[#6C63FF] hover:underline">
+                Clear all filters
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5 mb-10">
             {creators.map((creator) => <CreatorCard key={creator._id} creator={creator} />)}
+            {/* Skeleton placeholders while loading more */}
+            {loading && Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={`sk-${i}`} />)}
           </div>
         )}
 
         {/* Load More */}
-        {creators.length > 0 && hasMore && (
-          <div className="text-center">
+        {creators.length > 0 && hasMore && !loading && (
+          <div className="text-center pb-4">
             <button
               onClick={handleLoadMore}
-              disabled={loading}
-              className="bg-white border border-[#e0e0dd] text-[#0e0e0d] font-semibold text-sm px-8 py-3 rounded-lg hover:border-[#0e0e0d] transition-all disabled:opacity-50"
+              className="bg-white border border-[#e0e0dd] text-[#0e0e0d] font-semibold text-sm px-8 py-3 rounded-xl hover:border-[#0e0e0d] hover:shadow-sm transition-all"
             >
-              {loading ? 'Loading…' : 'Load More'}
+              Load more creators
             </button>
           </div>
         )}
