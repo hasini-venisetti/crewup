@@ -177,14 +177,14 @@ const reportFilm = async (req, res, next) => {
   }
 };
 
-// @desc   Toggle bookmark on a film
+// @desc   Toggle bookmark on a project (any type, not just films)
 // @route  POST /api/films/:id/bookmark
 // @access Private
 const toggleBookmark = async (req, res, next) => {
   try {
-    const project = await Project.findById(req.params.id).select('_id youtubeLink');
-    if (!project || !project.youtubeLink) {
-      return res.status(404).json({ success: false, message: 'Film not found' });
+    const project = await Project.findById(req.params.id).select('_id');
+    if (!project) {
+      return res.status(404).json({ success: false, message: 'Project not found' });
     }
 
     const user = await User.findById(req.user._id).select('bookmarks');
@@ -204,14 +204,14 @@ const toggleBookmark = async (req, res, next) => {
   }
 };
 
-// @desc   Get bookmark status for a film
+// @desc   Get bookmark status for a project
 // @route  GET /api/films/:id/bookmark
 // @access Public (returns false if not logged in)
 const getBookmarkStatus = async (req, res, next) => {
   try {
-    const project = await Project.findById(req.params.id).select('_id youtubeLink');
-    if (!project || !project.youtubeLink) {
-      return res.status(404).json({ success: false, message: 'Film not found' });
+    const project = await Project.findById(req.params.id).select('_id');
+    if (!project) {
+      return res.status(404).json({ success: false, message: 'Project not found' });
     }
 
     let bookmarked = false;
