@@ -673,18 +673,24 @@ const STATUS_STYLE = {
 };
 
 function ReportsTab() {
-  const [reports, setReports]   = useState([]);
-  const [loading, setLoading]   = useState(true);
+  const [reports,      setReports]      = useState([]);
+  const [loading,      setLoading]      = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
-  const [page, setPage]         = useState(1);
-  const [pages, setPages]       = useState(1);
-  const [total, setTotal]       = useState(0);
-  const [acting, setActing]     = useState({});
+  const [page,         setPage]         = useState(1);
+  const [pages,        setPages]        = useState(1);
+  const [total,        setTotal]        = useState(0);
+  const [acting,       setActing]       = useState({});
+
+  // Resolution modal
+  const [modal,      setModal]      = useState(null);
+  const [note,       setNote]       = useState('');
+  const [warnUser,   setWarnUser]   = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const load = useCallback(async (s, p) => {
     setLoading(true);
     try {
-      const { data } = await adminAPI.getReports({ status: s, page: p, limit: 20 });
+      const { data } = await reportAPI.getQueue({ status: s, page: p, limit: 20 });
       setReports(data.data || []);
       setTotal(data.total || 0);
       setPages(data.pages || 1);
@@ -694,14 +700,32 @@ function ReportsTab() {
 
   useEffect(() => { load(statusFilter, page); }, [statusFilter, page]);
 
-  const handleStatus = async (report, newStatus) => {
+  const openModal  = (report, action) => { setModal({ report, action }); setNote(''); setWarnUser(false); };
+  const closeModal = () => { setModal(null); setNote(''); setWarnUser(false); };
+
+  const submitResolution = async () => {
+    if (!modal) return;
+    setSubmitting(true);
+    try {
+      await reportAPI.resolve(modal.report._id, modal.action, note.trim(), warnUser);
+      setReports((prev) => prev.map((r) =>
+        r._id === modal.report._id ? { ...r, status: modal.action, resolutionNote: note.trim() } : r
+      ));
+      closeModal();
+    } catch {}
+    finally { setSubmitting(false); }
+  };
+
+  const reopen = async (report) => {
     setActing((a) => ({ ...a, [report._id]: true }));
     try {
-      await adminAPI.updateReportStatus(report._id, newStatus);
-      setReports((prev) => prev.map((r) => r._id === report._id ? { ...r, status: newStatus } : r));
+      await reportAPI.resolve(report._id, 'pending', '', false);
+      setReports((prev) => prev.map((r) => r._id === report._id ? { ...r, status: 'pending' } : r));
     } catch {}
     finally { setActing((a) => ({ ...a, [report._id]: false })); }
   };
+
+  const TARGET_ICON = { film: '🎬', project: '📋', user: '👤', message: '💬' };
 
   return (
     <div className="space-y-5">
@@ -720,7 +744,7 @@ function ReportsTab() {
         <p className="text-xs text-[#6b6b66]">{total} report{total !== 1 ? 's' : ''}</p>
       </div>
 
-      {/* Table */}
+      {/* Report list */}
       <div className="bg-white border border-[#efefed] rounded-2xl overflow-hidden">
         {loading ? (
           <div className="p-4 space-y-3">{Array(6).fill(0).map((_,i) => <div key={i} className="h-16 bg-[#efefed] rounded-xl animate-pulse" />)}</div>
@@ -732,17 +756,20 @@ function ReportsTab() {
         ) : (
           <div className="divide-y divide-[#efefed]">
             {reports.map((r) => {
-              const film   = r.targetId;
-              const reason = REASON_LABEL[r.reason] || REASON_LABEL.other;
+              const reason   = REASON_LABEL[r.reason] || REASON_LABEL.other;
+              const typeIcon = TARGET_ICON[r.targetType] || '📄';
+              const accused  = r.reportedUser;
               return (
                 <div key={r._id} className="p-5 hover:bg-[#fafaf9] transition-colors">
                   <div className="flex items-start gap-4">
-                    {/* Film info */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${reason.color}`}>
-                          {reason.label}
+
+                      {/* Badges + date */}
+                      <div className="flex items-center gap-2 flex-wrap mb-2">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-[#f5f3ff] text-[#5750D4] border-[#e0dbff] uppercase">
+                          {typeIcon} {r.targetType}
                         </span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${reason.color}`}>{reason.label}</span>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${STATUS_STYLE[r.status]}`}>
                           {r.status.charAt(0).toUpperCase() + r.status.slice(1)}
                         </span>
@@ -751,25 +778,35 @@ function ReportsTab() {
                         </span>
                       </div>
 
-                      {/* Film title */}
-                      <p className="text-sm font-semibold text-[#111110] mb-0.5">
-                        🎬 {film?.title || <span className="text-[#a3a39e] italic">Film deleted</span>}
-                        {film?.youtubeLink && (
-                          <a href={film.youtubeLink} target="_blank" rel="noopener noreferrer"
-                            className="ml-2 text-[10px] text-[#6C63FF] hover:underline font-normal">
-                            Watch ↗
-                          </a>
-                        )}
+                      {/* Target title (snapshot — survives deletion) */}
+                      <p className="text-sm font-semibold text-[#111110] mb-1.5">
+                        {typeIcon}{' '}
+                        {r.targetSnapshot
+                          ? r.targetSnapshot
+                          : <span className="text-[#a3a39e] italic font-normal">Content deleted</span>}
                       </p>
 
-                      {/* Creator */}
-                      {film?.createdBy && (
-                        <p className="text-xs text-[#6b6b66] mb-1.5">
-                          Creator: <Link href={`/profile/${film.createdBy._id}`} className="hover:text-[#6C63FF] transition-colors">{film.createdBy.name} (@{film.createdBy.username})</Link>
-                        </p>
+                      {/* Reported user — person the report is AGAINST */}
+                      {accused ? (
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <div className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center text-[8px] font-bold text-red-600 overflow-hidden flex-shrink-0">
+                            {accused.profileImage
+                              ? <img src={accused.profileImage} alt="" className="w-full h-full object-cover" />
+                              : accused.name?.[0]?.toUpperCase()}
+                          </div>
+                          <p className="text-xs text-[#6b6b66]">
+                            <span className="font-semibold text-red-600">Reported user: </span>
+                            <Link href={`/profile/${accused._id}`} className="font-medium text-[#111110] hover:text-[#6C63FF] transition-colors">
+                              {accused.name}
+                            </Link>
+                            <span className="text-[#a3a39e]"> (@{accused.username})</span>
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-[#a3a39e] mb-1.5 italic">Reported user unavailable</p>
                       )}
 
-                      {/* Reporter */}
+                      {/* Filed by — who submitted the report */}
                       <div className="flex items-center gap-2 mb-1.5">
                         <div className="w-5 h-5 rounded-full bg-gradient-to-br from-[#c9c4ff] to-[#6C63FF] flex items-center justify-center text-[8px] font-bold text-white overflow-hidden flex-shrink-0">
                           {r.reporter?.profileImage
@@ -777,15 +814,25 @@ function ReportsTab() {
                             : r.reporter?.name?.[0]?.toUpperCase()}
                         </div>
                         <p className="text-xs text-[#6b6b66]">
-                          Reported by <Link href={`/profile/${r.reporter?._id}`} className="font-medium text-[#111110] hover:text-[#6C63FF] transition-colors">{r.reporter?.name}</Link>
+                          Filed by{' '}
+                          <Link href={`/profile/${r.reporter?._id}`} className="font-medium text-[#111110] hover:text-[#6C63FF] transition-colors">
+                            {r.reporter?.name}
+                          </Link>
                           <span className="text-[#a3a39e]"> (@{r.reporter?.username})</span>
                         </p>
                       </div>
 
-                      {/* Details */}
+                      {/* Reporter's details */}
                       {r.details && (
-                        <p className="text-xs text-[#6b6b66] bg-[#f7f7f6] border border-[#e0e0dd] rounded-lg px-3 py-2 mt-2 italic">
+                        <p className="text-xs text-[#6b6b66] bg-[#f7f7f6] border border-[#e0e0dd] rounded-lg px-3 py-2 mt-1.5 italic">
                           "{r.details}"
+                        </p>
+                      )}
+
+                      {/* Admin resolution note */}
+                      {r.resolutionNote && (
+                        <p className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2 mt-1.5">
+                          📝 Admin note: {r.resolutionNote}
                         </p>
                       )}
                     </div>
@@ -794,20 +841,20 @@ function ReportsTab() {
                     <div className="flex flex-col gap-1.5 flex-shrink-0">
                       {r.status === 'pending' && (
                         <>
-                          <button onClick={() => handleStatus(r, 'reviewed')} disabled={acting[r._id]}
-                            className="text-xs px-3 py-1.5 rounded-lg border border-green-200 text-green-700 hover:bg-green-50 transition-colors disabled:opacity-50 font-medium">
-                            {acting[r._id] ? '…' : '✓ Reviewed'}
+                          <button onClick={() => openModal(r, 'reviewed')}
+                            className="text-xs px-3 py-1.5 rounded-lg border border-green-200 text-green-700 hover:bg-green-50 transition-colors font-medium whitespace-nowrap">
+                            ✓ Reviewed
                           </button>
-                          <button onClick={() => handleStatus(r, 'dismissed')} disabled={acting[r._id]}
-                            className="text-xs px-3 py-1.5 rounded-lg border border-[#e0e0dd] text-[#6b6b66] hover:bg-[#f7f7f6] transition-colors disabled:opacity-50 font-medium">
-                            {acting[r._id] ? '…' : '✕ Dismiss'}
+                          <button onClick={() => openModal(r, 'dismissed')}
+                            className="text-xs px-3 py-1.5 rounded-lg border border-[#e0e0dd] text-[#6b6b66] hover:bg-[#f7f7f6] transition-colors font-medium whitespace-nowrap">
+                            ✕ Dismiss
                           </button>
                         </>
                       )}
                       {r.status !== 'pending' && (
-                        <button onClick={() => handleStatus(r, 'pending')} disabled={acting[r._id]}
-                          className="text-xs px-3 py-1.5 rounded-lg border border-amber-200 text-amber-700 hover:bg-amber-50 transition-colors disabled:opacity-50 font-medium">
-                          ↩ Reopen
+                        <button onClick={() => reopen(r)} disabled={acting[r._id]}
+                          className="text-xs px-3 py-1.5 rounded-lg border border-amber-200 text-amber-700 hover:bg-amber-50 transition-colors disabled:opacity-50 font-medium whitespace-nowrap">
+                          {acting[r._id] ? '…' : '↩ Reopen'}
                         </button>
                       )}
                     </div>
@@ -831,6 +878,91 @@ function ReportsTab() {
             className="px-4 py-2 rounded-lg border border-[#e0e0dd] text-sm text-[#6b6b66] hover:border-[#0e0e0d] disabled:opacity-40 transition-all">
             Next →
           </button>
+        </div>
+      )}
+
+      {/* ── Resolution Modal ── */}
+      {modal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={closeModal} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 z-10">
+            <div className="flex items-start justify-between mb-5">
+              <div>
+                <h3 className="font-bold text-[#0e0e0d] text-base">
+                  {modal.action === 'reviewed' ? '✓ Mark as Reviewed' : '✕ Dismiss Report'}
+                </h3>
+                <p className="text-xs text-[#6b6b66] mt-1">
+                  {modal.report.targetSnapshot ? `Re: "${modal.report.targetSnapshot}"` : 'Re: deleted content'}
+                </p>
+              </div>
+              <button onClick={closeModal} className="text-[#a3a39e] hover:text-[#111110] transition-colors text-lg leading-none ml-4">✕</button>
+            </div>
+
+            {/* Reported user pill */}
+            {modal.report.reportedUser && (
+              <div className="flex items-center gap-2.5 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4">
+                <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-sm font-bold text-red-600 flex-shrink-0 overflow-hidden">
+                  {modal.report.reportedUser.profileImage
+                    ? <img src={modal.report.reportedUser.profileImage} alt="" className="w-full h-full object-cover" />
+                    : modal.report.reportedUser.name?.[0]?.toUpperCase()}
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-red-600 uppercase tracking-wide">Reported user</p>
+                  <p className="text-sm font-semibold text-[#111110]">
+                    {modal.report.reportedUser.name}
+                    <span className="text-[#a3a39e] font-normal"> @{modal.report.reportedUser.username}</span>
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Note */}
+            <label className="block text-xs font-bold text-[#444442] uppercase tracking-wide mb-2">
+              Resolution note <span className="text-[#a3a39e] font-normal normal-case">(optional)</span>
+            </label>
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder={
+                modal.action === 'reviewed'
+                  ? 'e.g. Film was already deleted, no further action needed.'
+                  : 'e.g. Report appears unfounded — no policy violation found.'
+              }
+              rows={3}
+              className="w-full px-3 py-2.5 rounded-xl border border-[#e0e0dd] text-sm text-[#111110] placeholder-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-[#6055de]/30 focus:border-[#6055de]/50 resize-none mb-4"
+            />
+
+            {/* Warn user toggle */}
+            {modal.report.reportedUser && (
+              <button
+                onClick={() => setWarnUser((v) => !v)}
+                className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl border text-sm font-medium transition-all mb-5 ${
+                  warnUser ? 'bg-amber-50 border-amber-300 text-amber-800' : 'border-[#e0e0dd] text-[#444442] hover:bg-[#f7f7f6]'
+                }`}
+              >
+                <span className={`w-8 h-4 rounded-full relative transition-colors flex-shrink-0 ${warnUser ? 'bg-amber-400' : 'bg-[#e0e0dd]'}`}>
+                  <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform ${warnUser ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                </span>
+                <div className="text-left">
+                  <p className="font-semibold">Send warning to {modal.report.reportedUser.name}</p>
+                  <p className="text-xs opacity-70 font-normal">Notifies them with your note via the platform</p>
+                </div>
+              </button>
+            )}
+
+            <div className="flex gap-3">
+              <button onClick={closeModal}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-[#e0e0dd] text-sm text-[#6b6b66] hover:bg-[#f7f7f6] transition-colors font-medium">
+                Cancel
+              </button>
+              <button onClick={submitResolution} disabled={submitting}
+                className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-colors disabled:opacity-50 ${
+                  modal.action === 'reviewed' ? 'bg-green-600 hover:bg-green-700' : 'bg-[#444442] hover:bg-[#0e0e0d]'
+                }`}>
+                {submitting ? '…' : modal.action === 'reviewed' ? '✓ Confirm Reviewed' : '✕ Confirm Dismiss'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

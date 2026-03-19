@@ -25,6 +25,9 @@ const reportSchema = new mongoose.Schema(
       required: true,
     },
     details:        { type: String, maxlength: 500 },
+    // Snapshot of who the report is AGAINST — stored at submit time so it survives content deletion
+    reportedUser:   { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    targetSnapshot: { type: String, default: '' }, // title/name of reported content at time of report
     status:         { type: String, enum: ['pending', 'reviewed', 'dismissed'], default: 'pending' },
     // Admin resolution
     resolvedBy:     { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },

@@ -255,7 +255,7 @@ export const reportAPI = {
   mine:         ()       => api.get('/reports/mine'),
   // Admin
   getQueue:     (params) => api.get('/admin/report-queue', { params }),
-  resolve:      (id, action, note) => api.patch(`/admin/report-queue/${id}/resolve`, { action, note }),
+  resolve:      (id, action, note, warnUser) => api.patch(`/admin/report-queue/${id}/resolve`, { action, note, warnUser }),
 };
 
 /* ── Contests ── */
