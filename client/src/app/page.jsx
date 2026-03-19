@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
-import Logo from '@/components/ui/Logo';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import { useScrollAnimation } from '@/hooks/useScrollAnimation';
@@ -16,29 +15,51 @@ const TICKER_ROLES = [
 ];
 
 const DISCIPLINES = [
-  { number: '01', role: 'Director',        tagline: 'Lead your vision' },
-  { number: '02', role: 'Cinematographer', tagline: 'Capture the moment' },
-  { number: '03', role: 'Editor',          tagline: 'Shape the narrative' },
-  { number: '04', role: 'Musician',        tagline: 'Create the score' },
-  { number: '05', role: 'Actor',           tagline: 'Bring characters alive' },
-  { number: '06', role: 'Photographer',    tagline: 'Frame the story' },
-  { number: '07', role: 'Writer',          tagline: 'Script the moment' },
-  { number: '08', role: 'Producer',        tagline: 'Orchestrate creation' },
+  { number: '01', role: 'Director',        tagline: 'Lead your vision',       icon: '🎬' },
+  { number: '02', role: 'Cinematographer', tagline: 'Capture the moment',     icon: '📷' },
+  { number: '03', role: 'Editor',          tagline: 'Shape the narrative',    icon: '✂️' },
+  { number: '04', role: 'Musician',        tagline: 'Create the score',       icon: '🎵' },
+  { number: '05', role: 'Actor',           tagline: 'Bring characters alive', icon: '🎭' },
+  { number: '06', role: 'Photographer',    tagline: 'Frame the story',        icon: '🖼️' },
+  { number: '07', role: 'Writer',          tagline: 'Script the moment',      icon: '✍️' },
+  { number: '08', role: 'Producer',        tagline: 'Orchestrate creation',   icon: '🎙' },
 ];
 
 const HOW_IT_WORKS = [
-  { number: '01', title: 'Create Your Profile', description: 'Set up your profile, showcase your skills, portfolio, and let creators discover you.' },
-  { number: '02', title: 'Post or Discover Projects', description: 'Share your project ideas or browse exciting opportunities in your discipline.' },
-  { number: '03', title: 'Apply and Collaborate', description: 'Connect with creators, build your team, and bring ambitious ideas to life.' },
+  {
+    number: '01',
+    title: 'Build Your Profile',
+    description: 'Set up your creative profile, showcase your portfolio and skills, and let the right projects find you.',
+    icon: '👤',
+  },
+  {
+    number: '02',
+    title: 'Post or Discover Projects',
+    description: 'List your project with compensation details, audition format, and shoot location — or browse opportunities by role and category.',
+    icon: '🔍',
+  },
+  {
+    number: '03',
+    title: 'Collaborate & Create',
+    description: 'Apply, connect through built-in messaging, build your crew, and bring ambitious ideas to life.',
+    icon: '🚀',
+  },
 ];
 
 const FEATURES = [
-  { icon: '🎯', title: 'Role-Based Matching',     description: 'Smart algorithms connect you with creators in your discipline and skill set.' },
-  { icon: '💬', title: 'Real-Time Messaging',     description: 'Collaborate seamlessly with integrated DMs, team chat, and file sharing.' },
-  { icon: '✦',  title: 'Smart Recommendations',  description: 'Discover projects and team members tailored precisely to your skills.' },
-  { icon: '📋', title: 'Production Timeline',     description: 'Track your project from planning through to release with built-in stages.' },
-  { icon: '⭐', title: 'Peer Reviews',            description: 'Build your reputation with verified ratings from real collaborators.' },
-  { icon: '🗺️', title: 'Creator Map',             description: 'Find local collaborators in your city or go fully remote worldwide.' },
+  { icon: '🎯', title: 'Role-Based Matching',       description: 'Filter projects by your exact role — Director, Actor, Editor, Musician and more — so you only see what matters.' },
+  { icon: '💬', title: 'Real-Time Messaging',       description: 'Collaborate seamlessly with integrated DMs and team chat. Everything stays in one place.' },
+  { icon: '💰', title: 'Compensation Transparency', description: 'Every project clearly states paid or unpaid, with compensation type and details — no surprises.' },
+  { icon: '📋', title: 'Casting & Audition Info',   description: 'See audition format (in-person, self-tape, or online) and shoot location upfront before you apply.' },
+  { icon: '⭐', title: 'Peer Reviews',              description: 'Build your reputation with verified ratings from real collaborators you have worked with.' },
+  { icon: '🗺️', title: 'Creator Map',               description: 'Find local collaborators in your city or go fully remote worldwide with location-based search.' },
+];
+
+const STATS = [
+  { value: '500+', label: 'Creators' },
+  { value: '120+', label: 'Projects Posted' },
+  { value: '8',    label: 'Disciplines' },
+  { value: '100%', label: 'Free to Join' },
 ];
 
 function timeAgo(date) {
@@ -50,17 +71,13 @@ function timeAgo(date) {
   return `${d}d ago`;
 }
 
-// Helper — split a string into word-reveal spans
 function WordReveal({ text, baseDelay = 0, wordStyle = {} }) {
   const words = text.split(' ');
   return (
     <>
       {words.map((word, i) => (
         <span key={i} className="word-clip-wrap">
-          <span
-            className="word-reveal"
-            style={{ animationDelay: `${baseDelay + i * 0.1}s`, ...wordStyle }}
-          >
+          <span className="word-reveal" style={{ animationDelay: `${baseDelay + i * 0.1}s`, ...wordStyle }}>
             {word}
           </span>
           {i < words.length - 1 && '\u00A0'}
@@ -74,19 +91,19 @@ export default function Home() {
   const { user } = useAuth();
   useScrollAnimation();
 
-  const [projects, setProjects] = useState([]);
+  const [projects,       setProjects]       = useState([]);
   const [projectsLoading, setProjectsLoading] = useState(true);
-  const [trendingFilms, setTrendingFilms] = useState([]);
-
-  // Cursor spotlight state
-  const [cursor, setCursor] = useState({ x: 50, y: 50 });
+  const [trendingFilms,  setTrendingFilms]  = useState([]);
+  const [cursor,         setCursor]         = useState({ x: 50, y: 50 });
   const heroRef = useRef(null);
+
   const handleMouseMove = useCallback((e) => {
     const rect = heroRef.current?.getBoundingClientRect();
     if (!rect) return;
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-    setCursor({ x, y });
+    setCursor({
+      x: ((e.clientX - rect.left) / rect.width)  * 100,
+      y: ((e.clientY - rect.top)  / rect.height) * 100,
+    });
   }, []);
 
   useEffect(() => {
@@ -108,46 +125,41 @@ export default function Home() {
     <main className="bg-white overflow-x-hidden">
       <Navbar />
 
-      {/* ── HERO ─────────────────────────────────────────────────────────── */}
+      {/* ── HERO ── */}
       <section
         ref={heroRef}
         onMouseMove={handleMouseMove}
         className="relative min-h-[92vh] flex flex-col justify-center bg-[#0e0e0d] overflow-hidden"
       >
-        {/* Letterbox bars — slide away on load */}
+        {/* Letterbox bars */}
         <div className="letterbox-bar-top" />
         <div className="letterbox-bar-bottom" />
 
-        {/* Background Image with Ken Burns */}
+        {/* Background image with Ken Burns */}
         <div className="absolute inset-0">
           <div
             className="absolute inset-0 bg-cover bg-center bg-no-repeat hero-bg-kenburns"
-            style={{
-              backgroundImage: 'url("https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80")'
-            }}
+            style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80")' }}
           />
-          {/* Dark overlay for text readability */}
-          <div className="absolute inset-0 bg-black/60" />
-          {/* Vignette — darkens edges like a film lens */}
+          <div className="absolute inset-0 bg-black/65" />
           <div className="absolute inset-0 hero-vignette" />
         </div>
 
-        {/* Animated film grain */}
+        {/* Film grain */}
         <div className="film-grain-anim" />
-
-        {/* Horizontal scan line */}
+        {/* Scanline */}
         <div className="hero-scanline" />
 
         {/* Cursor spotlight */}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
-            background: `radial-gradient(circle 480px at ${cursor.x}% ${cursor.y}%, rgba(108,99,255,0.07) 0%, transparent 70%)`,
-            transition: 'background 0.1s ease',
+            background: `radial-gradient(circle 520px at ${cursor.x}% ${cursor.y}%, rgba(108,99,255,0.08) 0%, transparent 70%)`,
+            transition: 'background 0.08s ease',
           }}
         />
 
-        <div className="relative max-w-6xl mx-auto px-6 py-24 text-center" style={{ zIndex: 10 }}>
+        <div className="relative z-10 max-w-6xl mx-auto px-6 py-24 text-center">
           {/* Badge */}
           <div
             className="cinematic-fade inline-flex items-center gap-2 border border-white/10 bg-white/5 text-white/60 text-xs font-semibold tracking-widest uppercase px-4 py-2 rounded-full mb-10"
@@ -157,7 +169,7 @@ export default function Home() {
             Independent Creator Platform
           </div>
 
-          {/* Heading — word-by-word reveal */}
+          {/* Heading */}
           <h1 className="font-[Playfair_Display] text-5xl md:text-7xl lg:text-8xl text-white leading-[1.15] tracking-[-0.02em] mb-8">
             <span className="block">
               <WordReveal text="Where Creators" baseDelay={0.9} />
@@ -176,27 +188,31 @@ export default function Home() {
             </span>
           </h1>
 
-          {/* Subheadline */}
+          {/* Subline */}
           <p
             className="cinematic-fade text-lg md:text-xl text-white/50 max-w-2xl mx-auto mb-12 font-light leading-relaxed"
             style={{ animationDelay: '1.55s' }}
           >
-            CREWUPFILMS connects directors, musicians, editors, photographers and storytellers
-            to build projects they couldn't make alone.
+            Post projects with real compensation details, browse by role, and collaborate with directors,
+            musicians, editors, and storytellers — all in one place.
           </p>
 
           {/* CTAs */}
           <div
-            className="cinematic-fade flex flex-col sm:flex-row gap-4 justify-center mb-20"
+            className="cinematic-fade flex flex-col sm:flex-row gap-4 justify-center mb-16"
             style={{ animationDelay: '1.75s' }}
           >
-            <Link href={user ? '/create-project' : '/signup'}
-              className="inline-flex items-center justify-center gap-2 bg-[#6055de] hover:bg-[#4d44c8] text-white text-sm font-bold px-8 py-4 rounded-xl transition-all duration-200 shadow-lg shadow-[#6055de]/25 hover:shadow-[#6055de]/40 active:scale-[0.98]">
+            <Link
+              href={user ? '/create-project' : '/signup'}
+              className="inline-flex items-center justify-center gap-2 bg-[#6055de] hover:bg-[#4d44c8] text-white text-sm font-bold px-8 py-4 rounded-xl transition-all duration-200 shadow-lg shadow-[#6055de]/30 hover:shadow-[#6055de]/50 active:scale-[0.98]"
+            >
               {user ? 'Post a Project' : 'Start a Project'} →
             </Link>
-            <Link href="/projects"
-              className="inline-flex items-center justify-center gap-2 border border-white/20 text-white/80 hover:border-white/50 hover:text-white text-sm font-semibold px-8 py-4 rounded-xl transition-all duration-200">
-              Explore Projects
+            <Link
+              href="/projects"
+              className="inline-flex items-center justify-center gap-2 border border-white/20 text-white/80 hover:border-white/50 hover:text-white text-sm font-semibold px-8 py-4 rounded-xl transition-all duration-200"
+            >
+              Browse Projects
             </Link>
           </div>
 
@@ -205,26 +221,27 @@ export default function Home() {
             className="cinematic-fade flex justify-center flex-wrap gap-2"
             style={{ animationDelay: '2s' }}
           >
-            {['Director', 'Editor', 'Musician', 'Photographer', 'Actor', 'Writer', 'Producer'].map((role) => (
-              <span key={role}
-                className="text-xs text-white/40 px-4 py-1.5 border border-white/10 rounded-full hover:border-white/25 hover:text-white/60 transition-all cursor-default">
+            {['Director', 'Editor', 'Musician', 'Photographer', 'Actor', 'Writer', 'Producer', 'Colorist'].map((role) => (
+              <Link key={role} href={`/projects?role=${role}`}
+                className="text-xs text-white/40 px-4 py-1.5 border border-white/10 rounded-full hover:border-white/25 hover:text-white/60 transition-all">
                 {role}
-              </span>
+              </Link>
             ))}
           </div>
         </div>
+
+        {/* Bottom fade */}
+        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#0e0e0d] to-transparent pointer-events-none" />
       </section>
 
-      {/* ── MARQUEE ──────────────────────────────────────────────────────── */}
+      {/* ── MARQUEE ── */}
       <div className="bg-[#0e0e0d] py-4 overflow-hidden select-none border-t border-white/5">
         <div className="marquee-track flex whitespace-nowrap">
           {[...Array(2)].map((_, i) => (
             <div key={i} className="flex items-center">
               {TICKER_ROLES.map((role) => (
                 <span key={role} className="flex items-center">
-                  <span className="text-xs font-semibold text-white/40 tracking-[0.2em] uppercase px-8 whitespace-nowrap">
-                    {role}
-                  </span>
+                  <span className="text-xs font-semibold text-white/40 tracking-[0.2em] uppercase px-8 whitespace-nowrap">{role}</span>
                   <span className="text-[#6055de]/60 text-sm">✦</span>
                 </span>
               ))}
@@ -233,32 +250,29 @@ export default function Home() {
         </div>
       </div>
 
-      <style jsx>{`
-        @keyframes marquee {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        .animate-marquee {
-          animation: marquee 20s linear infinite;
-        }
-        .marquee-track:hover {
-          animation-play-state: paused;
-        }
-      `}</style>
+      {/* ── STATS ── */}
+      <section className="py-16 px-6 bg-white border-b border-[#f0f0ee]">
+        <div className="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8">
+          {STATS.map((s, i) => (
+            <div key={i} data-scroll className="text-center">
+              <p className="font-[Playfair_Display] text-4xl md:text-5xl font-bold text-[#0e0e0d] mb-1">{s.value}</p>
+              <p className="text-sm text-[#6b6b66] uppercase tracking-wider font-medium">{s.label}</p>
+            </div>
+          ))}
+        </div>
+      </section>
 
-      {/* ── WHAT IS CREWUPFILMS ───────────────────────────────────────────────── */}
+      {/* ── WHAT IS CREWUPFILMS ── */}
       <section className="py-28 px-6 bg-white">
         <div className="max-w-5xl mx-auto">
           <div className="grid md:grid-cols-2 gap-16 items-center">
             <div>
               <p data-scroll className="text-xs uppercase tracking-[0.2em] text-[#6055de] font-bold mb-5">What is CREWUPFILMS</p>
-              <h2 data-scroll data-delay="1"
-                className="font-[Playfair_Display] text-4xl md:text-5xl text-[#0e0e0d] leading-[1.1] mb-6">
+              <h2 data-scroll data-delay="1" className="font-[Playfair_Display] text-4xl md:text-5xl text-[#0e0e0d] leading-[1.1] mb-6">
                 A platform built for independent creators.
               </h2>
-              <p data-scroll data-delay="2"
-                className="text-[#6b6b66] text-lg leading-relaxed mb-8">
-                From short films to music videos, photo series to podcasts — CREWUPFILMS is where ambitious creators find the collaborators they need to bring ideas to life.
+              <p data-scroll data-delay="2" className="text-[#6b6b66] text-lg leading-relaxed mb-8">
+                From short films to music videos, photo series to podcasts — CREWUPFILMS is where ambitious creators find the collaborators they need to bring ideas to life, with full transparency on compensation and project details.
               </p>
               <div data-scroll data-delay="3" className="flex gap-4">
                 <Link href="/projects" className="btn-primary">Browse Projects</Link>
@@ -267,10 +281,10 @@ export default function Home() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               {[
-                { icon: '🎬', label: 'Post your project',  desc: 'Describe your vision and roles needed.' },
-                { icon: '🤝', label: 'Find your people',   desc: 'Browse creators by discipline and skill.' },
-                { icon: '🚀', label: 'Create together',    desc: 'Collaborate with messaging, schedules, and more.' },
-                { icon: '⭐', label: 'Build reputation',   desc: 'Earn verified reviews from real collaborators.' },
+                { icon: '🎬', label: 'Post your project',      desc: 'Share your vision, compensation, audition format, and roles needed.' },
+                { icon: '🔍', label: 'Filter by role',          desc: 'Browse projects matching your exact discipline — no noise.' },
+                { icon: '🚀', label: 'Collaborate together',    desc: 'Message your team, track stages, and ship your creative work.' },
+                { icon: '⭐', label: 'Build reputation',        desc: 'Earn verified reviews from real collaborators you have worked with.' },
               ].map((item, idx) => (
                 <div key={idx} className="card p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
                   <p className="text-2xl mb-3">{item.icon}</p>
@@ -283,24 +297,25 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── HOW IT WORKS ─────────────────────────────────────────────────── */}
+      {/* ── HOW IT WORKS ── */}
       <section className="py-28 px-6 bg-[#fafaf9] border-y border-[#efefed]">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-20">
             <p data-scroll className="text-xs uppercase tracking-[0.2em] text-[#6055de] font-bold mb-4">The Process</p>
-            <h2 data-scroll data-delay="1" className="font-[Playfair_Display] text-4xl md:text-5xl text-[#0e0e0d]">
-              How It Works
-            </h2>
+            <h2 data-scroll data-delay="1" className="font-[Playfair_Display] text-4xl md:text-5xl text-[#0e0e0d]">How It Works</h2>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
             {HOW_IT_WORKS.map((item, idx) => (
-              <div key={idx}
+              <div key={idx} data-scroll
                 className="relative bg-white border border-[#efefed] rounded-2xl p-8 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
-                <p className="font-[Playfair_Display] text-6xl text-[#efefed] leading-none mb-6 select-none">{item.number}</p>
+                <div className="w-12 h-12 rounded-2xl bg-[#f5f3ff] border border-[#e0dbff] flex items-center justify-center text-2xl mb-6">
+                  {item.icon}
+                </div>
+                <p className="font-[Playfair_Display] text-5xl text-[#f0f0ee] leading-none mb-4 select-none absolute top-6 right-7">{item.number}</p>
                 <h3 className="text-lg font-bold text-[#0e0e0d] mb-3">{item.title}</h3>
                 <p className="text-sm text-[#6b6b66] leading-relaxed">{item.description}</p>
                 {idx < HOW_IT_WORKS.length - 1 && (
-                  <div className="hidden md:block absolute top-1/2 -right-4 text-[#e0e0dd] text-xl z-10">→</div>
+                  <div className="hidden md:block absolute top-1/2 -right-4 text-[#d0d0cc] text-xl z-10">→</div>
                 )}
               </div>
             ))}
@@ -308,7 +323,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── LIVE PROJECTS ────────────────────────────────────────────────── */}
+      {/* ── LIVE PROJECTS ── */}
       <section className="py-28 px-6 bg-white">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-16">
@@ -318,29 +333,27 @@ export default function Home() {
                 Latest from the community
               </h2>
             </div>
-            <Link href="/projects" data-scroll data-delay="2"
-              className="btn-outline flex-shrink-0 self-end">
-              View all →
-            </Link>
+            <Link href="/projects" data-scroll data-delay="2" className="btn-outline flex-shrink-0 self-end">View all →</Link>
           </div>
 
           {projectsLoading && (
             <div className="grid md:grid-cols-3 gap-6">
               {[1,2,3].map((i) => (
                 <div key={i} className="bg-white border border-[#efefed] rounded-2xl p-6 animate-pulse">
+                  <div className="h-1.5 bg-[#e0e0dd] rounded w-full mb-5" />
                   <div className="flex items-center gap-3 mb-5">
-                    <div className="w-10 h-10 rounded-full skeleton" />
+                    <div className="w-10 h-10 rounded-full bg-[#f0f0ee]" />
                     <div className="flex-1 space-y-2">
-                      <div className="h-3 skeleton rounded-full w-24" />
-                      <div className="h-2 skeleton rounded-full w-16" />
+                      <div className="h-3 bg-[#f0f0ee] rounded w-24" />
+                      <div className="h-2 bg-[#f5f5f3] rounded w-16" />
                     </div>
                   </div>
-                  <div className="h-5 skeleton rounded-full w-3/4 mb-3" />
-                  <div className="h-3 skeleton rounded-full w-full mb-2" />
-                  <div className="h-3 skeleton rounded-full w-2/3 mb-6" />
+                  <div className="h-5 bg-[#f0f0ee] rounded w-3/4 mb-3" />
+                  <div className="h-3 bg-[#f5f5f3] rounded w-full mb-2" />
+                  <div className="h-3 bg-[#f5f5f3] rounded w-2/3 mb-6" />
                   <div className="flex gap-2">
-                    <div className="h-6 w-20 skeleton rounded-full" />
-                    <div className="h-6 w-16 skeleton rounded-full" />
+                    <div className="h-6 w-20 bg-[#f0f0ee] rounded-full" />
+                    <div className="h-6 w-16 bg-[#f0f0ee] rounded-full" />
                   </div>
                 </div>
               ))}
@@ -364,34 +377,42 @@ export default function Home() {
             <div className="grid md:grid-cols-3 gap-6">
               {projects.map((project) => {
                 const initials = (project.createdBy?.name || '?').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+                const compLabel = project.isPaid ? '💰 Paid' : '🤝 Collab';
                 return (
                   <Link key={project._id} href={`/projects/${project._id}`}
-                    className="group bg-white border border-[#efefed] rounded-2xl p-6 hover:border-[#d0d0cc] hover:-translate-y-1 transition-all duration-300 block"
+                    className="group bg-white border border-[#efefed] rounded-2xl overflow-hidden hover:border-[#d0d0cc] hover:-translate-y-1 transition-all duration-300 block"
                     style={{ boxShadow: 'var(--shadow-xs)' }}
                     onMouseEnter={e => e.currentTarget.style.boxShadow = 'var(--shadow-md)'}
                     onMouseLeave={e => e.currentTarget.style.boxShadow = 'var(--shadow-xs)'}
                   >
-                    <div className="flex items-center gap-3 mb-5">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#d0d0cc] to-[#e8e8e5] flex items-center justify-center text-xs font-bold text-[#0e0e0d]">
-                        {initials}
+                    {/* Top color bar */}
+                    <div className={`h-1 w-full ${project.isPaid ? 'bg-gradient-to-r from-amber-400 to-amber-300' : 'bg-gradient-to-r from-[#6055de] to-[#8b82ff]'}`} />
+                    <div className="p-6">
+                      <div className="flex items-center gap-3 mb-5">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#d0d0cc] to-[#e8e8e5] flex items-center justify-center text-xs font-bold text-[#0e0e0d]">
+                          {initials}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-[#0e0e0d] truncate">{project.createdBy?.name || 'Anonymous'}</p>
+                          <p className="text-xs text-[#a3a39e]">{timeAgo(project.createdAt)}</p>
+                        </div>
+                        <span className={`text-xs font-medium px-2.5 py-1 rounded-full flex-shrink-0 ${project.isPaid ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-[#f7f7f6] text-[#6b6b66] border border-[#e8e8e5]'}`}>
+                          {compLabel}
+                        </span>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-[#0e0e0d] truncate">{project.createdBy?.name || 'Anonymous'}</p>
-                        <p className="text-xs text-[#a3a39e]">{project.createdBy?.role} · {timeAgo(project.createdAt)}</p>
-                      </div>
-                      <span className={`text-xs font-medium px-2.5 py-1 rounded-full flex-shrink-0 ${project.isPaid ? 'bg-[#0e0e0d] text-white' : 'bg-[#f7f7f6] text-[#6b6b66]'}`}>
-                        {project.isPaid ? '💰 Paid' : '🤝 Collab'}
-                      </span>
+                      <h3 className="font-bold text-[#0e0e0d] text-base mb-2 group-hover:text-[#6055de] transition-colors line-clamp-1">{project.title}</h3>
+                      <p className="text-sm text-[#6b6b66] mb-5 line-clamp-2 leading-relaxed">{project.description}</p>
+                      {project.requiredRoles?.length > 0 && (
+                        <div className="flex gap-2 flex-wrap">
+                          {project.requiredRoles.slice(0, 3).map((role, i) => (
+                            <span key={i} className="chip">{role}</span>
+                          ))}
+                          {project.requiredRoles.length > 3 && (
+                            <span className="chip text-[#a3a39e]">+{project.requiredRoles.length - 3}</span>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <h3 className="font-bold text-[#0e0e0d] text-base mb-2 group-hover:underline line-clamp-1">{project.title}</h3>
-                    <p className="text-sm text-[#6b6b66] mb-5 line-clamp-2 leading-relaxed">{project.description}</p>
-                    {project.requiredRoles?.length > 0 && (
-                      <div className="flex gap-2 flex-wrap">
-                        {project.requiredRoles.slice(0, 3).map((role, i) => (
-                          <span key={i} className="chip">{role}</span>
-                        ))}
-                      </div>
-                    )}
                   </Link>
                 );
               })}
@@ -400,10 +421,10 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── WHO IT'S FOR ─────────────────────────────────────────────────── */}
+      {/* ── WHO IT'S FOR ── */}
       <section className="py-28 px-6 bg-[#0e0e0d]">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-20">
+          <div className="text-center mb-16">
             <p data-scroll className="text-xs uppercase tracking-[0.2em] text-[#6055de] font-bold mb-4">Every Discipline</p>
             <h2 data-scroll data-delay="1" className="font-[Playfair_Display] text-4xl md:text-5xl text-white">
               Who It&apos;s For
@@ -411,34 +432,39 @@ export default function Home() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {DISCIPLINES.map((item, idx) => (
-              <div key={idx}
-                className="group border border-white/10 rounded-xl p-6 text-center hover:border-[#6055de]/40 hover:bg-white/5 transition-all duration-300 cursor-default">
-                <p className="font-[Playfair_Display] text-4xl text-white/10 leading-none mb-4 group-hover:text-[#6055de]/30 transition-colors">
-                  {item.number}
-                </p>
-                <h3 className="text-sm font-bold text-white/80 mb-1.5 group-hover:text-white transition-colors">{item.role}</h3>
+              <div key={idx} data-scroll
+                className="group border border-white/10 rounded-xl p-6 text-center hover:border-[#6055de]/50 hover:bg-white/5 transition-all duration-300 cursor-default">
+                <p className="text-3xl mb-3 group-hover:scale-110 transition-transform duration-300">{item.icon}</p>
+                <h3 className="text-sm font-bold text-white/80 mb-1 group-hover:text-white transition-colors">{item.role}</h3>
                 <p className="text-xs text-white/30 group-hover:text-white/50 transition-colors">{item.tagline}</p>
               </div>
             ))}
           </div>
+          <div data-scroll className="text-center mt-12">
+            <Link href="/explore"
+              className="inline-flex items-center gap-2 border border-white/20 text-white/60 hover:border-[#6055de]/60 hover:text-white text-sm font-semibold px-7 py-3 rounded-xl transition-all">
+              👥 Browse All Creators →
+            </Link>
+          </div>
         </div>
       </section>
 
-      {/* ── FEATURES ─────────────────────────────────────────────────────── */}
+      {/* ── FEATURES ── */}
       <section className="py-28 px-6 bg-[#fafaf9] border-y border-[#efefed]">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-20">
             <p data-scroll className="text-xs uppercase tracking-[0.2em] text-[#6055de] font-bold mb-4">Built for Creators</p>
-            <h2 data-scroll data-delay="1" className="font-[Playfair_Display] text-4xl md:text-5xl text-[#0e0e0d]">
-              Everything You Need
-            </h2>
+            <h2 data-scroll data-delay="1" className="font-[Playfair_Display] text-4xl md:text-5xl text-[#0e0e0d]">Everything You Need</h2>
+            <p data-scroll data-delay="2" className="text-[#6b6b66] mt-4 max-w-xl mx-auto text-base leading-relaxed">
+              Every feature is designed around how independent creators actually work.
+            </p>
           </div>
           <div className="grid md:grid-cols-3 gap-5">
             {FEATURES.map((feature, idx) => (
-              <div key={idx}
-                className="bg-white border border-[#efefed] rounded-2xl p-7 hover:border-[#d0d0cc] hover:-translate-y-0.5 transition-all duration-200"
+              <div key={idx} data-scroll
+                className="bg-white border border-[#efefed] rounded-2xl p-7 hover:border-[#d0d0cc] hover:-translate-y-1 transition-all duration-300 group"
                 style={{ boxShadow: 'var(--shadow-xs)' }}>
-                <div className="w-10 h-10 rounded-xl bg-[#f7f7f6] border border-[#e0e0dd] flex items-center justify-center text-xl mb-5">
+                <div className="w-11 h-11 rounded-xl bg-[#f5f3ff] border border-[#e0dbff] flex items-center justify-center text-xl mb-5 group-hover:bg-[#6055de]/10 transition-colors">
                   {feature.icon}
                 </div>
                 <h3 className="text-base font-bold text-[#0e0e0d] mb-2">{feature.title}</h3>
@@ -449,20 +475,13 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── SAFETY SECTION ───────────────────────────────────────────────── */}
+      {/* ── SAFETY ── */}
       <section className="py-28 px-6 bg-[#0e0e0d] relative overflow-hidden">
-        {/* Background pattern */}
-        <div
-          className="absolute inset-0 opacity-20 pointer-events-none"
-          style={{
-            backgroundImage: 'radial-gradient(circle, #252523 1px, transparent 1px)',
-            backgroundSize: '32px 32px',
-          }}
-        />
+        <div className="absolute inset-0 opacity-20 pointer-events-none"
+          style={{ backgroundImage: 'radial-gradient(circle, #252523 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
         <div className="absolute top-1/2 left-0 w-[500px] h-[500px] rounded-full bg-[#6055de]/5 blur-[120px] pointer-events-none -translate-y-1/2" />
 
         <div className="relative max-w-6xl mx-auto">
-          {/* Header */}
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16">
             <div>
               <p data-scroll className="text-xs uppercase tracking-[0.2em] text-[#8b82ff] font-bold mb-4">Trust &amp; Safety</p>
@@ -471,16 +490,13 @@ export default function Home() {
                 <span className="text-[#8b82ff]">Creative Collaboration.</span>
               </h2>
             </div>
-            <Link
-              href="/safety"
-              data-scroll data-delay="2"
-              className="flex-shrink-0 inline-flex items-center gap-2 border border-white/20 text-white/70 hover:border-[#8b82ff]/60 hover:text-white text-sm font-semibold px-6 py-3 rounded-xl transition-all self-start md:self-end"
-            >
+            <Link href="/safety" data-scroll data-delay="2"
+              className="flex-shrink-0 inline-flex items-center gap-2 border border-white/20 text-white/70 hover:border-[#8b82ff]/60 hover:text-white text-sm font-semibold px-6 py-3 rounded-xl transition-all self-start md:self-end">
               Read Full Safety Guide →
             </Link>
           </div>
 
-          {/* Warning pill */}
+          {/* Warning */}
           <div data-scroll className="inline-flex items-center gap-3 bg-red-500/15 border border-red-400/30 rounded-full px-5 py-2.5 mb-12">
             <span className="text-red-400 text-sm">⚠️</span>
             <p className="text-sm font-semibold text-red-300">
@@ -488,59 +504,28 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Safety feature cards */}
+          {/* Safety cards */}
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-14">
             {[
-              {
-                icon: '🚨',
-                title: 'Fraud Risk Detection',
-                desc: 'Every project is automatically scanned for fraud signals. High-risk listings are flagged and reviewed by our team.',
-              },
-              {
-                icon: '🚫',
-                title: 'Contact Info Filtering',
-                desc: 'Phone numbers and emails are automatically removed from messages. All communication stays safely on-platform.',
-              },
-              {
-                icon: '⚠️',
-                title: 'Scam Detection',
-                desc: 'Messages containing payment requests or suspicious keywords are flagged in real time and reviewed by our moderation team.',
-              },
-              {
-                icon: '🔒',
-                title: 'Minor Account Protection',
-                desc: 'Accounts under 18 are automatically protected — unverified adults cannot initiate contact with minors.',
-              },
-              {
-                icon: '✅',
-                title: 'Verified Creator Badge',
-                desc: 'Top creators earn a Verified badge through identity checks, giving you confidence when joining paid projects.',
-              },
-              {
-                icon: '⚑',
-                title: 'One-Tap Reporting',
-                desc: 'Report any profile, project, or message in one tap. Your identity is kept confidential and all reports are reviewed.',
-              },
+              { icon: '🚨', title: 'Fraud Risk Detection',     desc: 'Every project is automatically scanned for fraud signals. High-risk listings are flagged and reviewed by our team.' },
+              { icon: '⚠️', title: 'Scam Keyword Detection',   desc: 'Messages containing payment requests or suspicious keywords are flagged in real time and reviewed by our moderation team.' },
+              { icon: '🔒', title: 'Minor Account Protection', desc: 'Accounts under 18 are automatically protected — unverified adults cannot initiate contact with minors.' },
+              { icon: '✅', title: 'Verified Creator Badge',   desc: 'Top creators earn a Verified badge through identity checks, giving you confidence when joining paid projects.' },
+              { icon: '⏱️', title: 'Comment Spam Cooldown',    desc: 'A cooldown between comments prevents spam and keeps project discussions healthy and constructive.' },
+              { icon: '⚑',  title: 'One-Tap Reporting',       desc: 'Report any profile, project, or message in one tap. Your identity is kept confidential and all reports are reviewed.' },
             ].map((item, idx) => (
-              <div
-                key={idx}
-                data-scroll
-                className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:bg-white/10 hover:border-[#8b82ff]/30 transition-all duration-300"
-              >
-                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-xl mb-4">
-                  {item.icon}
-                </div>
+              <div key={idx} data-scroll
+                className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:bg-white/10 hover:border-[#8b82ff]/30 transition-all duration-300">
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-xl mb-4">{item.icon}</div>
                 <h3 className="text-sm font-bold text-white mb-2">{item.title}</h3>
                 <p className="text-xs text-white/40 leading-relaxed">{item.desc}</p>
               </div>
             ))}
           </div>
 
-          {/* Do / Don't quick reference */}
+          {/* Quick reference */}
           <div data-scroll className="bg-white/5 border border-white/10 rounded-2xl p-7 mb-10">
-            <h3 className="text-white font-bold text-base mb-6 flex items-center gap-2">
-              ⚡ Quick Reference
-            </h3>
+            <h3 className="text-white font-bold text-base mb-6 flex items-center gap-2">⚡ Quick Reference</h3>
             <div className="grid md:grid-cols-2 gap-6">
               <div>
                 <p className="text-xs font-bold text-green-400 uppercase tracking-wide mb-4">✅ Always Do</p>
@@ -564,7 +549,7 @@ export default function Home() {
                   {[
                     'Pay any fee to audition, apply, or join a project',
                     'Move conversations to WhatsApp or email early on',
-                    'Share personal contact info before building trust',
+                    'Ignore missing compensation or audition details',
                     'Send money via crypto, wire transfer, or UPI to strangers',
                   ].map((item, i) => (
                     <li key={i} className="flex items-start gap-2.5">
@@ -577,33 +562,24 @@ export default function Home() {
             </div>
           </div>
 
-          {/* CTA */}
           <div data-scroll className="text-center">
-            <Link
-              href="/safety"
-              className="inline-flex items-center gap-2 bg-[#6055de] hover:bg-[#4d44c8] text-white text-sm font-bold px-8 py-4 rounded-xl transition-all shadow-lg shadow-[#6055de]/25 hover:shadow-[#6055de]/40"
-            >
+            <Link href="/safety"
+              className="inline-flex items-center gap-2 bg-[#6055de] hover:bg-[#4d44c8] text-white text-sm font-bold px-8 py-4 rounded-xl transition-all shadow-lg shadow-[#6055de]/25 hover:shadow-[#6055de]/40">
               🛡 Read the Full Safety Guide →
             </Link>
-            <p className="text-white/30 text-xs mt-4">
-              Includes emergency contacts, scam prevention tips, and minor protection guidelines.
-            </p>
+            <p className="text-white/30 text-xs mt-4">Includes scam prevention tips, red flags, and minor protection guidelines.</p>
           </div>
         </div>
       </section>
 
-      {/* ── TRENDING FILMS THIS WEEK ──────────────────────────────────────── */}
+      {/* ── TRENDING FILMS ── */}
       {trendingFilms.length > 0 && (
         <section className="py-24 px-6 bg-white border-y border-[#efefed]">
           <div className="max-w-6xl mx-auto">
-
-            {/* Header */}
             <div className="flex items-end justify-between mb-10">
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-[#6055de] font-bold mb-3">Films Made on CrewUpFilms</p>
-                <h2 className="font-[Playfair_Display] text-4xl md:text-5xl text-[#0e0e0d]">
-                  Trending This Week
-                </h2>
+                <h2 className="font-[Playfair_Display] text-4xl md:text-5xl text-[#0e0e0d]">Trending This Week</h2>
               </div>
               <Link href="/films"
                 className="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold text-[#6b6b66] hover:text-[#111110] transition-colors border border-[#e0e0dd] hover:border-[#0e0e0d] px-4 py-2 rounded-xl">
@@ -611,55 +587,32 @@ export default function Home() {
               </Link>
             </div>
 
-            {/* Film cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5">
               {trendingFilms.map((film, idx) => (
-                <a
-                  key={film._id}
-                  href={film.youtubeLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group block bg-white rounded-2xl overflow-hidden border border-[#efefed] hover:border-[#b0a9ff] hover:shadow-[0_8px_32px_rgba(108,99,255,0.12)] transition-all duration-300"
-                >
-                  {/* Thumbnail */}
+                <a key={film._id} href={film.youtubeLink} target="_blank" rel="noopener noreferrer"
+                  className="group block bg-white rounded-2xl overflow-hidden border border-[#efefed] hover:border-[#b0a9ff] hover:shadow-[0_8px_32px_rgba(108,99,255,0.12)] transition-all duration-300">
                   <div className="relative aspect-video bg-[#f7f7f6] overflow-hidden">
                     {film.thumbnail ? (
-                      <img
-                        src={film.thumbnail}
-                        alt={film.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
+                      <img src={film.thumbnail} alt={film.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-3xl text-[#d0d0cc]">🎬</div>
                     )}
-
-                    {/* Rank badge */}
                     <div className="absolute top-2.5 left-2.5">
-                      <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold text-white shadow-sm ${
-                        idx === 0 ? 'bg-[#6055de]' : idx === 1 ? 'bg-[#8b84ff]' : 'bg-[#0e0e0d]/70'
-                      }`}>
+                      <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold text-white shadow-sm ${idx === 0 ? 'bg-[#6055de]' : idx === 1 ? 'bg-[#8b84ff]' : 'bg-[#0e0e0d]/70'}`}>
                         #{idx + 1}
                       </span>
                     </div>
-
-                    {/* Play overlay */}
                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-black/30">
                       <div className="w-11 h-11 rounded-full bg-white/95 flex items-center justify-center shadow-lg">
                         <span className="text-[#6055de] text-base ml-0.5">▶</span>
                       </div>
                     </div>
                   </div>
-
-                  {/* Info */}
                   <div className="p-4">
-                    <p className="text-sm font-semibold text-[#111110] truncate mb-1 group-hover:text-[#6055de] transition-colors">
-                      {film.title}
-                    </p>
+                    <p className="text-sm font-semibold text-[#111110] truncate mb-1 group-hover:text-[#6055de] transition-colors">{film.title}</p>
                     <p className="text-xs text-[#6b6b66] truncate mb-3">by {film.director?.name || 'Unknown'}</p>
                     <div className="flex items-center justify-between">
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-white bg-[#6055de] px-2.5 py-1 rounded-lg">
-                        ▶ Watch
-                      </span>
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-white bg-[#6055de] px-2.5 py-1 rounded-lg">▶ Watch</span>
                       <div className="flex items-center gap-2 text-[#a3a39e] text-[11px]">
                         {film.likeCount > 0 && <span>♥ {film.likeCount}</span>}
                         {film.commentCount > 0 && <span>💬 {film.commentCount}</span>}
@@ -670,10 +623,8 @@ export default function Home() {
               ))}
             </div>
 
-            {/* Mobile view all */}
             <div className="flex justify-center mt-8 sm:hidden">
-              <Link href="/films"
-                className="text-sm font-semibold text-[#6b6b66] hover:text-[#111110] transition-colors border border-[#e0e0dd] hover:border-[#0e0e0d] px-5 py-2.5 rounded-xl">
+              <Link href="/films" className="text-sm font-semibold text-[#6b6b66] hover:text-[#111110] transition-colors border border-[#e0e0dd] hover:border-[#0e0e0d] px-5 py-2.5 rounded-xl">
                 View all films →
               </Link>
             </div>
@@ -681,13 +632,10 @@ export default function Home() {
         </section>
       )}
 
-      {/* ── CTA BANNER ───────────────────────────────────────────────────── */}
+      {/* ── CTA BANNER ── */}
       <section className="relative py-32 px-6 bg-[#0e0e0d] overflow-hidden">
         <div className="absolute inset-0 pointer-events-none"
-          style={{
-            backgroundImage: 'radial-gradient(circle, #252523 1px, transparent 1px)',
-            backgroundSize: '32px 32px',
-          }} />
+          style={{ backgroundImage: 'radial-gradient(circle, #252523 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] rounded-full bg-[#6055de]/5 blur-[120px] pointer-events-none" />
         <div className="relative max-w-4xl mx-auto text-center">
           <h2 data-scroll className="font-[Playfair_Display] text-5xl md:text-6xl text-white mb-6 leading-tight">
@@ -699,7 +647,7 @@ export default function Home() {
           <div data-scroll data-delay="2" className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href={user ? '/dashboard' : '/signup'}
               className="inline-flex items-center justify-center gap-2 bg-[#6055de] hover:bg-[#4d44c8] text-white text-sm font-bold px-10 py-4 rounded-xl transition-all duration-200 shadow-lg shadow-[#6055de]/25">
-              {user ? 'Go to Dashboard' : 'Get Started — It\'s Free'} →
+              {user ? 'Go to Dashboard' : "Get Started — It's Free"} →
             </Link>
             <Link href="/projects"
               className="inline-flex items-center justify-center gap-2 border border-white/20 text-white/70 hover:border-white/50 hover:text-white text-sm font-semibold px-10 py-4 rounded-xl transition-all duration-200">

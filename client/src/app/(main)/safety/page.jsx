@@ -25,7 +25,7 @@ const DO_DONT = [
   },
   {
     do:   'Have a parent or guardian present for minors at all meets',
-    dont: 'Share your personal phone number before building trust',
+    dont: 'Send money via crypto, wire transfer, or UPI to strangers',
   },
 ];
 
@@ -70,14 +70,14 @@ const SECTIONS = [
     color: '#f0fff4',
     border: '#b2f5c8',
     dos: [
-      'Keep all communication inside CREWUPFILMS — our system filters and logs messages.',
+      'Keep all communication inside CREWUPFILMS where possible — it\'s the safest way to collaborate.',
       'Report any message that requests payment, fees, or financial information.',
       'Use the platform\'s message request system before opening a direct chat.',
       'Save screenshots if you receive suspicious or threatening messages.',
     ],
     donts: [
-      'Share your personal phone number or email until you\'ve built real trust.',
       'Respond to messages requesting money, wire transfers, or cryptocurrency.',
+      'Move conversations to WhatsApp or personal email before establishing real trust.',
       'Assume a profile is genuine just because it has a photo and bio.',
     ],
   },
@@ -148,10 +148,10 @@ const RED_FLAGS = [
 
 const PLATFORM_PROTECTIONS = [
   { icon: '🚨', title: 'Fraud Risk Detection', desc: 'Every project is automatically scanned for fraud signals. High-risk listings are flagged and reviewed by our team.' },
-  { icon: '🚫', title: 'Contact Info Filtering', desc: 'Phone numbers and emails are automatically removed from messages. All communication stays safely on-platform.' },
   { icon: '⚠️', title: 'Scam Keyword Detection', desc: 'Messages containing payment requests or suspicious keywords are flagged in real time and reviewed by our moderation team.' },
   { icon: '🔒', title: 'Minor Account Protection', desc: 'Accounts under 18 are automatically protected — unverified adults cannot initiate contact with minors.' },
   { icon: '✅', title: 'Verified Creator Badge', desc: 'Top creators earn a Verified badge through identity checks, giving you confidence when joining paid projects.' },
+  { icon: '⏱️', title: 'Comment Spam Cooldown', desc: 'A cooldown period between comments prevents spam and keeps discussions healthy and constructive.' },
   { icon: '⚑', title: 'One-Tap Reporting', desc: 'Report any profile, project, or message in one tap. Your identity is kept confidential and all reports are reviewed.' },
 ];
 
