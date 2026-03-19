@@ -55,12 +55,6 @@ const FEATURES = [
   { icon: '🗺️', title: 'Creator Map',               description: 'Find local collaborators in your city or go fully remote worldwide with location-based search.' },
 ];
 
-const STATS = [
-  { value: '500+', label: 'Creators' },
-  { value: '120+', label: 'Projects Posted' },
-  { value: '8',    label: 'Disciplines' },
-  { value: '100%', label: 'Free to Join' },
-];
 
 function timeAgo(date) {
   const diff = Date.now() - new Date(date);
@@ -249,18 +243,6 @@ export default function Home() {
           ))}
         </div>
       </div>
-
-      {/* ── STATS ── */}
-      <section className="py-16 px-6 bg-white border-b border-[#f0f0ee]">
-        <div className="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8">
-          {STATS.map((s, i) => (
-            <div key={i} data-scroll className="text-center">
-              <p className="font-[Playfair_Display] text-4xl md:text-5xl font-bold text-[#0e0e0d] mb-1">{s.value}</p>
-              <p className="text-sm text-[#6b6b66] uppercase tracking-wider font-medium">{s.label}</p>
-            </div>
-          ))}
-        </div>
-      </section>
 
       {/* ── WHAT IS CREWUPFILMS ── */}
       <section className="py-28 px-6 bg-white">
