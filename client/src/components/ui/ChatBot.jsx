@@ -742,6 +742,7 @@ export default function ChatBot() {
               link: guesses.length === 0 ? { label: 'Contact Support →', href: '/contact' } : null,
               related: guesses,
               showFeedbackInput: true,
+              userQuery: trimmed,
             }
           );
         }
@@ -749,7 +750,7 @@ export default function ChatBot() {
     }, delay);
   }, [input, typing, flowState, failCount, pathname, pushBot]);
 
-  const handleAction = useCallback((type, payload) => {
+  const handleAction = useCallback(async (type, payload) => {
     if (type === 'related') { handleSend(payload.question); return; }
     if (type === 'up') {
       setMessages((prev) => prev.map((m) => m.id === payload.id ? { ...m, rated: 'up' } : m));
@@ -760,10 +761,28 @@ export default function ChatBot() {
     if (type === 'feedbackText') {
       const { msg, text } = payload;
       setMessages((prev) => prev.map((m) => m.id === msg.id ? { ...m, feedbackSent: true, showFeedbackInput: false } : m));
-      pushBot(`Thanks for telling us! We'll use that to improve 🙏 For now, feel free to contact support directly.`, {
-        link: { label: 'Contact Support →', href: '/contact' }, canRate: false,
+      pushBot(`Thanks for the feedback! We'll use it to improve the assistant 🙏`, {
+        canRate: false,
       });
-      // Could also fire a mailto or API call here
+
+      // Send feedback to admin via /api/contact
+      try {
+        const u = getStoredUser();
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
+        await fetch(`${API_URL}/contact`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name:    u?.name  || 'Anonymous (chatbot user)',
+            email:   u?.email || 'no-reply@crewupfilms.com',
+            subject: 'Chatbot Feedback — unanswered question',
+            type:    'chatbot-feedback',
+            message: `The bot couldn't answer this query.\n\nUser asked: "${msg.userQuery || 'unknown'}"\nBot replied: "${msg.text?.slice(0, 200)}"\n\nUser feedback: "${text}"`,
+          }),
+        });
+      } catch {
+        // Silently fail — don't break UX if the email fails
+      }
     }
   }, [handleSend, pushBot]);
 
