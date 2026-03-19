@@ -159,13 +159,16 @@ const updateApplicationStatus = async (req, res, next) => {
         projectRef: application.project._id,
       });
     } else if (status === 'rejected') {
-      // Create notification for applicant
+      // Create notification for applicant (include reviewNote if provided)
+      const declineMsg = reviewNote?.trim()
+        ? `Your application for "${application.project.title}" was not selected this time. Note from the creator: "${reviewNote.trim()}"`
+        : `Your application for "${application.project.title}" was not selected this time.`;
       await Notification.create({
         recipient: application.applicant._id,
         sender: req.user._id,
         type: 'application_declined',
         title: 'Application Update',
-        message: `Your application for "${application.project.title}" was not selected this time.`,
+        message: declineMsg,
         link: `/projects/${application.project._id}`,
       });
 

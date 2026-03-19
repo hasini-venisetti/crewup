@@ -117,13 +117,13 @@ export default function ProjectsPage() {
       <div className="sticky top-0 z-20 bg-white border-b border-[#efefed] shadow-sm">
         <div className="max-w-6xl mx-auto px-4 sm:px-8">
 
-          {/* Row 1 — category tabs (scrollable) */}
-          <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide pt-3 pb-2 border-b border-[#f5f5f3]">
+          {/* Row 1 — category tabs (always scrollable, larger touch targets on mobile) */}
+          <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide pt-2.5 pb-2 border-b border-[#f5f5f3]">
             {CATEGORIES.map((cat) => (
               <button
                 key={cat.value}
                 onClick={() => setActiveTab(cat.value)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all flex-shrink-0 ${
+                className={`flex items-center gap-1.5 px-3 py-2 sm:py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all flex-shrink-0 min-h-[36px] ${
                   activeTab === cat.value
                     ? 'bg-[#0e0e0d] text-white'
                     : 'text-[#444442] hover:bg-[#f7f7f6]'
@@ -135,55 +135,54 @@ export default function ProjectsPage() {
             ))}
           </div>
 
-          {/* Row 2 — filters + CTAs (not scrollable, dropdown safe) */}
-          <div className="flex items-center gap-2 py-2">
+          {/* Row 2 — filter chips + CTA (scrollable on mobile; role dropdown uses fixed so no clip) */}
+          <div className="flex items-center gap-2 py-2 overflow-x-auto scrollbar-hide">
 
             {/* Paid toggle */}
             <button
               onClick={() => setIsPaid((v) => !v)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap border transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium whitespace-nowrap border transition-all flex-shrink-0 min-h-[38px] ${
                 isPaid
                   ? 'bg-amber-50 border-amber-300 text-amber-800'
                   : 'border-[#efefed] text-[#444442] hover:bg-[#f7f7f6]'
               }`}
             >
-              💰 Paid {isPaid && <span className="text-amber-600">✓</span>}
+              💰 Paid {isPaid && <span className="ml-0.5 text-amber-500">✓</span>}
             </button>
 
             {/* Remote toggle */}
             <button
               onClick={() => setIsRemote((v) => !v)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap border transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium whitespace-nowrap border transition-all flex-shrink-0 min-h-[38px] ${
                 isRemote
                   ? 'bg-blue-50 border-blue-300 text-blue-800'
                   : 'border-[#efefed] text-[#444442] hover:bg-[#f7f7f6]'
               }`}
             >
-              🌐 Remote {isRemote && <span className="text-blue-600">✓</span>}
+              🌐 Remote {isRemote && <span className="ml-0.5 text-blue-500">✓</span>}
             </button>
 
-            {/* Role dropdown — outside overflow:hidden parent so it renders freely */}
-            <div className="relative">
+            {/* Role dropdown — uses fixed overlay so overflow-x-auto doesn't clip it */}
+            <div className="relative flex-shrink-0">
               <button
                 onClick={() => setShowRoles((v) => !v)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap border transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium whitespace-nowrap border transition-all min-h-[38px] ${
                   roleFilter
                     ? 'bg-[#6C63FF]/10 border-[#6C63FF]/30 text-[#4740CC]'
                     : 'border-[#efefed] text-[#444442] hover:bg-[#f7f7f6]'
                 }`}
               >
-                🎭 {roleFilter || 'Role'} <span className="opacity-50 text-[10px]">{showRoles ? '▲' : '▼'}</span>
+                🎭 {roleFilter || 'Role'} <span className="opacity-40 text-[10px] ml-0.5">{showRoles ? '▲' : '▼'}</span>
               </button>
 
               {showRoles && (
                 <>
-                  {/* Click-outside overlay */}
                   <div className="fixed inset-0 z-40" onClick={() => setShowRoles(false)} />
-                  <div className="absolute top-full left-0 mt-1.5 w-44 bg-white border border-[#efefed] rounded-xl shadow-xl py-1 z-50">
+                  <div className="absolute top-full left-0 mt-1.5 w-48 bg-white border border-[#efefed] rounded-2xl shadow-xl py-1.5 z-50">
                     {roleFilter && (
                       <button
                         onClick={() => { setRoleFilter(''); setShowRoles(false); }}
-                        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors"
+                        className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
                       >
                         ✕ Clear role
                       </button>
@@ -192,7 +191,7 @@ export default function ProjectsPage() {
                       <button
                         key={r.label}
                         onClick={() => { setRoleFilter(r.label); setShowRoles(false); }}
-                        className={`flex items-center gap-2 w-full px-3 py-2 text-sm transition-colors ${
+                        className={`flex items-center gap-2.5 w-full px-4 py-2.5 text-sm transition-colors ${
                           roleFilter === r.label
                             ? 'bg-[#6C63FF]/10 text-[#4740CC] font-semibold'
                             : 'text-[#444442] hover:bg-[#f7f7f6]'
@@ -206,31 +205,35 @@ export default function ProjectsPage() {
               )}
             </div>
 
-            {/* Clear all */}
+            {/* Clear filters chip */}
             {activeFilterCount > 0 && (
               <button
                 onClick={clearAll}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap text-red-500 hover:bg-red-50 border border-red-200 transition-all"
+                className="flex items-center gap-1 px-3 py-2 rounded-xl text-sm font-medium whitespace-nowrap text-red-500 hover:bg-red-50 border border-red-200 transition-all flex-shrink-0 min-h-[38px]"
               >
                 ✕ Clear ({activeFilterCount})
               </button>
             )}
 
-            {/* CTAs */}
-            <div className="flex items-center gap-2 ml-auto">
-              <Link
-                href="/explore"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#efefed] text-[#444442] text-sm font-medium hover:bg-[#f7f7f6] transition-colors whitespace-nowrap"
-              >
-                👥 Creators
-              </Link>
-              <Link
-                href={user ? '/create-project' : '/login'}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0e0e0d] text-white text-sm font-semibold hover:bg-[#2d2d2b] transition-colors whitespace-nowrap"
-              >
-                + Post Project
-              </Link>
-            </div>
+            {/* Spacer pushes CTAs to the right on desktop, ignored on mobile scroll */}
+            <div className="flex-1 min-w-[8px]" />
+
+            {/* Creators link — hidden on small screens */}
+            <Link
+              href="/explore"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[#efefed] text-[#444442] text-sm font-medium hover:bg-[#f7f7f6] transition-colors whitespace-nowrap flex-shrink-0 min-h-[38px]"
+            >
+              👥 Creators
+            </Link>
+
+            {/* Post project — icon-only on mobile, full label on sm+ */}
+            <Link
+              href={user ? '/create-project' : '/auth/login'}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#0e0e0d] text-white text-sm font-semibold hover:bg-[#2d2d2b] transition-colors whitespace-nowrap flex-shrink-0 min-h-[38px]"
+            >
+              <span>+</span>
+              <span className="hidden sm:inline">Post Project</span>
+            </Link>
 
           </div>
         </div>

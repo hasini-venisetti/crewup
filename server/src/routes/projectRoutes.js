@@ -14,6 +14,8 @@ const {
   removeMember,
   leaveProject,
   resubmitProject,
+  publishDraft,
+  postStatusUpdate,
 } = require('../controllers/projectController');
 const { protect } = require('../middleware/auth');
 
@@ -30,6 +32,8 @@ router.get('/films/:userId',        getUserFilms);               // public – u
 router.patch('/:id/roles/fill',         protect, fillRole);
 router.patch('/:id/youtube-link',       protect, setYoutubeLink);
 router.patch('/:id/resubmit',           protect, resubmitProject);
+router.patch('/:id/publish',            protect, publishDraft);
+router.post('/:id/status-update',       protect, postStatusUpdate);
 router.delete('/:id/members/:userId',   protect, removeMember);
 router.delete('/:id/leave',             protect, leaveProject);
 router.get('/',            getProjects);

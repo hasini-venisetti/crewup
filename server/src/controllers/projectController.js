@@ -64,7 +64,9 @@ const createProject = async (req, res, next) => {
       { existingProjectCount, reportCount, profileComplete }
     );
 
-    // ── All projects go live immediately ──────────────────────────────────
+    const isDraft = req.body.isDraft === true || req.body.isDraft === 'true';
+
+    // ── Create project (draft or live) ────────────────────────────────────
     const project = await Project.create({
       title, description, projectType, requiredRoles, isPaid, budget,
       location, deadline, experienceLevel, projectTags,
@@ -72,46 +74,53 @@ const createProject = async (req, res, next) => {
       auditionFormat:       auditionFormat       || 'not-applicable',
       shootingLocationType: shootingLocationType || 'not-specified',
       compensationDetails:  compensationDetails  || '',
-      moderationStatus: 'approved',   // always live — admin monitors via Risk Monitor
-      riskScore: score,
-      riskLevel: level,
-      riskFlags: flags,
+      moderationStatus: 'approved',
+      riskScore: isDraft ? 0 : score,
+      riskLevel: isDraft ? 'low' : level,
+      riskFlags: isDraft ? [] : flags,
+      isDraft,
       createdBy: req.user._id,
     });
 
     await project.populate('createdBy', 'name username role profileImage');
 
-    // ── Notify creator ────────────────────────────────────────────────────
-    await Notification.create({
-      recipient: req.user._id,
-      type:      'platform_update',
-      title:     '✅ Project is now live!',
-      message:   `Your project "${project.title}" has been published and is now visible to others.`,
-      link:      `/projects/${project._id}`,
-    });
+    if (!isDraft) {
+      // ── Notify creator ──────────────────────────────────────────────────
+      await Notification.create({
+        recipient: req.user._id,
+        type:      'platform_update',
+        title:     '✅ Project is now live!',
+        message:   `Your project "${project.title}" has been published and is now visible to others.`,
+        link:      `/projects/${project._id}`,
+      });
 
-    // ── Alert admins if high risk (for monitoring — project is still live) ─
-    if (level === 'high') {
-      const admins = await User.find({ isAdmin: true }).select('_id').lean();
-      const flagSummary = flags.slice(0, 3).join(' | ');
-      await Promise.all(admins.map((admin) =>
-        Notification.create({
-          recipient: admin._id,
-          type:      'platform_update',
-          title:     `🚨 High-Risk Project Posted: "${project.title}"`,
-          message:   `Risk score: ${score}/100. ${flagSummary} — Review and delete if fraudulent.`,
-          link:      '/admin?tab=risk-monitor',
-        })
-      ));
+      // ── Alert admins if high risk ───────────────────────────────────────
+      if (level === 'high') {
+        const admins = await User.find({ isAdmin: true }).select('_id').lean();
+        const flagSummary = flags.slice(0, 3).join(' | ');
+        await Promise.all(admins.map((admin) =>
+          Notification.create({
+            recipient: admin._id,
+            type:      'platform_update',
+            title:     `🚨 High-Risk Project Posted: "${project.title}"`,
+            message:   `Risk score: ${score}/100. ${flagSummary} — Review and delete if fraudulent.`,
+            link:      '/admin?tab=risk-monitor',
+          })
+        ));
+      }
+
+      logActivity({
+        actor: req.user._id, type: 'project_created',
+        title: `submitted a new project: "${project.title}"`,
+        link: `/projects/${project._id}`, projectRef: project._id,
+      });
     }
 
-    logActivity({
-      actor: req.user._id, type: 'project_created',
-      title: `submitted a new project: "${project.title}"`,
-      link: `/projects/${project._id}`, projectRef: project._id,
+    res.status(201).json({
+      success: true,
+      message: isDraft ? 'Draft saved.' : 'Project is now live!',
+      data: project,
     });
-
-    res.status(201).json({ success: true, message: 'Project is now live!', data: project });
   } catch (error) {
     next(error);
   }
@@ -130,7 +139,8 @@ const getProjects = async (req, res, next) => {
     if (location) filter['location.country'] = new RegExp(location, 'i');
     if (isRemote === 'true') filter['location.isRemote'] = true;
     if (isPaid !== undefined) filter.isPaid = isPaid === 'true';
-    // Show all projects that are not auto-suspended (no manual approval queue anymore)
+    // Exclude drafts and auto-suspended from public listings
+    filter.isDraft = { $ne: true };
     filter.autoSuspended = { $ne: true };
     filter.moderationStatus = { $ne: 'rejected' };
 
@@ -287,13 +297,15 @@ const deleteProject = async (req, res, next) => {
   }
 };
 
-// @desc    Get own projects
+// @desc    Get own projects (live + drafts)
 // @route   GET /api/projects/my
 // @access  Private
 const getMyProjects = async (req, res, next) => {
   try {
-    const projects = await Project.find({ createdBy: req.user._id }).sort({ createdAt: -1 });
-    res.status(200).json({ success: true, data: projects });
+    const all = await Project.find({ createdBy: req.user._id }).sort({ createdAt: -1 });
+    const drafts = all.filter((p) => p.isDraft);
+    const live   = all.filter((p) => !p.isDraft);
+    res.status(200).json({ success: true, data: live, drafts });
   } catch (error) {
     next(error);
   }
@@ -688,6 +700,88 @@ const resubmitProject = async (req, res, next) => {
   } catch (e) { next(e); }
 };
 
+// @desc    Publish a draft project
+// @route   PATCH /api/projects/:id/publish
+// @access  Private (owner only)
+const publishDraft = async (req, res, next) => {
+  try {
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ success: false, message: 'Project not found' });
+    if (project.createdBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+    if (!project.isDraft) return res.status(400).json({ success: false, message: 'Project is already live' });
+
+    project.isDraft = false;
+    await project.save();
+
+    await Notification.create({
+      recipient: req.user._id,
+      type:      'platform_update',
+      title:     '✅ Project is now live!',
+      message:   `Your project "${project.title}" has been published and is now visible to others.`,
+      link:      `/projects/${project._id}`,
+    });
+
+    logActivity({
+      actor: req.user._id, type: 'project_created',
+      title: `published a new project: "${project.title}"`,
+      link: `/projects/${project._id}`, projectRef: project._id,
+    });
+
+    res.json({ success: true, message: 'Project published!', data: project });
+  } catch (e) { next(e); }
+};
+
+// @desc    Post a status update on a project (visible to team + applicants)
+// @route   POST /api/projects/:id/status-update
+// @access  Private (owner only)
+const postStatusUpdate = async (req, res, next) => {
+  try {
+    const { text } = req.body;
+    if (!text?.trim()) return res.status(400).json({ success: false, message: 'Update text is required' });
+
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ success: false, message: 'Project not found' });
+    if (project.createdBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+
+    const update = { text: text.trim(), createdAt: new Date() };
+    project.statusUpdates.unshift(update); // newest first
+    if (project.statusUpdates.length > 10) project.statusUpdates = project.statusUpdates.slice(0, 10);
+    await project.save();
+
+    // Notify all current applicants (pending) and team members
+    const [applications, populatedProject] = await Promise.all([
+      Application.find({ project: project._id, status: 'pending' }).select('applicant').lean(),
+      Project.findById(project._id).select('teamMembers title').lean(),
+    ]);
+
+    const recipientIds = new Set([
+      ...applications.map((a) => a.applicant.toString()),
+      ...populatedProject.teamMembers.map((m) => m.user.toString()),
+    ]);
+    // Don't notify the owner themselves
+    recipientIds.delete(req.user._id.toString());
+
+    if (recipientIds.size > 0) {
+      await Promise.all([...recipientIds].map((uid) =>
+        Notification.create({
+          recipient: uid,
+          sender:    req.user._id,
+          type:      'platform_update',
+          title:     `📢 Update on "${project.title}"`,
+          message:   text.trim().slice(0, 100),
+          link:      `/projects/${project._id}`,
+        })
+      ));
+    }
+
+    res.json({ success: true, message: 'Status update posted', data: update });
+  } catch (e) { next(e); }
+};
+
 module.exports = {
   createProject,
   getProjects,
@@ -703,4 +797,6 @@ module.exports = {
   removeMember,
   leaveProject,
   resubmitProject,
+  publishDraft,
+  postStatusUpdate,
 };

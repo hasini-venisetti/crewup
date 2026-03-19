@@ -393,10 +393,27 @@ function ProjectDetailContent() {
   const [waitlistMsg, setWaitlistMsg]               = useState('');
   const [showYoutubeModal, setShowYoutubeModal]     = useState(false);
   const [creatorIsVerified, setCreatorIsVerified]   = useState(false);
+  // Status updates
+  const [updateText, setUpdateText]                 = useState('');
+  const [postingUpdate, setPostingUpdate]           = useState(false);
+  // Similar projects
+  const [similarProjects, setSimilarProjects]       = useState([]);
 
   useEffect(() => {
     projectAPI.getById(id)
-      .then(({ data }) => setProject(data.data))
+      .then(({ data }) => {
+        setProject(data.data);
+        // Fetch similar projects based on type
+        const type = data.data?.projectType;
+        if (type) {
+          projectAPI.getAll({ projectType: type, limit: 4 })
+            .then(({ data: simRes }) => {
+              const others = (simRes.data || []).filter((p) => p._id !== id);
+              setSimilarProjects(others.slice(0, 3));
+            })
+            .catch(() => {});
+        }
+      })
       .catch(() => router.push('/projects'))
       .finally(() => setLoading(false));
   }, [id]);
@@ -428,6 +445,24 @@ function ProjectDetailContent() {
     setDeleting(true);
     try { await projectAPI.delete(id); router.push('/dashboard'); }
     catch { setDeleting(false); }
+  };
+
+  const handlePostUpdate = async () => {
+    if (!updateText.trim()) return;
+    setPostingUpdate(true);
+    try {
+      const { data } = await projectAPI.postStatusUpdate(id, updateText.trim());
+      setProject((prev) => ({
+        ...prev,
+        statusUpdates: [data.data, ...(prev.statusUpdates || [])],
+      }));
+      setUpdateText('');
+      toast.success('Update posted — applicants and team have been notified.');
+    } catch {
+      toast.error('Failed to post update');
+    } finally {
+      setPostingUpdate(false);
+    }
   };
 
   const handleUpdateTimeline = async (stage) => {
@@ -879,6 +914,79 @@ function ProjectDetailContent() {
             })}
           </div>
         </div>
+
+        {/* ── Status Updates ── */}
+        {(isOwner || (project.statusUpdates?.length > 0)) && (
+          <div className="bg-white rounded-2xl border border-[#efefed] p-6 mb-6">
+            <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#a3a39e] mb-4">📢 Project Updates</h2>
+
+            {isOwner && (
+              <div className="mb-5">
+                <textarea
+                  value={updateText}
+                  onChange={(e) => setUpdateText(e.target.value)}
+                  placeholder='e.g. "Casting is now closed. Shooting starts next week!"'
+                  maxLength={500}
+                  rows={2}
+                  className="w-full bg-[#f7f7f6] border border-[#e0e0dd] rounded-xl px-4 py-3 text-sm text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:border-[#6C63FF] resize-none transition-colors"
+                />
+                <div className="flex items-center justify-between mt-2">
+                  <span className="text-xs text-[#a3a39e]">{updateText.length}/500</span>
+                  <button
+                    onClick={handlePostUpdate}
+                    disabled={!updateText.trim() || postingUpdate}
+                    className="text-xs font-bold px-4 py-2 rounded-xl bg-[#6C63FF] text-white hover:bg-[#5750D4] disabled:opacity-40 transition-colors"
+                  >
+                    {postingUpdate ? 'Posting…' : 'Post Update'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {project.statusUpdates?.length > 0 ? (
+              <div className="space-y-3">
+                {project.statusUpdates.map((u, i) => (
+                  <div key={i} className="flex gap-3 items-start">
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#6C63FF] mt-2 flex-shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-sm text-[#111110] leading-relaxed">{u.text}</p>
+                      <p className="text-xs text-[#a3a39e] mt-1">
+                        {new Date(u.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-[#a3a39e] italic">No updates yet. Post one to notify your applicants and team.</p>
+            )}
+          </div>
+        )}
+
+        {/* ── Similar Projects ── */}
+        {similarProjects.length > 0 && (
+          <div className="mb-6">
+            <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#a3a39e] mb-4">Similar Projects</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {similarProjects.map((sp) => (
+                <Link key={sp._id} href={`/projects/${sp._id}`}
+                  className="bg-white rounded-2xl border border-[#efefed] p-4 hover:border-[#6C63FF]/40 hover:shadow-md transition-all group">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${sp.isPaid ? 'bg-amber-400' : 'bg-purple-400'}`} />
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-[#a3a39e]">
+                      {sp.isPaid ? 'Paid' : 'Collab'}
+                    </span>
+                  </div>
+                  <p className="text-sm font-semibold text-[#111110] leading-snug group-hover:text-[#6C63FF] transition-colors line-clamp-2">{sp.title}</p>
+                  <p className="text-xs text-[#6b6b66] mt-1.5">{sp.requiredRoles?.slice(0, 3).join(' · ')}</p>
+                  <p className="text-xs text-[#a3a39e] mt-2">
+                    {sp.location?.isRemote ? '🌐 Remote' : `📍 ${sp.location?.city || sp.location?.country || 'Location TBD'}`}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Footer actions */}
         <div className="flex items-center justify-between py-2 px-1">

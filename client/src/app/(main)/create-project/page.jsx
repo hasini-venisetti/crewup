@@ -65,6 +65,7 @@ export default function CreateProjectPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [draftLoading, setDraftLoading] = useState(false);
   const [roleInput, setRoleInput] = useState('');
 
   const [form, setForm] = useState({
@@ -139,6 +140,31 @@ export default function CreateProjectPage() {
     }
   };
 
+  const buildPayload = (isDraft = false) => ({
+    ...form,
+    isPaid: form.compensationType === 'paid',
+    deadline: form.deadline || undefined,
+    budget: form.compensationType === 'paid' ? form.budget : '',
+    compensationDetails: ['paid', 'revenue-share', 'deferred'].includes(form.compensationType)
+      ? form.compensationDetails
+      : '',
+    isDraft,
+  });
+
+  const handleSaveDraft = async () => {
+    if (!form.title.trim()) return toast.error('Add a project title to save draft');
+    setDraftLoading(true);
+    try {
+      const { data } = await projectAPI.create(buildPayload(true));
+      toast.success('Draft saved! You can publish it anytime from your dashboard.');
+      router.push('/dashboard');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to save draft');
+    } finally {
+      setDraftLoading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.title.trim()) return toast.error('Project title is required');
@@ -151,16 +177,7 @@ export default function CreateProjectPage() {
     if (!form.location.isRemote && (!form.location.city.trim() || !form.location.country.trim())) return toast.error('Please enter the shooting city and country');
     setLoading(true);
     try {
-      const payload = {
-        ...form,
-        isPaid: form.compensationType === 'paid',
-        deadline: form.deadline || undefined,
-        budget: form.compensationType === 'paid' ? form.budget : '',
-        compensationDetails: ['paid', 'revenue-share', 'deferred'].includes(form.compensationType)
-          ? form.compensationDetails
-          : '',
-      };
-      const { data } = await projectAPI.create(payload);
+      const { data } = await projectAPI.create(buildPayload(false));
       toast.success('🎉 Your project is live! Creators can now apply.');
       router.push(`/projects/${data.data._id}`);
     } catch (err) {
@@ -720,14 +737,24 @@ export default function CreateProjectPage() {
             </div>
           </div>
 
-          {/* Submit */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="bg-[#6C63FF] text-white rounded-xl py-4 text-base font-bold w-full hover:bg-[#5750D4] disabled:opacity-50 transition-colors"
-          >
-            {loading ? 'Posting...' : 'Post Project →'}
-          </button>
+          {/* Actions */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              type="button"
+              onClick={handleSaveDraft}
+              disabled={loading || draftLoading}
+              className="flex-1 border border-[#e0e0dd] bg-[#f7f7f6] text-[#6b6b66] rounded-xl py-4 text-base font-semibold hover:bg-[#efefed] disabled:opacity-50 transition-colors"
+            >
+              {draftLoading ? 'Saving...' : '💾 Save as Draft'}
+            </button>
+            <button
+              type="submit"
+              disabled={loading || draftLoading}
+              className="flex-1 bg-[#6C63FF] text-white rounded-xl py-4 text-base font-bold hover:bg-[#5750D4] disabled:opacity-50 transition-colors"
+            >
+              {loading ? 'Posting...' : 'Post Project →'}
+            </button>
+          </div>
         </form>
       </div>
     </div>

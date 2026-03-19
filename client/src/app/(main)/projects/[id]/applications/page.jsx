@@ -21,69 +21,109 @@ function Avatar({ name, image, size = 'sm' }) {
 }
 
 function ApplicationCard({ app, onDecision }) {
-  const [loading, setLoading] = useState('');
+  const [loading, setLoading]         = useState('');
+  const [showDeclineForm, setShowDeclineForm] = useState(false);
+  const [declineNote, setDeclineNote] = useState('');
 
-  const decide = async (status) => {
+  const decide = async (status, reviewNote = '') => {
     setLoading(status);
     try {
-      await applicationAPI.updateStatus({ applicationId: app._id, status });
+      await applicationAPI.updateStatus({ applicationId: app._id, status, reviewNote });
       toast.success(status === 'accepted' ? `${app.applicant?.name} accepted!` : 'Application declined.');
       onDecision(app._id, status);
     } catch {
       toast.error('Failed to update application.');
     } finally {
       setLoading('');
+      setShowDeclineForm(false);
     }
   };
 
   return (
-    <div className="card  p-4 flex flex-col sm:flex-row sm:items-start gap-4">
-      <Link
-        href={`/profile/${app.applicant?._id}`}
-        className="flex items-start gap-3 flex-1 group"
-      >
-        <Avatar name={app.applicant?.name} image={app.applicant?.profileImage} />
-        <div className="min-w-0 flex-1">
-          <div className="font-semibold text-sm text-[#111110] transition-colors">
-            {app.applicant?.name}
+    <div className="card p-4 flex flex-col gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+        <Link
+          href={`/profile/${app.applicant?._id}`}
+          className="flex items-start gap-3 flex-1 group"
+        >
+          <Avatar name={app.applicant?.name} image={app.applicant?.profileImage} />
+          <div className="min-w-0 flex-1">
+            <div className="font-semibold text-sm text-[#111110] transition-colors">
+              {app.applicant?.name}
+            </div>
+            <div className="text-xs text-[#6b6b66] mt-0.5">
+              @{app.applicant?.username} · <span className="capitalize">{app.applicant?.role?.replace('-', ' ')}</span>
+            </div>
+            <div className="text-xs text-[#111110]/80 mt-1">
+              Applying for: <span className="text-[#6b6b66]">{app.roleApplyingFor}</span>
+            </div>
+            <p className="text-xs text-[#6b6b66] mt-2 leading-relaxed italic">"{app.message}"</p>
+            <div className="text-xs text-[#6b6b66] mt-2">
+              Applied {new Date(app.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+            </div>
+            {/* Show review note if already declined */}
+            {app.status === 'rejected' && app.reviewNote && (
+              <div className="mt-2 text-xs bg-red-50 border border-red-100 text-red-700 rounded-lg px-3 py-2 italic">
+                Note to applicant: "{app.reviewNote}"
+              </div>
+            )}
           </div>
-          <div className="text-xs text-[#6b6b66] mt-0.5">
-            @{app.applicant?.username} · <span className="capitalize">{app.applicant?.role?.replace('-', ' ')}</span>
-          </div>
-          <div className="text-xs text-[#111110]/80 mt-1">
-            Applying for: <span className="text-[#6b6b66]">{app.roleApplyingFor}</span>
-          </div>
-          <p className="text-xs text-[#6b6b66] mt-2 leading-relaxed italic">"{app.message}"</p>
-          <div className="text-xs text-[#6b6b66] mt-2">
-            Applied {new Date(app.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+        </Link>
+
+        <div className="flex items-center gap-2 flex-shrink-0 self-start sm:self-center">
+          {app.status === 'pending' ? (
+            <>
+              <button
+                onClick={() => decide('accepted')}
+                disabled={!!loading}
+                className="text-xs font-bold px-3 py-2 rounded-lg bg-green-500/10 text-green-400 border border-green-500/20 hover:bg-green-500/20 transition-colors disabled:opacity-40"
+              >
+                {loading === 'accepted' ? '...' : 'Accept'}
+              </button>
+              <button
+                onClick={() => setShowDeclineForm((v) => !v)}
+                disabled={!!loading}
+                className={`text-xs font-bold px-3 py-2 rounded-lg border transition-colors disabled:opacity-40 ${
+                  showDeclineForm
+                    ? 'bg-red-500/20 text-red-500 border-red-500/30'
+                    : 'bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20'
+                }`}
+              >
+                {loading === 'rejected' ? '...' : showDeclineForm ? 'Cancel' : 'Decline'}
+              </button>
+            </>
+          ) : (
+            <span className={STATUS_CLASS[app.status]}>
+              {STATUS_ICON[app.status]} {app.status}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Inline decline note form */}
+      {showDeclineForm && app.status === 'pending' && (
+        <div className="bg-red-50 border border-red-100 rounded-xl p-4 flex flex-col gap-3">
+          <p className="text-xs font-semibold text-red-700">Optional: leave a note for {app.applicant?.name}</p>
+          <textarea
+            value={declineNote}
+            onChange={(e) => setDeclineNote(e.target.value)}
+            placeholder='e.g. "We filled this role, but would love to work with you on a future project!"'
+            maxLength={300}
+            rows={2}
+            className="w-full bg-white border border-red-200 rounded-lg px-3 py-2 text-sm text-[#111110] placeholder:text-[#a3a39e] focus:outline-none focus:border-red-400 resize-none transition-colors"
+          />
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-red-400">{declineNote.length}/300 · applicant will see this in their notification</span>
+            <button
+              onClick={() => decide('rejected', declineNote)}
+              disabled={!!loading}
+              className="text-xs font-bold px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
+            >
+              {loading === 'rejected' ? 'Declining…' : 'Confirm Decline'}
+            </button>
           </div>
         </div>
-      </Link>
-
-      <div className="flex items-center gap-2 flex-shrink-0 self-start sm:self-center">
-        {app.status === 'pending' ? (
-          <>
-            <button
-              onClick={() => decide('accepted')}
-              disabled={!!loading}
-              className="text-xs font-bold px-3 py-2 rounded-lg bg-green-500/10 text-green-400 border border-green-500/20 hover:bg-green-500/20 transition-colors disabled:opacity-40"
-            >
-              {loading === 'accepted' ? '...' : 'Accept'}
-            </button>
-            <button
-              onClick={() => decide('rejected')}
-              disabled={!!loading}
-              className="text-xs font-bold px-3 py-2 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors disabled:opacity-40"
-            >
-              {loading === 'rejected' ? '...' : 'Decline'}
-            </button>
-          </>
-        ) : (
-          <span className={STATUS_CLASS[app.status]}>
-            {STATUS_ICON[app.status]} {app.status}
-          </span>
-        )}
-      </div>
+      )}
     </div>
   );
 }

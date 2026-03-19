@@ -59,6 +59,49 @@ function EmptyCard({ icon, title, body, cta, href }) {
   );
 }
 
+/* ── Draft Project Card ──────────────────────────────────────────────────── */
+function DraftCard({ project: p, onPublish }) {
+  const [publishing, setPublishing] = useState(false);
+
+  const handlePublish = async () => {
+    setPublishing(true);
+    try {
+      await projectAPI.publishDraft(p._id);
+      toast.success('🎉 Project is now live!');
+      onPublish(p._id);
+    } catch {
+      toast.error('Failed to publish project');
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-2xl border border-dashed border-[#c9c4ff] p-4 flex flex-col gap-3">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-[#8b82ff] bg-[#f0eeff] px-2 py-0.5 rounded-full">Draft</span>
+          <p className="font-semibold text-[#111110] text-sm mt-1.5 leading-snug">{p.title || 'Untitled draft'}</p>
+          <p className="text-xs text-[#6b6b66] mt-0.5 capitalize">{(p.projectType || '').replace('-', ' ')} · {p.requiredRoles?.length || 0} roles</p>
+        </div>
+      </div>
+      <div className="flex gap-2 mt-auto">
+        <Link href={`/projects/${p._id}/edit`}
+          className="flex-1 text-center text-xs font-semibold border border-[#e0e0dd] text-[#6b6b66] py-2 rounded-xl hover:border-[#6C63FF] hover:text-[#6C63FF] transition-colors">
+          ✏️ Edit
+        </Link>
+        <button
+          onClick={handlePublish}
+          disabled={publishing}
+          className="flex-1 text-xs font-semibold bg-[#6C63FF] text-white py-2 rounded-xl hover:bg-[#5750D4] disabled:opacity-50 transition-colors"
+        >
+          {publishing ? 'Publishing...' : '🚀 Publish'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ── Incoming Application Card ───────────────────────────────────────────── */
 function IncomingAppItem({ app, onDecision }) {
   const [loading, setLoading] = useState('');
@@ -232,6 +275,7 @@ export default function DashboardPage() {
 
   /* ── data state ── */
   const [myProjects,     setMyProjects]     = useState([]);
+  const [myDrafts,       setMyDrafts]       = useState([]);
   const [myApplications, setMyApplications] = useState([]);
   const [recommended,    setRecommended]    = useState([]);
   const [incomingApps,   setIncomingApps]   = useState({});
@@ -256,6 +300,7 @@ export default function DashboardPage() {
     try {
       const [projRes, appRes] = await Promise.all([projectAPI.getMine(), applicationAPI.getMine()]);
       setMyProjects(projRes.data.data);
+      setMyDrafts(projRes.data.drafts || []);
       setMyApplications(appRes.data.data);
 
       const incoming = {};
@@ -481,6 +526,21 @@ export default function DashboardPage() {
                 </div>
               )}
             </section>
+
+            {/* ── DRAFTS ── */}
+            {myDrafts.length > 0 && (
+              <section id="drafts">
+                <SectionHeader icon="💾" title="Drafts" count={myDrafts.length} />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {myDrafts.map((p) => (
+                    <DraftCard key={p._id} project={p} onPublish={(id) => {
+                      setMyDrafts((prev) => prev.filter((d) => d._id !== id));
+                      setMyProjects((prev) => [{ ...p, isDraft: false }, ...prev]);
+                    }} />
+                  ))}
+                </div>
+              </section>
+            )}
 
             {/* ── MY APPLICATIONS ── */}
             <section id="applications">

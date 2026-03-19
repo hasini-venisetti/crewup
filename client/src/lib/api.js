@@ -69,6 +69,8 @@ export const projectAPI = {
   setYoutubeLink:  (id, link)     => api.patch(`/projects/${id}/youtube-link`, { youtubeLink: link }),
   setEpisodeLinks: (id, episodes) => api.patch(`/projects/${id}/youtube-link`, { episodeLinks: episodes }),
   resubmit:        (id)           => api.patch(`/projects/${id}/resubmit`),
+  publishDraft:    (id)           => api.patch(`/projects/${id}/publish`),
+  postStatusUpdate:(id, text)     => api.post(`/projects/${id}/status-update`, { text }),
   getAllFilms:     (params)        => api.get('/projects/films', { params }),
   getUserFilms:   (userId)        => api.get(`/projects/films/${userId}`),
 };

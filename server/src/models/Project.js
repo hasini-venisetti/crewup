@@ -178,6 +178,19 @@ const projectSchema = new mongoose.Schema(
         summary:   { type: String, default: '' }, // e.g. "Updated compensation, location"
       },
     ],
+
+    // ── Draft mode ────────────────────────────────────────────────────────
+    // When true the project is only visible to its creator and excluded from
+    // all public listings.  Publish by PATCHing /:id/publish.
+    isDraft: { type: Boolean, default: false },
+
+    // ── Status updates (creator → applicants/team) ────────────────────────
+    statusUpdates: [
+      {
+        text:      { type: String, required: true, maxlength: 500 },
+        createdAt: { type: Date,   default: Date.now },
+      },
+    ],
   },
   { timestamps: true }
 );
