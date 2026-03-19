@@ -682,10 +682,11 @@ function ReportsTab() {
   const [acting,       setActing]       = useState({});
 
   // Resolution modal
-  const [modal,      setModal]      = useState(null);
-  const [note,       setNote]       = useState('');
-  const [warnUser,   setWarnUser]   = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [modal,        setModal]        = useState(null);
+  const [note,         setNote]         = useState('');
+  const [warnUser,     setWarnUser]     = useState(false);
+  const [suspendAcc,   setSuspendAcc]   = useState(false);
+  const [submitting,   setSubmitting]   = useState(false);
 
   const load = useCallback(async (s, p) => {
     setLoading(true);
@@ -700,14 +701,18 @@ function ReportsTab() {
 
   useEffect(() => { load(statusFilter, page); }, [statusFilter, page]);
 
-  const openModal  = (report, action) => { setModal({ report, action }); setNote(''); setWarnUser(false); };
-  const closeModal = () => { setModal(null); setNote(''); setWarnUser(false); };
+  const openModal  = (report, action) => { setModal({ report, action }); setNote(''); setWarnUser(false); setSuspendAcc(false); };
+  const closeModal = () => { setModal(null); setNote(''); setWarnUser(false); setSuspendAcc(false); };
 
   const submitResolution = async () => {
     if (!modal) return;
     setSubmitting(true);
     try {
       await reportAPI.resolve(modal.report._id, modal.action, note.trim(), warnUser);
+      // Optionally suspend the reported user's account
+      if (suspendAcc && modal.report.reportedUser?._id) {
+        await adminAPI.suspendUser(modal.report.reportedUser._id, true);
+      }
       setReports((prev) => prev.map((r) =>
         r._id === modal.report._id ? { ...r, status: modal.action, resolutionNote: note.trim() } : r
       ));
@@ -822,10 +827,18 @@ function ReportsTab() {
                         </p>
                       </div>
 
+                      {/* Reported content snapshot (message text, film title etc.) */}
+                      {r.targetType === 'message' && r.targetSnapshot && (
+                        <div className="bg-[#f7f7f6] border border-[#e0e0dd] rounded-lg px-3 py-2 mt-1.5">
+                          <p className="text-[10px] font-bold text-[#a3a39e] uppercase tracking-wide mb-1">Reported message</p>
+                          <p className="text-xs text-[#333331] italic leading-relaxed">"{r.targetSnapshot}"</p>
+                        </div>
+                      )}
+
                       {/* Reporter's details */}
                       {r.details && (
-                        <p className="text-xs text-[#6b6b66] bg-[#f7f7f6] border border-[#e0e0dd] rounded-lg px-3 py-2 mt-1.5 italic">
-                          "{r.details}"
+                        <p className="text-xs text-[#6b6b66] bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 mt-1.5 italic">
+                          Reporter note: "{r.details}"
                         </p>
                       )}
 
@@ -885,30 +898,46 @@ function ReportsTab() {
       {modal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50" onClick={closeModal} />
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 z-10">
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 z-10 max-h-[90vh] overflow-y-auto">
+
+            {/* Header */}
             <div className="flex items-start justify-between mb-5">
               <div>
                 <h3 className="font-bold text-[#0e0e0d] text-base">
                   {modal.action === 'reviewed' ? '✓ Mark as Reviewed' : '✕ Dismiss Report'}
                 </h3>
-                <p className="text-xs text-[#6b6b66] mt-1">
-                  {modal.report.targetSnapshot ? `Re: "${modal.report.targetSnapshot}"` : 'Re: deleted content'}
+                <p className="text-xs text-[#6b6b66] mt-1 capitalize">
+                  {modal.report.targetType} report · {new Date(modal.report.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                 </p>
               </div>
-              <button onClick={closeModal} className="text-[#a3a39e] hover:text-[#111110] transition-colors text-lg leading-none ml-4">✕</button>
+              <button onClick={closeModal} className="text-[#a3a39e] hover:text-[#111110] transition-colors text-lg leading-none ml-4 flex-shrink-0">✕</button>
             </div>
+
+            {/* Reported content preview */}
+            {modal.report.targetSnapshot && (
+              <div className="bg-[#f7f7f6] border border-[#e0e0dd] rounded-xl px-4 py-3 mb-4">
+                <p className="text-[10px] font-bold text-[#6b6b66] uppercase tracking-wide mb-1.5">
+                  {modal.report.targetType === 'message' ? '💬 Reported message' : modal.report.targetType === 'film' ? '🎬 Film' : modal.report.targetType === 'project' ? '📋 Project' : '📄 Content'}
+                </p>
+                <p className="text-sm text-[#111110] leading-relaxed italic">
+                  {modal.report.targetType === 'message'
+                    ? `"${modal.report.targetSnapshot}"`
+                    : modal.report.targetSnapshot}
+                </p>
+              </div>
+            )}
 
             {/* Reported user pill */}
             {modal.report.reportedUser && (
               <div className="flex items-center gap-2.5 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4">
                 <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-sm font-bold text-red-600 flex-shrink-0 overflow-hidden">
                   {modal.report.reportedUser.profileImage
-                    ? <img src={modal.report.reportedUser.profileImage} alt="" className="w-full h-full object-cover" />
+                    ? <img src={modal.report.reportedUser.profileImage} alt="" className="w-full h-full object-cover rounded-full" />
                     : modal.report.reportedUser.name?.[0]?.toUpperCase()}
                 </div>
-                <div>
+                <div className="flex-1 min-w-0">
                   <p className="text-[10px] font-bold text-red-600 uppercase tracking-wide">Reported user</p>
-                  <p className="text-sm font-semibold text-[#111110]">
+                  <p className="text-sm font-semibold text-[#111110] truncate">
                     {modal.report.reportedUser.name}
                     <span className="text-[#a3a39e] font-normal"> @{modal.report.reportedUser.username}</span>
                   </p>
@@ -916,7 +945,15 @@ function ReportsTab() {
               </div>
             )}
 
-            {/* Note */}
+            {/* Reporter's details */}
+            {modal.report.details && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 mb-4">
+                <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wide mb-1">Reporter's note</p>
+                <p className="text-sm text-[#333331] italic">"{modal.report.details}"</p>
+              </div>
+            )}
+
+            {/* Resolution note */}
             <label className="block text-xs font-bold text-[#444442] uppercase tracking-wide mb-2">
               Resolution note <span className="text-[#a3a39e] font-normal normal-case">(optional)</span>
             </label>
@@ -925,31 +962,51 @@ function ReportsTab() {
               onChange={(e) => setNote(e.target.value)}
               placeholder={
                 modal.action === 'reviewed'
-                  ? 'e.g. Film was already deleted, no further action needed.'
+                  ? 'e.g. Content already deleted, user warned. No further action needed.'
                   : 'e.g. Report appears unfounded — no policy violation found.'
               }
               rows={3}
-              className="w-full px-3 py-2.5 rounded-xl border border-[#e0e0dd] text-sm text-[#111110] placeholder-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-[#6055de]/30 focus:border-[#6055de]/50 resize-none mb-4"
+              className="w-full px-3 py-2.5 rounded-xl border border-[#e0e0dd] text-sm text-[#111110] placeholder-[#a3a39e] focus:outline-none focus:ring-2 focus:ring-[#6055de]/30 focus:border-[#6055de]/50 resize-none mb-3"
             />
 
-            {/* Warn user toggle */}
+            {/* Actions on the reported user */}
             {modal.report.reportedUser && (
-              <button
-                onClick={() => setWarnUser((v) => !v)}
-                className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl border text-sm font-medium transition-all mb-5 ${
-                  warnUser ? 'bg-amber-50 border-amber-300 text-amber-800' : 'border-[#e0e0dd] text-[#444442] hover:bg-[#f7f7f6]'
-                }`}
-              >
-                <span className={`w-8 h-4 rounded-full relative transition-colors flex-shrink-0 ${warnUser ? 'bg-amber-400' : 'bg-[#e0e0dd]'}`}>
-                  <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform ${warnUser ? 'translate-x-4' : 'translate-x-0.5'}`} />
-                </span>
-                <div className="text-left">
-                  <p className="font-semibold">Send warning to {modal.report.reportedUser.name}</p>
-                  <p className="text-xs opacity-70 font-normal">Notifies them with your note via the platform</p>
-                </div>
-              </button>
+              <div className="flex flex-col gap-2 mb-5">
+                {/* Warn user */}
+                <button
+                  onClick={() => setWarnUser((v) => !v)}
+                  className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
+                    warnUser ? 'bg-amber-50 border-amber-300 text-amber-800' : 'border-[#e0e0dd] text-[#444442] hover:bg-[#f7f7f6]'
+                  }`}
+                >
+                  <span className={`w-8 h-4 rounded-full relative transition-colors flex-shrink-0 ${warnUser ? 'bg-amber-400' : 'bg-[#e0e0dd]'}`}>
+                    <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform ${warnUser ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                  </span>
+                  <div className="text-left">
+                    <p className="font-semibold">⚠️ Send warning to {modal.report.reportedUser.name}</p>
+                    <p className="text-xs opacity-70 font-normal">Sends a notification with your note to their account</p>
+                  </div>
+                </button>
+
+                {/* Suspend account */}
+                <button
+                  onClick={() => setSuspendAcc((v) => !v)}
+                  className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
+                    suspendAcc ? 'bg-red-50 border-red-300 text-red-800' : 'border-[#e0e0dd] text-[#444442] hover:bg-[#f7f7f6]'
+                  }`}
+                >
+                  <span className={`w-8 h-4 rounded-full relative transition-colors flex-shrink-0 ${suspendAcc ? 'bg-red-500' : 'bg-[#e0e0dd]'}`}>
+                    <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform ${suspendAcc ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                  </span>
+                  <div className="text-left">
+                    <p className="font-semibold">🚫 Suspend {modal.report.reportedUser.name}'s account</p>
+                    <p className="text-xs opacity-70 font-normal">Blocks them from logging in until manually unsuspended</p>
+                  </div>
+                </button>
+              </div>
             )}
 
+            {/* Submit */}
             <div className="flex gap-3">
               <button onClick={closeModal}
                 className="flex-1 px-4 py-2.5 rounded-xl border border-[#e0e0dd] text-sm text-[#6b6b66] hover:bg-[#f7f7f6] transition-colors font-medium">
@@ -957,9 +1014,9 @@ function ReportsTab() {
               </button>
               <button onClick={submitResolution} disabled={submitting}
                 className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-colors disabled:opacity-50 ${
-                  modal.action === 'reviewed' ? 'bg-green-600 hover:bg-green-700' : 'bg-[#444442] hover:bg-[#0e0e0d]'
+                  suspendAcc ? 'bg-red-600 hover:bg-red-700' : modal.action === 'reviewed' ? 'bg-green-600 hover:bg-green-700' : 'bg-[#444442] hover:bg-[#0e0e0d]'
                 }`}>
-                {submitting ? '…' : modal.action === 'reviewed' ? '✓ Confirm Reviewed' : '✕ Confirm Dismiss'}
+                {submitting ? '…' : suspendAcc ? '🚫 Suspend & Resolve' : modal.action === 'reviewed' ? '✓ Confirm Reviewed' : '✕ Confirm Dismiss'}
               </button>
             </div>
           </div>

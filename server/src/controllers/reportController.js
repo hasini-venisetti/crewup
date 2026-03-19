@@ -3,6 +3,7 @@ const Notification = require('../models/Notification');
 const Project      = require('../models/Project');
 const User         = require('../models/User');
 const Film         = require('../models/Film');
+const Message      = require('../models/Message');
 
 /* ─────────────────────────────────────────────────────────────────────────
    POST /api/reports
@@ -39,6 +40,13 @@ const submitReport = async (req, res, next) => {
       if (project) {
         reportedUser   = project.postedBy?._id || project.createdBy?._id || null;
         targetSnapshot = project.title || '';
+      }
+    } else if (targetType === 'message') {
+      const msg = await Message.findById(targetId).populate('sender', '_id name username').lean();
+      if (msg) {
+        reportedUser   = msg.sender?._id || null;
+        // Store a truncated preview of the message text so it survives deletion
+        targetSnapshot = (msg.text || '').slice(0, 300);
       }
     } else if (targetType === 'user') {
       const u = await User.findById(targetId).select('name username').lean();
