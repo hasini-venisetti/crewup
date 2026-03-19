@@ -66,7 +66,7 @@ export default function Footer() {
             <p className="text-xs font-bold uppercase tracking-[0.15em] mb-5" style={{ color: '#6055de' }}>Trust &amp; Safety</p>
             <ul className="space-y-3">
               <li><Link href="/safety"                     className={footerLink}>🛡 Safety Guide</Link></li>
-              <li><Link href="/report"                     className={footerLink}>Report an Issue</Link></li>
+              <li><Link href="/support/report"              className={footerLink}>Report an Issue</Link></li>
               <li><Link href="/support"                    className={footerLink}>Support</Link></li>
               <li><Link href="/legal/privacy"     className={footerLink}>Privacy Policy</Link></li>
               <li><Link href="/legal/terms"       className={footerLink}>Terms of Service</Link></li>
