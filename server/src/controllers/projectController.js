@@ -786,6 +786,27 @@ const postStatusUpdate = async (req, res, next) => {
   } catch (e) { next(e); }
 };
 
+// @desc   Get all bookmarked projects for the logged-in user (full project data)
+// @route  GET /api/projects/bookmarks
+// @access Private
+const getBookmarkedProjects = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id)
+      .select('bookmarks')
+      .populate({
+        path: 'bookmarks',
+        populate: { path: 'createdBy', select: 'name username profileImage role' },
+      });
+
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+    const projects = (user.bookmarks || []).filter(Boolean);
+    res.status(200).json({ success: true, data: projects });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createProject,
   getProjects,
@@ -803,4 +824,5 @@ module.exports = {
   resubmitProject,
   publishDraft,
   postStatusUpdate,
+  getBookmarkedProjects,
 };

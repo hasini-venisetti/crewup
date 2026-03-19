@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import ProjectCard from '@/components/ui/ProjectCard';
-import { filmAPI } from '@/lib/api';
+import { projectAPI, filmAPI } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function SavedProjectsPage() {
@@ -20,13 +20,13 @@ export default function SavedProjectsPage() {
     if (!authLoading && !user) router.push('/login');
   }, [user, authLoading, router]);
 
-  // Fetch bookmarks
+  // Fetch bookmarks — use the projects endpoint which returns full project data
   useEffect(() => {
     if (!user) return;
     setIsLoading(true);
-    filmAPI.getBookmarks()
+    projectAPI.getBookmarks()
       .then((res) => {
-        const bms = res.data?.bookmarks ?? res.data?.data ?? res.data ?? [];
+        const bms = res.data?.data ?? res.data ?? [];
         setSaved(Array.isArray(bms) ? bms : []);
       })
       .catch(() => setSaved([]))

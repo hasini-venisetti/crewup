@@ -16,6 +16,7 @@ const {
   resubmitProject,
   publishDraft,
   postStatusUpdate,
+  getBookmarkedProjects,
 } = require('../controllers/projectController');
 const { protect } = require('../middleware/auth');
 
@@ -26,6 +27,7 @@ const router = express.Router();
  * before the dynamic /:id route, otherwise Express matches them as IDs.
  */
 router.get('/my',                  protect, getMyProjects);
+router.get('/bookmarks',           protect, getBookmarkedProjects);
 router.get('/recommended',         protect, getRecommended);
 router.get('/films',               getAllFilms);                // public – global films browse
 router.get('/films/:userId',        getUserFilms);               // public – used on profiles

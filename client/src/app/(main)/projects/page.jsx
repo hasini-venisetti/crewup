@@ -43,8 +43,8 @@ export default function ProjectsPage() {
       const apps = res.data?.applications ?? res.data ?? [];
       setAppliedIds(new Set(apps.map((a) => a.project?._id ?? a.project)));
     }).catch(() => {});
-    filmAPI.getBookmarks().then((res) => {
-      const bms = res.data?.bookmarks ?? res.data?.data ?? res.data ?? [];
+    projectAPI.getBookmarks().then((res) => {
+      const bms = res.data?.data ?? [];
       setBookmarkedIds(new Set(bms.map((b) => b._id ?? b)));
     }).catch(() => {});
   }, [user]);

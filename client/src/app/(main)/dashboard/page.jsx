@@ -342,8 +342,8 @@ export default function DashboardPage() {
     reviewAPI.getForUser(myId).then(({ data }) => setMyReviews(data.data || [])).catch(() => {});
 
     // Saved/bookmarked projects
-    filmAPI.getBookmarks().then(({ data }) => {
-      setSavedProjects(data?.bookmarks ?? data?.data ?? []);
+    projectAPI.getBookmarks().then(({ data }) => {
+      setSavedProjects(data?.data ?? []);
     }).catch(() => {});
 
     // Mentor
