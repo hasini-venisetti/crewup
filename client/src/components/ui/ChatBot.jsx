@@ -290,7 +290,7 @@ const FAQ = [
     related: ['contact', 'profile'] },
 
   { id: 'contact', category: 'account',
-    keywords: ['contact', 'email', 'support', 'help', 'reach out', 'team', 'human'],
+    keywords: ['contact', 'email', 'support', 'reach out', 'team', 'human', 'talk to someone'],
     synonyms: ['get help', 'customer support', 'admin'],
     question: 'How do I contact CREWUPFILMS?',
     answer: 'Email us at crewupfilms@gmail.com, use the Contact page, or the Support hub. We typically respond within 24–48 hours.',
@@ -612,8 +612,44 @@ export default function ChatBot() {
     setTimeout(() => {
       setTyping(false);
 
-      // ── Active guided flow — advance to next step ──
+      // ── Active guided flow ──
       if (flowState) {
+        const q = trimmed.toLowerCase();
+
+        // Exit words — user wants to leave the flow
+        const exitWords = ['stop', 'exit', 'cancel', 'quit', 'back', 'done', 'end', 'no thanks', 'never mind', 'nevermind'];
+        if (exitWords.some((w) => q === w || q.startsWith(w + ' '))) {
+          setFlowState(null);
+          pushBot("No problem! Feel free to ask me anything. 😊", {
+            related: getRelated(['post-project', 'how-apply', 'contact']),
+          });
+          setFailCount(0);
+          return;
+        }
+
+        // If user asks a completely different question (strong FAQ match), exit flow and answer it
+        const jumpMatch = findAnswer(trimmed);
+        const jumpFlow = detectFlow(trimmed);
+        const isNewFlow = jumpFlow && jumpFlow.key !== flowState.key;
+        if (isNewFlow) {
+          // Start the new flow instead
+          setFlowState(null);
+          const { key, flow } = jumpFlow;
+          const first = flow.steps[0];
+          setFlowState({ key, step: 0 });
+          pushBot(first.text, { action: first.action || null });
+          setFailCount(0);
+          return;
+        }
+        if (jumpMatch && jumpMatch.id !== 'contact') {
+          setFlowState(null);
+          const related = getRelated(jumpMatch.related || []);
+          pushBot(jumpMatch.answer, { link: jumpMatch.link || null, related });
+          setFailCount(0);
+          return;
+        }
+
+        // Otherwise advance to next step
         const { key, step } = flowState;
         const flow = FLOWS[key];
         const nextStep = step + 1;
@@ -627,6 +663,24 @@ export default function ChatBot() {
             related: getRelated(['dashboard', 'how-apply', 'contact']),
           });
         }
+        setFailCount(0);
+        return;
+      }
+
+      // ── "help" / "hi" / "hello" — show a quick menu ──
+      const helpTriggers = ['help', 'hi', 'hello', 'hey', 'helo', 'hii', 'start', 'menu', 'options', 'what can you do'];
+      if (helpTriggers.includes(trimmed.toLowerCase())) {
+        pushBot(
+          "Hi! I'm the CREWUP Assistant 👋 Here are some things I can help with:",
+          {
+            related: [
+              FAQ.find((f) => f.id === 'post-project'),
+              FAQ.find((f) => f.id === 'how-apply'),
+              FAQ.find((f) => f.id === 'verification'),
+              FAQ.find((f) => f.id === 'contact'),
+            ].filter(Boolean),
+          }
+        );
         setFailCount(0);
         return;
       }

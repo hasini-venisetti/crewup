@@ -272,7 +272,8 @@ export default function Navbar() {
                     {[
                       { href: '/dashboard',                      label: '⚡ Dashboard' },
                       { href: `/profile/${user._id || user.id}`, label: '👤 My Profile' },
-                      { href: '/settings',                       label: '⚙️ Settings' },
+                      { href: '/dashboard#saved-projects',        label: '🔖 Saved Projects' },
+                      { href: '/settings',                        label: '⚙️ Settings' },
                       ...(user.isAdmin ? [{ href: '/admin', label: '🛡 Admin Panel' }] : []),
                     ].map((item) => (
                       <Link key={item.href} href={item.href} onClick={() => setShowDropdown(false)}
