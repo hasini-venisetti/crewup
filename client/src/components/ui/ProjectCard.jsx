@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import toast from 'react-hot-toast';
 import ReportModal from '@/components/ui/ReportModal';
 
 const TYPE_CONFIG = {
@@ -53,8 +54,14 @@ export default function ProjectCard({ project, isBookmarked = false, onToggleBoo
     setBookmarked(next); // optimistic
     try {
       await onToggleBookmark(_id, next);
+      if (next) {
+        toast.success('🔖 Project saved!', { duration: 2000 });
+      } else {
+        toast('Removed from saved projects', { icon: '🗑️', duration: 2000 });
+      }
     } catch {
       setBookmarked(!next); // revert on error
+      toast.error('Failed to update bookmark');
     } finally {
       setBmLoading(false);
     }
