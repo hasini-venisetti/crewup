@@ -2,7 +2,6 @@ const Report       = require('../models/Report');
 const Notification = require('../models/Notification');
 const Project      = require('../models/Project');
 const User         = require('../models/User');
-const Film         = require('../models/Film');
 const Message      = require('../models/Message');
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -30,7 +29,8 @@ const submitReport = async (req, res, next) => {
     let targetSnapshot = '';
 
     if (targetType === 'film') {
-      const film = await Film.findById(targetId).populate('createdBy', '_id name username').lean();
+      // Films are stored as Project documents (they have a youtubeLink field)
+      const film = await Project.findById(targetId).populate('createdBy', '_id name username').lean();
       if (film) {
         reportedUser   = film.createdBy?._id || null;
         targetSnapshot = film.title || '';
@@ -180,7 +180,8 @@ const getAllReports = async (req, res, next) => {
 
       try {
         if (r.targetType === 'film') {
-          const film = await Film.findById(r.targetId).populate('createdBy', '_id name username profileImage').lean();
+          // Films are Project documents with a youtubeLink
+          const film = await Project.findById(r.targetId).populate('createdBy', '_id name username profileImage').lean();
           if (film) { reportedUser = film.createdBy; targetSnapshot = film.title || ''; }
         } else if (r.targetType === 'project') {
           const project = await Project.findById(r.targetId).populate('postedBy', '_id name username profileImage').lean();
