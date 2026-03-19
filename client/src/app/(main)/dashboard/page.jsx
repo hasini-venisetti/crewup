@@ -295,6 +295,15 @@ export default function DashboardPage() {
 
   useEffect(() => { if (!authLoading && !user) router.push('/login'); }, [user, authLoading, router]);
 
+  // Scroll to hash anchor once data has loaded (e.g. #saved-projects from navbar link)
+  useEffect(() => {
+    if (dataLoading) return;
+    const hash = window.location.hash;
+    if (!hash) return;
+    const el = document.querySelector(hash);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [dataLoading]);
+
   /* ── Fetch everything ── */
   const fetchAll = useCallback(async () => {
     if (!user) return;
