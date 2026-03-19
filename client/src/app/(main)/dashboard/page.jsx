@@ -6,7 +6,7 @@ import Link from 'next/link';
 import toast from 'react-hot-toast';
 import ProjectCard from '@/components/ui/ProjectCard';
 import { SkeletonGrid } from '@/components/ui/SkeletonCard';
-import { projectAPI, applicationAPI, followAPI, reviewAPI, mentorAPI, profileAPI } from '@/lib/api';
+import { projectAPI, applicationAPI, followAPI, reviewAPI, mentorAPI, profileAPI, filmAPI } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { computeCompletenessScore, getCompletenessColor } from '@/lib/profileCompleteness';
 
@@ -283,6 +283,7 @@ export default function DashboardPage() {
   const [myReviews,      setMyReviews]      = useState([]);
   const [isMentor,       setIsMentor]       = useState(false);
   const [mentorApps,     setMentorApps]     = useState([]);
+  const [savedProjects,  setSavedProjects]  = useState([]);
 
   /* ── loading states ── */
   const [dataLoading, setDataLoading] = useState(true);
@@ -330,6 +331,11 @@ export default function DashboardPage() {
     // Reviews
     const myId = user._id || user.id;
     reviewAPI.getForUser(myId).then(({ data }) => setMyReviews(data.data || [])).catch(() => {});
+
+    // Saved/bookmarked projects
+    filmAPI.getBookmarks().then(({ data }) => {
+      setSavedProjects(data?.bookmarks ?? data?.data ?? []);
+    }).catch(() => {});
 
     // Mentor
     profileAPI.getMe().then(({ data }) => {
@@ -537,6 +543,35 @@ export default function DashboardPage() {
                       setMyDrafts((prev) => prev.filter((d) => d._id !== id));
                       setMyProjects((prev) => [{ ...p, isDraft: false }, ...prev]);
                     }} />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* ── SAVED PROJECTS ── */}
+            {savedProjects.length > 0 && (
+              <section id="saved-projects">
+                <SectionHeader
+                  icon="🔖"
+                  title="Saved Projects"
+                  count={savedProjects.length}
+                  action={
+                    <Link href="/projects" className="text-xs text-[#6C63FF] hover:underline font-medium">
+                      Browse more →
+                    </Link>
+                  }
+                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {savedProjects.map((p) => (
+                    <ProjectCard
+                      key={p._id}
+                      project={p}
+                      isBookmarked={true}
+                      onToggleBookmark={async (id) => {
+                        await filmAPI.toggleBookmark(id);
+                        setSavedProjects((prev) => prev.filter((x) => x._id !== id));
+                      }}
+                    />
                   ))}
                 </div>
               </section>

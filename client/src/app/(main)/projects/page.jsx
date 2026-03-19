@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import ProjectCard from '@/components/ui/ProjectCard';
-import { projectAPI } from '@/lib/api';
+import { projectAPI, applicationAPI, filmAPI } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 
 const CATEGORIES = [
@@ -25,14 +25,29 @@ const TOP_ROLES = [
 
 export default function ProjectsPage() {
   const { user } = useAuth();
-  const [projects,    setProjects]    = useState([]);
-  const [activeTab,   setActiveTab]   = useState('All');
-  const [isPaid,      setIsPaid]      = useState(false);
-  const [isRemote,    setIsRemote]    = useState(false);
-  const [roleFilter,  setRoleFilter]  = useState('');
-  const [search,      setSearch]      = useState('');
-  const [isLoading,   setIsLoading]   = useState(true);
-  const [showRoles,   setShowRoles]   = useState(false);
+  const [projects,      setProjects]      = useState([]);
+  const [activeTab,     setActiveTab]     = useState('All');
+  const [isPaid,        setIsPaid]        = useState(false);
+  const [isRemote,      setIsRemote]      = useState(false);
+  const [roleFilter,    setRoleFilter]    = useState('');
+  const [search,        setSearch]        = useState('');
+  const [isLoading,     setIsLoading]     = useState(true);
+  const [showRoles,     setShowRoles]     = useState(false);
+  const [appliedIds,    setAppliedIds]    = useState(new Set());
+  const [bookmarkedIds, setBookmarkedIds] = useState(new Set());
+
+  // Fetch user's applied + bookmarked project IDs once on mount (logged-in only)
+  useEffect(() => {
+    if (!user) return;
+    applicationAPI.getMine().then((res) => {
+      const apps = res.data?.applications ?? res.data ?? [];
+      setAppliedIds(new Set(apps.map((a) => a.project?._id ?? a.project)));
+    }).catch(() => {});
+    filmAPI.getBookmarks().then((res) => {
+      const bms = res.data?.bookmarks ?? res.data?.data ?? res.data ?? [];
+      setBookmarkedIds(new Set(bms.map((b) => b._id ?? b)));
+    }).catch(() => {});
+  }, [user]);
 
   useEffect(() => {
     setIsLoading(true);
@@ -59,6 +74,19 @@ export default function ProjectsPage() {
     setIsRemote(false);
     setRoleFilter('');
     setSearch('');
+  };
+
+  const handleToggleBookmark = async (projectId) => {
+    if (!user) return;
+    try {
+      await filmAPI.toggleBookmark(projectId);
+      setBookmarkedIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(projectId)) next.delete(projectId);
+        else next.add(projectId);
+        return next;
+      });
+    } catch {}
   };
 
   const activeFilterCount = [
@@ -282,7 +310,13 @@ export default function ProjectsPage() {
         ) : projects.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {projects.map((project) => (
-              <ProjectCard key={project._id || project.id} project={project} />
+              <ProjectCard
+                key={project._id || project.id}
+                project={project}
+                isApplied={appliedIds.has(project._id)}
+                isBookmarked={bookmarkedIds.has(project._id)}
+                onToggleBookmark={user ? handleToggleBookmark : undefined}
+              />
             ))}
           </div>
         ) : (

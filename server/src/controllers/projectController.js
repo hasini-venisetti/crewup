@@ -131,7 +131,7 @@ const createProject = async (req, res, next) => {
 // @access  Public
 const getProjects = async (req, res, next) => {
   try {
-    const { projectType, role, location, isPaid, isRemote, status = 'open', page = 1, limit = 12 } = req.query;
+    const { projectType, role, location, isPaid, isRemote, q, status = 'open', page = 1, limit = 12 } = req.query;
 
     const filter = { status };
     if (projectType) filter.projectType = projectType;
@@ -139,6 +139,10 @@ const getProjects = async (req, res, next) => {
     if (location) filter['location.country'] = new RegExp(location, 'i');
     if (isRemote === 'true') filter['location.isRemote'] = true;
     if (isPaid !== undefined) filter.isPaid = isPaid === 'true';
+    if (q?.trim()) {
+      const rx = new RegExp(q.trim(), 'i');
+      filter.$or = [{ title: rx }, { description: rx }, { requiredRoles: rx }];
+    }
     // Exclude drafts and auto-suspended from public listings
     filter.isDraft = { $ne: true };
     filter.autoSuspended = { $ne: true };

@@ -23,8 +23,11 @@ const LEVEL_CONFIG = {
   advanced:     { label: 'Advanced',     color: '#EA580C', bg: '#FFF7ED' },
 };
 
-export default function ProjectCard({ project }) {
-  const [showReport, setShowReport] = useState(false);
+export default function ProjectCard({ project, isBookmarked = false, onToggleBookmark, isApplied = false }) {
+  const [showReport,  setShowReport]  = useState(false);
+  const [bookmarked,  setBookmarked]  = useState(isBookmarked);
+  const [bmLoading,   setBmLoading]   = useState(false);
+
   const {
     _id, title, description, createdBy, projectType,
     requiredRoles, location, isPaid, createdAt,
@@ -39,6 +42,22 @@ export default function ProjectCard({ project }) {
     const d = Math.floor(h / 24);
     if (d < 7) return `${d}d ago`;
     return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
+  const handleBookmark = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (bmLoading || !onToggleBookmark) return;
+    setBmLoading(true);
+    const next = !bookmarked;
+    setBookmarked(next); // optimistic
+    try {
+      await onToggleBookmark(_id, next);
+    } catch {
+      setBookmarked(!next); // revert on error
+    } finally {
+      setBmLoading(false);
+    }
   };
 
   const isReleased = timelineStage === 'released';
@@ -66,6 +85,13 @@ export default function ProjectCard({ project }) {
         {isReleased && (
           <div className="bg-green-500 text-white text-[10px] font-black tracking-[0.15em] uppercase text-center py-1.5 px-3">
             🚀 Completed · Released
+          </div>
+        )}
+
+        {/* ── Applied badge ── */}
+        {isApplied && (
+          <div className="bg-[#6C63FF]/10 border-b border-[#6C63FF]/20 text-[#5750D4] text-[10px] font-bold tracking-wide uppercase text-center py-1">
+            ✓ Applied
           </div>
         )}
 
@@ -146,6 +172,22 @@ export default function ProjectCard({ project }) {
           </div>
 
         </div>
+
+        {/* ── Bookmark button (top-right, always visible when bookmarked, hover-visible otherwise) ── */}
+        {onToggleBookmark && (
+          <button
+            onClick={handleBookmark}
+            disabled={bmLoading}
+            title={bookmarked ? 'Remove bookmark' : 'Save project'}
+            className={`absolute top-3 right-10 transition-all text-base px-1.5 py-0.5 rounded-lg bg-white/90 border z-10
+              ${bookmarked
+                ? 'opacity-100 text-[#6C63FF] border-[#6C63FF]/30'
+                : 'opacity-0 group-hover:opacity-100 text-[#8b8b86] border-[#e0e0dd] hover:text-[#6C63FF] hover:border-[#6C63FF]/30'
+              } ${bmLoading ? 'opacity-50 cursor-wait' : ''}`}
+          >
+            {bookmarked ? '🔖' : '🔖'}
+          </button>
+        )}
 
         {/* ── One-tap Report button (top-right corner, only visible on hover) ── */}
         <button
