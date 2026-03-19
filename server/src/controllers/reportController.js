@@ -169,6 +169,44 @@ const getAllReports = async (req, res, next) => {
       Report.countDocuments(filter),
     ]);
 
+    // ── Backfill legacy reports that are missing snapshot / reportedUser ──────
+    // Reports created before these fields were added will have empty values.
+    // We attempt a live lookup and also persist the result so it only runs once.
+    await Promise.all(reports.map(async (r) => {
+      if (r.targetSnapshot || r.reportedUser) return; // already filled
+
+      let reportedUser   = null;
+      let targetSnapshot = '';
+
+      try {
+        if (r.targetType === 'film') {
+          const film = await Film.findById(r.targetId).populate('createdBy', '_id name username profileImage').lean();
+          if (film) { reportedUser = film.createdBy; targetSnapshot = film.title || ''; }
+        } else if (r.targetType === 'project') {
+          const project = await Project.findById(r.targetId).populate('postedBy', '_id name username profileImage').lean();
+          if (project) { reportedUser = project.postedBy; targetSnapshot = project.title || ''; }
+        } else if (r.targetType === 'message') {
+          const msg = await Message.findById(r.targetId).populate('sender', '_id name username profileImage').lean();
+          if (msg) { reportedUser = msg.sender; targetSnapshot = (msg.text || '').slice(0, 300); }
+        } else if (r.targetType === 'user') {
+          const u = await User.findById(r.targetId).select('_id name username profileImage').lean();
+          if (u) { reportedUser = u; targetSnapshot = u.name || u.username || ''; }
+        }
+      } catch (_) {}
+
+      // Mutate in-place for the response
+      r.reportedUser   = reportedUser;
+      r.targetSnapshot = targetSnapshot;
+
+      // Persist so we never need to look it up again
+      if (targetSnapshot || reportedUser) {
+        Report.findByIdAndUpdate(r._id, {
+          reportedUser:   reportedUser?._id || null,
+          targetSnapshot,
+        }).catch(() => {});
+      }
+    }));
+
     res.status(200).json({
       success: true,
       data: reports,
