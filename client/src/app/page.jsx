@@ -123,57 +123,87 @@ export default function Home() {
       <section
         ref={heroRef}
         onMouseMove={handleMouseMove}
-        className="relative min-h-[92vh] flex flex-col justify-center bg-[#0e0e0d] overflow-hidden"
+        className="relative min-h-[96vh] flex flex-col justify-center bg-[#0e0e0d] overflow-hidden"
       >
+        {/* Shutter flash — single white burst on page load */}
+        <div className="hero-shutter" />
+
         {/* Letterbox bars */}
         <div className="letterbox-bar-top" />
         <div className="letterbox-bar-bottom" />
 
-        {/* Background image with Ken Burns */}
-        <div className="absolute inset-0">
+        {/* Background image with Ken Burns — wrapped in iris opening */}
+        <div className="hero-iris absolute inset-0">
           <div
             className="absolute inset-0 bg-cover bg-center bg-no-repeat hero-bg-kenburns"
             style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80")' }}
           />
-          <div className="absolute inset-0 bg-black/65" />
+          <div className="absolute inset-0 bg-black/60" />
           <div className="absolute inset-0 hero-vignette" />
         </div>
 
+        {/* Breathing exposure glow */}
+        <div className="hero-exposure" />
+
+        {/* Light leak sweep */}
+        <div className="hero-light-leak" />
+
         {/* Film grain */}
         <div className="film-grain-anim" />
+
         {/* Scanline */}
         <div className="hero-scanline" />
 
         {/* Cursor spotlight */}
         <div
-          className="absolute inset-0 pointer-events-none"
+          className="absolute inset-0 pointer-events-none z-10"
           style={{
-            background: `radial-gradient(circle 520px at ${cursor.x}% ${cursor.y}%, rgba(108,99,255,0.08) 0%, transparent 70%)`,
-            transition: 'background 0.08s ease',
+            background: `radial-gradient(circle 600px at ${cursor.x}% ${cursor.y}%, rgba(108,99,255,0.10) 0%, transparent 65%)`,
+            transition: 'background 0.06s ease',
           }}
         />
 
-        <div className="relative z-10 max-w-6xl mx-auto px-6 py-24 text-center">
+        {/* Film format label — top left */}
+        <div
+          className="cinematic-fade absolute top-6 left-6 z-20 hidden sm:flex items-center gap-2"
+          style={{ animationDelay: '1.9s' }}
+        >
+          <span className="text-[10px] font-mono font-bold text-white/25 tracking-[0.25em] uppercase">2.39 : 1</span>
+          <span className="w-px h-3 bg-white/15" />
+          <span className="text-[10px] font-mono text-white/20 tracking-widest">4K</span>
+        </div>
+
+        {/* Record indicator — top right */}
+        <div
+          className="cinematic-fade absolute top-6 right-6 z-20 hidden sm:flex items-center gap-1.5"
+          style={{ animationDelay: '2s' }}
+        >
+          <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+          <span className="text-[10px] font-mono text-white/25 tracking-widest uppercase">REC</span>
+        </div>
+
+        <div className="relative z-20 max-w-6xl mx-auto px-6 py-28 text-center">
+
           {/* Badge */}
           <div
-            className="cinematic-fade inline-flex items-center gap-2 border border-white/10 bg-white/5 text-white/60 text-xs font-semibold tracking-widest uppercase px-4 py-2 rounded-full mb-10"
-            style={{ animationDelay: '0.8s' }}
+            className="cinematic-fade inline-flex items-center gap-2 border border-white/10 bg-white/5 backdrop-blur-sm text-white/55 text-xs font-semibold tracking-widest uppercase px-4 py-2 rounded-full mb-10"
+            style={{ animationDelay: '1.0s' }}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-[#8b82ff] animate-pulse" />
             Independent Creator Platform
           </div>
 
           {/* Heading */}
-          <h1 className="font-[Playfair_Display] text-5xl md:text-7xl lg:text-8xl text-white leading-[1.15] tracking-[-0.02em] mb-8">
-            <span className="block">
-              <WordReveal text="Where Creators" baseDelay={0.9} />
+          <h1 className="font-[Playfair_Display] text-5xl md:text-7xl lg:text-[88px] text-white leading-[1.1] tracking-[-0.03em] mb-8">
+            <span className="block mb-1">
+              <WordReveal text="Where Creators" baseDelay={1.1} />
             </span>
             <span className="block">
               <WordReveal
                 text="Find Their Team."
-                baseDelay={1.2}
+                baseDelay={1.45}
                 wordStyle={{
-                  background: 'linear-gradient(135deg, #6055de, #8b82ff, #a5b4fc)',
+                  background: 'linear-gradient(135deg, #6055de 0%, #8b82ff 45%, #c4b8ff 100%)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   backgroundClip: 'text',
@@ -184,8 +214,8 @@ export default function Home() {
 
           {/* Subline */}
           <p
-            className="cinematic-fade text-lg md:text-xl text-white/50 max-w-2xl mx-auto mb-12 font-light leading-relaxed"
-            style={{ animationDelay: '1.55s' }}
+            className="cinematic-fade text-lg md:text-xl text-white/45 max-w-2xl mx-auto mb-14 font-light leading-relaxed tracking-wide"
+            style={{ animationDelay: '1.9s' }}
           >
             Post projects with real compensation details, browse by role, and collaborate with directors,
             musicians, editors, and storytellers — all in one place.
@@ -194,17 +224,17 @@ export default function Home() {
           {/* CTAs */}
           <div
             className="cinematic-fade flex flex-col sm:flex-row gap-4 justify-center mb-16"
-            style={{ animationDelay: '1.75s' }}
+            style={{ animationDelay: '2.1s' }}
           >
             <Link
               href={user ? '/create-project' : '/signup'}
-              className="inline-flex items-center justify-center gap-2 bg-[#6055de] hover:bg-[#4d44c8] text-white text-sm font-bold px-8 py-4 rounded-xl transition-all duration-200 shadow-lg shadow-[#6055de]/30 hover:shadow-[#6055de]/50 active:scale-[0.98]"
+              className="inline-flex items-center justify-center gap-2 bg-[#6055de] hover:bg-[#4d44c8] text-white text-sm font-bold px-9 py-4 rounded-xl transition-all duration-300 shadow-xl shadow-[#6055de]/35 hover:shadow-[#6055de]/55 hover:scale-[1.02] active:scale-[0.98]"
             >
               {user ? 'Post a Project' : 'Start a Project'} →
             </Link>
             <Link
               href="/projects"
-              className="inline-flex items-center justify-center gap-2 border border-white/20 text-white/80 hover:border-white/50 hover:text-white text-sm font-semibold px-8 py-4 rounded-xl transition-all duration-200"
+              className="inline-flex items-center justify-center gap-2 border border-white/15 text-white/70 hover:border-white/45 hover:text-white text-sm font-semibold px-9 py-4 rounded-xl transition-all duration-300 backdrop-blur-sm hover:bg-white/5"
             >
               Browse Projects
             </Link>
@@ -213,11 +243,11 @@ export default function Home() {
           {/* Role pills */}
           <div
             className="cinematic-fade flex justify-center flex-wrap gap-2"
-            style={{ animationDelay: '2s' }}
+            style={{ animationDelay: '2.35s' }}
           >
             {['Director', 'Editor', 'Musician', 'Photographer', 'Actor', 'Writer', 'Producer', 'Colorist'].map((role) => (
               <Link key={role} href={`/projects?role=${role}`}
-                className="text-xs text-white/40 px-4 py-1.5 border border-white/10 rounded-full hover:border-white/25 hover:text-white/60 transition-all">
+                className="text-xs text-white/35 px-4 py-1.5 border border-white/8 rounded-full hover:border-white/25 hover:text-white/60 hover:bg-white/5 transition-all duration-200">
                 {role}
               </Link>
             ))}
@@ -225,7 +255,7 @@ export default function Home() {
         </div>
 
         {/* Bottom fade */}
-        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#0e0e0d] to-transparent pointer-events-none" />
+        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#0e0e0d] via-[#0e0e0d]/60 to-transparent pointer-events-none z-10" />
       </section>
 
       {/* ── MARQUEE ── */}

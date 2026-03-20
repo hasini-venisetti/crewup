@@ -148,7 +148,6 @@ const RED_FLAGS = [
 
 const PLATFORM_PROTECTIONS = [
   { icon: '🚨', title: 'Fraud Risk Detection', desc: 'Every project is automatically scanned for fraud signals. High-risk listings are flagged and reviewed by our team.' },
-  { icon: '⚠️', title: 'Scam Keyword Detection', desc: 'Messages containing payment requests or suspicious keywords are flagged in real time and reviewed by our moderation team.' },
   { icon: '🔒', title: 'Minor Account Protection', desc: 'Accounts under 18 are automatically protected — unverified adults cannot initiate contact with minors.' },
   { icon: '✅', title: 'Verified Creator Badge', desc: 'Top creators earn a Verified badge through identity checks, giving you confidence when joining paid projects.' },
   { icon: '⏱️', title: 'Comment Spam Cooldown', desc: 'A cooldown period between comments prevents spam and keeps discussions healthy and constructive.' },
