@@ -284,169 +284,155 @@ h1,h2,h3,h4,h5,h6 {
 }
 
 /* ══════════════════════════════════════════════════════════
-   CINEMATIC ANIMATIONS
+   HERO ANIMATIONS — Gradient Orb Style
 ══════════════════════════════════════════════════════════ */
 
-/* ═══════════════════════════════════════════════════════════════
-   CINEMATIC HERO ANIMATIONS
-═══════════════════════════════════════════════════════════════ */
-
-/* Ken Burns — dramatic slow pan + zoom from bottom-right toward centre */
-@keyframes kenBurns {
-  0%   { transform: scale(1.0)  translate(2%, 1.5%) rotate(0.3deg); }
-  50%  { transform: scale(1.07) translate(-0.5%, 0.5%) rotate(0deg); }
-  100% { transform: scale(1.14) translate(-2%, -1%) rotate(-0.2deg); }
+/* Background photo — slow fade in + gentle Ken Burns */
+@keyframes heroBgReveal {
+  0%   { opacity: 0; transform: scale(1.06) translate(1%, 0.5%); }
+  100% { opacity: 1; transform: scale(1.12) translate(-1%, -0.5%); }
 }
-.hero-bg-kenburns {
-  animation: kenBurns 32s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-  will-change: transform;
+.hero-bg-photo {
+  animation: heroBgReveal 8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  will-change: transform, opacity;
 }
 
-/* Shutter flash — single white flash on open, like a camera shutter */
-@keyframes shutterFlash {
-  0%   { opacity: 1; }
-  8%   { opacity: 0.85; }
-  18%  { opacity: 0; }
-  100% { opacity: 0; }
+/* Floating orb 1 — slow drift */
+@keyframes orbDrift1 {
+  0%   { transform: translate(0, 0)   scale(1); }
+  33%  { transform: translate(30px, -20px) scale(1.05); }
+  66%  { transform: translate(-20px, 15px)  scale(0.97); }
+  100% { transform: translate(0, 0)   scale(1); }
 }
-.hero-shutter {
+/* Floating orb 2 */
+@keyframes orbDrift2 {
+  0%   { transform: translate(0, 0)   scale(1); }
+  40%  { transform: translate(-25px, 20px) scale(1.04); }
+  80%  { transform: translate(15px, -10px)  scale(0.98); }
+  100% { transform: translate(0, 0)   scale(1); }
+}
+.hero-orb-1 {
   position: absolute;
-  inset: 0;
-  background: #fff;
-  z-index: 40;
+  width: 700px; height: 700px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(96,85,222,0.28) 0%, rgba(96,85,222,0.08) 50%, transparent 70%);
+  top: -15%; left: -10%;
+  filter: blur(60px);
   pointer-events: none;
-  animation: shutterFlash 0.9s cubic-bezier(0.4, 0, 0.6, 1) 0.1s forwards;
+  z-index: 2;
+  animation: orbDrift1 18s ease-in-out infinite;
 }
-
-/* Iris opening — radial mask expanding from centre like a lens iris */
-@keyframes irisOpen {
-  0%   { clip-path: circle(0% at 50% 50%); }
-  100% { clip-path: circle(140% at 50% 50%); }
-}
-.hero-iris {
+.hero-orb-2 {
   position: absolute;
-  inset: 0;
-  z-index: 25;
+  width: 600px; height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(139,130,255,0.20) 0%, rgba(108,99,255,0.06) 50%, transparent 70%);
+  bottom: -20%; right: -5%;
+  filter: blur(80px);
   pointer-events: none;
-  animation: irisOpen 1.1s cubic-bezier(0.76, 0, 0.24, 1) 0.05s both;
+  z-index: 2;
+  animation: orbDrift2 22s ease-in-out infinite;
 }
-
-/* Light leak — warm amber streak sweeping left → right once */
-@keyframes lightLeak {
-  0%   { transform: translateX(-120%) skewX(-15deg); opacity: 0; }
-  15%  { opacity: 0.18; }
-  85%  { opacity: 0.12; }
-  100% { transform: translateX(130%) skewX(-15deg); opacity: 0; }
-}
-.hero-light-leak {
+.hero-orb-3 {
   position: absolute;
-  top: -10%;
-  left: 0;
-  width: 45%;
-  height: 120%;
-  background: linear-gradient(105deg,
-    transparent 0%,
-    rgba(255, 180, 60, 0.15) 35%,
-    rgba(255, 220, 120, 0.22) 50%,
-    rgba(255, 180, 60, 0.15) 65%,
-    transparent 100%
-  );
+  width: 350px; height: 350px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(180,160,255,0.12) 0%, transparent 70%);
+  top: 40%; left: 50%;
+  transform: translateX(-50%);
+  filter: blur(50px);
   pointer-events: none;
-  z-index: 8;
-  animation: lightLeak 2.4s cubic-bezier(0.4, 0, 0.2, 1) 1.2s forwards;
+  z-index: 2;
+  animation: orbDrift1 14s ease-in-out 3s infinite reverse;
 }
 
-/* Letterbox bars — thicker, slower, staggered open */
-@keyframes letterboxTop {
-  0%   { transform: translateY(0);    }
-  100% { transform: translateY(-100%); }
+/* Accent line — draws left to right */
+@keyframes lineGrow {
+  0%   { transform: scaleX(0); opacity: 0; }
+  10%  { opacity: 1; }
+  100% { transform: scaleX(1); opacity: 1; }
 }
-@keyframes letterboxBottom {
-  0%   { transform: translateY(0);   }
-  100% { transform: translateY(100%); }
-}
-.letterbox-bar-top {
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 11vh;
-  background: #000;
-  z-index: 30;
-  animation: letterboxTop 1.4s cubic-bezier(0.76, 0, 0.24, 1) 0.5s forwards;
-}
-.letterbox-bar-bottom {
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  height: 11vh;
-  background: #000;
-  z-index: 30;
-  animation: letterboxBottom 1.4s cubic-bezier(0.76, 0, 0.24, 1) 0.5s forwards;
+.hero-accent-line {
+  display: block;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(139,130,255,0.8) 20%, rgba(96,85,222,1) 50%, rgba(139,130,255,0.8) 80%, transparent);
+  transform-origin: left center;
+  animation: lineGrow 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
 }
 
-/* Word reveal — bigger travel distance, slight scale pop */
+/* Word reveal — clean clip + slide up */
 @keyframes wordRevealUp {
-  0%   { transform: translateY(115%) scale(0.97); opacity: 0; }
-  60%  { opacity: 1; }
-  100% { transform: translateY(0)    scale(1);    opacity: 1; }
+  0%   { transform: translateY(100%); opacity: 0; }
+  100% { transform: translateY(0);    opacity: 1; }
 }
 .word-clip-wrap {
   display: inline-block;
   overflow: hidden;
   vertical-align: bottom;
-  padding-bottom: 0.08em;
+  padding-bottom: 0.06em;
 }
 .word-reveal {
   display: inline-block;
   opacity: 0;
-  animation: wordRevealUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: wordRevealUp 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   will-change: transform, opacity;
 }
 
-/* Cinematic fade-in — stronger blur + longer travel */
-@keyframes cinematicFadeIn {
-  0%   { opacity: 0; filter: blur(8px); transform: translateY(18px); }
-  100% { opacity: 1; filter: blur(0);   transform: translateY(0); }
+/* Hero element fade — clean fade up, no blur issues */
+@keyframes heroFadeUp {
+  0%   { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
-.cinematic-fade {
+.hero-fade {
   opacity: 0;
-  animation: cinematicFadeIn 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: heroFadeUp 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Vignette — deeper, more dramatic lens falloff */
-.hero-vignette {
-  background:
-    radial-gradient(ellipse 80% 70% at 50% 50%, transparent 30%, rgba(0,0,0,0.5) 75%, rgba(0,0,0,0.85) 100%);
+/* Subtle grain texture overlay */
+@keyframes grainShift {
+  0%,100% { transform: translate(0, 0); }
+  10%  { transform: translate(-2%, -1%); }
+  20%  { transform: translate(1%, 2%);  }
+  30%  { transform: translate(2%, -1%); }
+  40%  { transform: translate(-1%, 1%); }
+  50%  { transform: translate(-2%, 2%); }
+  60%  { transform: translate(1%, -2%); }
+  70%  { transform: translate(2%, 1%);  }
+  80%  { transform: translate(-1%, 2%); }
+  90%  { transform: translate(1%, -1%); }
 }
-
-/* Exposure pulse — subtle breathing glow after load */
-@keyframes exposurePulse {
-  0%, 100% { opacity: 0.65; }
-  50%       { opacity: 0.8;  }
-}
-.hero-exposure {
+.film-grain-anim {
   position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse 60% 50% at 50% 45%, rgba(108,99,255,0.07) 0%, transparent 70%);
+  inset: -50%;
+  width: 200%; height: 200%;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.035;
   pointer-events: none;
-  z-index: 4;
-  animation: exposurePulse 6s ease-in-out 2s infinite;
+  z-index: 6;
+  animation: grainShift 0.4s steps(1) infinite;
+}
+
+/* Vignette */
+.hero-vignette {
+  background: radial-gradient(ellipse 90% 80% at 50% 50%, transparent 35%, rgba(0,0,0,0.45) 75%, rgba(0,0,0,0.82) 100%);
 }
 
 /* Scroll animations */
 [data-scroll] {
   opacity: 0;
-  transform: translateY(40px);
-  transition: opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateY(36px);
+  transition: opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.75s cubic-bezier(0.16, 1, 0.3, 1);
 }
 [data-scroll="right"] {
   opacity: 0;
-  transform: translateX(48px);
-  transition: opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateX(40px);
+  transition: opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.75s cubic-bezier(0.16, 1, 0.3, 1);
 }
 [data-scroll="fade"] {
   opacity: 0;
-  transition: opacity 1.1s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1);
 }
 [data-scroll].in-view,
 [data-scroll="right"].in-view,
@@ -459,28 +445,13 @@ h1,h2,h3,h4,h5,h6 {
 [data-delay="3"] { transition-delay: 0.34s; }
 [data-delay="4"] { transition-delay: 0.46s; }
 
-/* Section card cinematic entrance */
+/* Section card entrance */
 @keyframes cardRise {
-  0%   { opacity: 0; transform: translateY(44px) scale(0.96); }
+  0%   { opacity: 0; transform: translateY(40px) scale(0.97); }
   100% { opacity: 1; transform: translateY(0)    scale(1); }
 }
 .card-cinematic {
-  animation: cardRise 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-/* Horizontal scan line */
-@keyframes scanLine {
-  0%   { top: -2px; }
-  100% { top: 100%; }
-}
-.hero-scanline {
-  position: absolute;
-  left: 0; right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.09) 40%, rgba(255,255,255,0.09) 60%, transparent 100%);
-  animation: scanLine 10s linear infinite;
-  pointer-events: none;
-  z-index: 5;
+  animation: cardRise 0.75s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* Film grain — more visible, faster flicker */
