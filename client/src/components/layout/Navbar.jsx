@@ -345,6 +345,7 @@ export default function Navbar() {
                 </Link>
                 <Link href="/dashboard" onClick={() => setShowMenu(false)} className="block px-3 py-2.5 rounded-lg text-sm text-white/70 hover:bg-white/10 transition-colors">Dashboard</Link>
                 <Link href={`/profile/${user._id || user.id}`} onClick={() => setShowMenu(false)} className="block px-3 py-2.5 rounded-lg text-sm text-white/70 hover:bg-white/10 transition-colors">My Profile</Link>
+                <Link href="/saved" onClick={() => setShowMenu(false)} className="block px-3 py-2.5 rounded-lg text-sm text-white/70 hover:bg-white/10 transition-colors">🔖 Saved Projects</Link>
                 <Link href="/settings" onClick={() => setShowMenu(false)} className="block px-3 py-2.5 rounded-lg text-sm text-white/70 hover:bg-white/10 transition-colors">Settings</Link>
                 <button onClick={handleLogout} className="block w-full text-left px-3 py-2.5 rounded-lg text-sm text-red-400 hover:bg-red-500/10 transition-colors">Log out</button>
               </>

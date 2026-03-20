@@ -57,7 +57,7 @@ export default function Footer() {
               <li><Link href="/contests"    className={footerLink}>Contests</Link></li>
               <li><Link href="/leaderboard" className={footerLink}>Leaderboard</Link></li>
               <li><Link href="/films"       className={footerLink}>Films</Link></li>
-              <li><Link href="/crew-match"  className={footerLink}>Crew Match</Link></li>
+              <li><Link href="/explore"     className={footerLink}>Crew Match</Link></li>
             </ul>
           </div>
 
