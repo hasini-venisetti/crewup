@@ -357,6 +357,18 @@ function NotificationRow({ notif, timeAgo, onMarkRead, onDelete, onAccept, onDec
               </a>
             </div>
           )}
+
+          {/* Prize claim button for contest_announcement with prize-claim link */}
+          {notif.type === 'contest_announcement' && notif.link?.startsWith('/prize-claim') && (
+            <div className="mt-3">
+              <a
+                href={notif.link}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 px-4 py-2 text-xs font-semibold text-white transition-colors"
+              >
+                💰 Submit Payment Details →
+              </a>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-2 flex-shrink-0">
