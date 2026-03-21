@@ -1921,9 +1921,9 @@ export default function AdminPage() {
     if (!loading && (!user || !user.isAdmin)) router.push('/dashboard');
   }, [user, loading, router]);
 
-  if (loading || !user?.isAdmin) {
-    return <div className="min-h-screen bg-[#fafaf9] flex items-center justify-center"><div className="w-8 h-8 border-2 border-[#6C63FF] border-t-transparent rounded-full animate-spin" /></div>;
-  }
+  // Block render until auth is confirmed — prevents any content flash for non-admins
+  if (loading) return <div className="min-h-screen bg-[#fafaf9] flex items-center justify-center"><div className="w-8 h-8 border-2 border-[#6C63FF] border-t-transparent rounded-full animate-spin" /></div>;
+  if (!user || !user.isAdmin) return null; // redirect fired in useEffect above
 
   return (
     <div className="min-h-screen bg-[#fafaf9]">

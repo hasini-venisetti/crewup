@@ -1,11 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { projectAPI } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
+
+const DRAFT_KEY = 'crewup_create_project_draft';
 
 const ROLES = ['Director','Cinematographer','Editor','Musician','Actor','Photographer','Writer','Producer','Sound Designer','Colorist','VFX Artist','Animator','Scriptwriter','Production Designer','Costume Designer','Makeup Artist'];
 const TYPES = [
@@ -60,26 +62,53 @@ const COMPENSATION_TYPES = [
   { value: 'not-specified', label: '❓ Not Specified',  desc: 'TBD — discuss with applicants' },
 ];
 
+const EMPTY_FORM = {
+  title: '', description: '', projectType: '', requiredRoles: [],
+  isPaid: false, compensationType: '', budget: '', compensationDetails: '',
+  location: { city: '', country: '', isRemote: false },
+  deadline: '', experienceLevel: 'any', projectTags: [],
+  productionType: 'indie',
+  auditionFormat: 'not-applicable',
+  shootingLocationType: 'not-specified',
+  roleDescriptions: {},
+  rolePositions:    {},
+};
+
+function loadSavedDraft() {
+  try {
+    const saved = localStorage.getItem(DRAFT_KEY);
+    return saved ? JSON.parse(saved) : null;
+  } catch { return null; }
+}
+
 export default function CreateProjectPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [draftLoading, setDraftLoading] = useState(false);
   const [roleInput, setRoleInput] = useState('');
+  const [autoSaved, setAutoSaved] = useState(false);
+  const autoSaveTimer = useRef(null);
+  const isFirstRender = useRef(true);
 
-  const [form, setForm] = useState({
-    title: '', description: '', projectType: '', requiredRoles: [],
-    isPaid: false, compensationType: '', budget: '', compensationDetails: '',
-    location: { city: '', country: '', isRemote: false },
-    deadline: '', experienceLevel: 'any', projectTags: [],
-    // Phase 2: Safety fields
-    productionType: 'indie',
-    auditionFormat: 'not-applicable',
-    shootingLocationType: 'not-specified',
-    // Role details
-    roleDescriptions: {},  // { [roleName]: description string }
-    rolePositions:    {},  // { [roleName]: number of spots }
+  const [form, setForm] = useState(() => {
+    const saved = loadSavedDraft();
+    return saved || EMPTY_FORM;
   });
+
+  // Auto-save to localStorage whenever form changes (skip first render)
+  useEffect(() => {
+    if (isFirstRender.current) { isFirstRender.current = false; return; }
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(() => {
+      try {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(form));
+        setAutoSaved(true);
+        setTimeout(() => setAutoSaved(false), 2000);
+      } catch {}
+    }, 1500);
+    return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); };
+  }, [form]);
 
   const set = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
   const setLoc = (field, value) => setForm((prev) => ({ ...prev, location: { ...prev.location, [field]: value } }));
@@ -155,6 +184,7 @@ export default function CreateProjectPage() {
     setDraftLoading(true);
     try {
       const { data } = await projectAPI.create(buildPayload(true));
+      localStorage.removeItem(DRAFT_KEY);
       toast.success('Draft saved! You can publish it anytime from your dashboard.');
       router.push('/dashboard');
     } catch (err) {
@@ -177,6 +207,7 @@ export default function CreateProjectPage() {
     setLoading(true);
     try {
       const { data } = await projectAPI.create(buildPayload(false));
+      localStorage.removeItem(DRAFT_KEY);
       toast.success('🎉 Your project is live! Creators can now apply.');
       router.push(`/projects/${data.data._id}`);
     } catch (err) {
@@ -275,9 +306,20 @@ export default function CreateProjectPage() {
       </div>
 
       <div className="pt-12 pb-20 px-4 max-w-[700px] mx-auto">
-        <Link href="/dashboard" className="text-sm text-[#6b6b66] hover:text-[#111110] mb-8 inline-block transition-colors">
-          ← Back to Dashboard
-        </Link>
+        <div className="flex items-center justify-between mb-8">
+          <Link href="/dashboard" className="text-sm text-[#6b6b66] hover:text-[#111110] transition-colors">
+            ← Back to Dashboard
+          </Link>
+          {autoSaved && (
+            <span className="text-xs text-green-600 font-medium animate-pulse">✓ Auto-saved</span>
+          )}
+          {!autoSaved && loadSavedDraft() && (
+            <button type="button" onClick={() => { localStorage.removeItem(DRAFT_KEY); setForm(EMPTY_FORM); }}
+              className="text-xs text-[#a3a39e] hover:text-red-500 transition-colors">
+              ✕ Clear saved draft
+            </button>
+          )}
+        </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-8">
 

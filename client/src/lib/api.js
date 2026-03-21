@@ -82,6 +82,7 @@ export const applicationAPI = {
   getForProject:  (id)     => api.get(`/applications/${id}`),
   getMine:        ()       => api.get('/applications/my'),
   updateStatus:   (data)   => api.put('/application/status', data),
+  withdraw:       (id)     => api.delete(`/application/${id}`),
 };
 
 /* ── Crew Match ── */
@@ -211,13 +212,14 @@ export const waitlistAPI = {
 
 /* ── Mentor API ── */
 export const mentorAPI = {
-  getAll:           (params)                 => api.get('/mentors', { params }),
-  updateSettings:   (data)                   => api.patch('/mentors/settings', data),
-  updateStatus:     (mentorStatus)           => api.patch('/mentors/settings', { mentorStatus }),
-  apply:            (mentorUserId, message)  => api.post(`/mentors/${mentorUserId}/apply`, { message }),
-  getApplications:  ()                       => api.get('/message-requests'),          // incoming pending requests (as mentor)
-  acceptRequest:    (requestId)              => api.patch(`/mentors/requests/${requestId}/accept`),
-  declineRequest:   (requestId)             => api.patch(`/message-requests/${requestId}/decline`),
+  getAll:              (params)                 => api.get('/mentors', { params }),
+  updateSettings:      (data)                   => api.patch('/mentors/settings', data),
+  updateStatus:        (mentorStatus)           => api.patch('/mentors/settings', { mentorStatus }),
+  apply:               (mentorUserId, message)  => api.post(`/mentors/${mentorUserId}/apply`, { message }),
+  getApplications:     ()                       => api.get('/message-requests'),           // incoming pending requests (as mentor)
+  getSentRequests:     ()                       => api.get('/message-requests/sent'),      // outgoing requests (as mentee)
+  acceptRequest:       (requestId)              => api.patch(`/mentors/requests/${requestId}/accept`),
+  declineRequest:      (requestId)              => api.patch(`/message-requests/${requestId}/decline`),
 };
 
 /* ── Launch Waitlist ── */

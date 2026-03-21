@@ -129,8 +129,19 @@ const updateApplicationStatus = async (req, res, next) => {
           user: application.applicant._id,
           role: application.roleApplyingFor,
         });
-        await project.save();
       }
+
+      // Auto-close project to 'in-progress' if all required roles are now filled
+      if (project.status === 'open' && project.requiredRoles?.length > 0) {
+        const allFilled = project.requiredRoles.every((role) => {
+          const needed = project.rolePositions?.get(role) || 1;
+          const count  = project.teamMembers.filter((m) => m.role === role).length;
+          return count >= needed;
+        });
+        if (allFilled) project.status = 'in-progress';
+      }
+
+      await project.save();
 
       // Create notification for applicant
       await Notification.create({
@@ -201,4 +212,26 @@ const getMyApplications = async (req, res, next) => {
   }
 };
 
-module.exports = { applyToProject, getProjectApplications, updateApplicationStatus, getMyApplications };
+// @desc    Withdraw (delete) my pending application
+// @route   DELETE /api/application/:id
+// @access  Private
+const withdrawApplication = async (req, res, next) => {
+  try {
+    const application = await Application.findById(req.params.id);
+    if (!application) {
+      return res.status(404).json({ success: false, message: 'Application not found' });
+    }
+    if (application.applicant.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+    if (application.status !== 'pending') {
+      return res.status(400).json({ success: false, message: 'Only pending applications can be withdrawn' });
+    }
+    await application.deleteOne();
+    res.status(200).json({ success: true, message: 'Application withdrawn' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { applyToProject, getProjectApplications, updateApplicationStatus, getMyApplications, withdrawApplication };

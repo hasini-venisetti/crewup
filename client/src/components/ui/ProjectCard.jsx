@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import ReportModal from '@/components/ui/ReportModal';
@@ -28,6 +28,12 @@ export default function ProjectCard({ project, isBookmarked = false, onToggleBoo
   const [showReport,  setShowReport]  = useState(false);
   const [bookmarked,  setBookmarked]  = useState(isBookmarked);
   const [bmLoading,   setBmLoading]   = useState(false);
+
+  // Sync with parent when bookmarks load after initial render
+  useEffect(() => {
+    if (!bmLoading) setBookmarked(isBookmarked);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isBookmarked]);
 
   const {
     _id, title, description, createdBy, projectType,

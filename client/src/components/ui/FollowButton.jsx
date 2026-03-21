@@ -94,10 +94,7 @@ export default function FollowButton({ userId, onCountChange }) {
           : 'bg-[#6C63FF] hover:bg-[#7C75FF] text-white shadow-lg shadow-[#6C63FF]/20'
       }`}
     >
-      {busy
-        ? <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mx-auto" />
-        : isFollowing ? '✓ Following' : '+ Follow'
-      }
+      {isFollowing ? '✓ Following' : '+ Follow'}
     </button>
   );
 }

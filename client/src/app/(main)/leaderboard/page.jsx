@@ -25,7 +25,7 @@ const QUICK_FILTERS = [
   { label: 'Editors',     value: 'editor',    icon: '✂️' },
 ];
 
-const PERIODS = ['month', 'all-time'];
+const PERIODS = ['month', 'alltime'];
 
 // How the score is calculated — shown to users
 const SCORE_BREAKDOWN_INFO = [
@@ -361,7 +361,7 @@ export default function LeaderboardPage() {
                   period === p ? 'bg-[#111110] text-white shadow-sm' : 'text-[#6b6b66] hover:text-[#111110] hover:bg-[#fafaf9]'
                 }`}
               >
-                {p === 'all-time' ? <><Trophy size={14} /> All Time</> : <><Calendar size={14} /> This Month</>}
+                {p === 'alltime' ? <><Trophy size={14} /> All Time</> : <><Calendar size={14} /> This Month</>}
               </button>
             ))}
           </div>
@@ -416,6 +416,9 @@ export default function LeaderboardPage() {
                   {role === 'all'
                     ? 'Top Rated Creators'
                     : `Top ${ROLE_OPTIONS.find((r) => r.value === role)?.label || role}s`}
+                  <span className="ml-2 text-xs font-normal text-[#a3a39e]">
+                    — {period === 'alltime' ? 'All Time' : 'This Month'}
+                  </span>
                 </h3>
                 <span className="text-xs text-[#a3a39e]">Click ⓘ to see score breakdown</span>
               </div>

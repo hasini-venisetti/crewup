@@ -386,6 +386,7 @@ function ProjectDetailContent() {
   const [loading, setLoading]                       = useState(true);
   const [showModal, setShowModal]                   = useState(false);
   const [applied, setApplied]                       = useState(false);
+  const [myApplication, setMyApplication]           = useState(null); // full application object
   const [deleting, setDeleting]                     = useState(false);
   const [updatingTimeline, setUpdatingTimeline]     = useState(false);
   const [waitlistRole, setWaitlistRole]             = useState('');
@@ -414,20 +415,20 @@ function ProjectDetailContent() {
             .catch(() => {});
         }
       })
-      .catch(() => router.push('/projects'))
+      .catch(() => {/* project not found — handled by !project check below */})
       .finally(() => setLoading(false));
   }, [id]);
 
-  // Check if logged-in user already applied to this project
+  // Check if logged-in user already applied to this project + get their status
   useEffect(() => {
     if (!user || !id) return;
     applicationAPI.getMine()
       .then(({ data }) => {
         const apps = data.data || [];
-        const alreadyApplied = apps.some(
+        const myApp = apps.find(
           (app) => app.project?._id === id || app.project === id
         );
-        if (alreadyApplied) setApplied(true);
+        if (myApp) { setApplied(true); setMyApplication(myApp); }
       })
       .catch(() => {/* silent — applied state stays false */});
   }, [user, id]);
@@ -548,7 +549,16 @@ function ProjectDetailContent() {
   };
 
   if (loading) return <LoadingSpinner size="lg" className="min-h-screen" />;
-  if (!project) return null;
+  if (!project) return (
+    <div className="min-h-screen flex flex-col items-center justify-center text-center p-8 bg-white">
+      <p className="text-5xl mb-5">🎬</p>
+      <h2 className="font-['Playfair_Display'] text-2xl font-bold text-[#111110] mb-2">Project Not Found</h2>
+      <p className="text-sm text-[#6b6b66] mb-6 max-w-xs">This project may have been removed or the link is invalid.</p>
+      <Link href="/projects" className="rounded-xl bg-[#0e0e0d] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#2d2d2b] transition-colors">
+        Browse Projects
+      </Link>
+    </div>
+  );
 
   const myId        = user?._id || user?.id;
   const isOwner     = !!(user && myId && (project.createdBy?._id === myId || project.createdBy?._id?.toString() === myId));
@@ -671,12 +681,33 @@ function ProjectDetailContent() {
                   {user && <p className="text-xs text-white/40">Join the waitlist for an open role below ↓</p>}
                 </div>
               ) : user ? (
-                <button
-                  onClick={() => { if (checkVerification()) setShowModal(true); }}
-                  disabled={applied}
-                  className="text-sm font-semibold px-6 py-2.5 rounded-lg bg-[#6C63FF] hover:bg-[#7C75FF] text-white shadow-lg shadow-[#6C63FF]/20 transition-all active:scale-[0.98] disabled:opacity-60">
-                  {applied ? '✓ Applied' : 'Apply Now'}
-                </button>
+                applied && myApplication ? (
+                  <div className="flex flex-col items-end gap-1">
+                    <div className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border ${
+                      myApplication.status === 'accepted' ? 'bg-green-50 text-green-700 border-green-200' :
+                      myApplication.status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200' :
+                      'bg-amber-50 text-amber-700 border-amber-200'
+                    }`}>
+                      {myApplication.status === 'accepted' ? '✅' : myApplication.status === 'rejected' ? '❌' : '⏳'}
+                      {' '}Application {myApplication.status === 'rejected' ? 'Declined' : myApplication.status === 'accepted' ? 'Accepted' : 'Pending'}
+                    </div>
+                    {myApplication.status === 'accepted' && (
+                      <Link href={`/projects/${id}/team`}
+                        className="text-xs font-semibold bg-[#6C63FF] text-white px-3 py-1.5 rounded-lg hover:bg-[#5750D4] transition-colors">
+                        👥 Go to Team Dashboard
+                      </Link>
+                    )}
+                    {myApplication.status === 'pending' && (
+                      <p className="text-[11px] text-white/50">We'll notify you when the creator reviews your application.</p>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => { if (checkVerification()) setShowModal(true); }}
+                    className="text-sm font-semibold px-6 py-2.5 rounded-lg bg-[#6C63FF] hover:bg-[#7C75FF] text-white shadow-lg shadow-[#6C63FF]/20 transition-all active:scale-[0.98]">
+                    Apply Now
+                  </button>
+                )
               ) : (
                 <Link href="/login"
                   className="text-sm font-semibold px-6 py-2.5 rounded-lg bg-[#6C63FF] hover:bg-[#7C75FF] text-white transition-all">
@@ -889,14 +920,14 @@ function ProjectDetailContent() {
         <div className="bg-white rounded-2xl border border-[#efefed] p-6 mb-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#a3a39e]">Production Timeline</h2>
-            {(isOwner || isTeamMember) && <p className="text-xs text-[#a3a39e]">Click to update stage</p>}
+            {isOwner && <p className="text-xs text-[#a3a39e]">Click to update stage</p>}
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
             {TIMELINE_STAGES.map((stage, idx) => {
               const cfg       = STAGE_LABELS[stage];
               const isCurrent = project.timelineStage === stage;
               const isPast    = currentStageIdx > idx;
-              const canUpdate = isOwner || isTeamMember;
+              const canUpdate = isOwner;
               return (
                 <button key={stage} disabled={!canUpdate || updatingTimeline}
                   onClick={() => canUpdate && handleUpdateTimeline(stage)}

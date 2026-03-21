@@ -358,6 +358,20 @@ function NotificationRow({ notif, timeAgo, onMarkRead, onDelete, onAccept, onDec
             </div>
           )}
 
+          {/* View Project button for application_accepted / application_declined */}
+          {(notif.type === 'application_accepted' || notif.type === 'application_declined') && notif.link && (
+            <div className="mt-3">
+              <a href={notif.link}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-xs font-semibold transition-colors ${
+                  notif.type === 'application_accepted'
+                    ? 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200'
+                    : 'bg-[#f7f7f6] text-[#6b6b66] hover:bg-[#efefed] border border-[#e0e0dd]'
+                }`}>
+                {notif.type === 'application_accepted' ? '🎬 View Project →' : '🔍 View Project'}
+              </a>
+            </div>
+          )}
+
           {/* Prize claim button for contest_announcement with prize-claim link */}
           {notif.type === 'contest_announcement' && notif.link?.startsWith('/prize-claim') && (
             <div className="mt-3">

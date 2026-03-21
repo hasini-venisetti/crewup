@@ -32,6 +32,7 @@ export default function ProjectsPage() {
   const [roleFilter,    setRoleFilter]    = useState('');
   const [search,        setSearch]        = useState('');
   const [isLoading,     setIsLoading]     = useState(true);
+  const [loadError,     setLoadError]     = useState(false);
   const [showRoles,     setShowRoles]     = useState(false);
   const [appliedIds,    setAppliedIds]    = useState(new Set());
   const [bookmarkedIds, setBookmarkedIds] = useState(new Set());
@@ -58,13 +59,14 @@ export default function ProjectsPage() {
     if (roleFilter)  params.role     = roleFilter;
     if (search.trim()) params.q      = search.trim();
 
+    setLoadError(false);
     projectAPI
       .getAll(params)
       .then((res) => {
         const raw = res.data?.data ?? res.data?.projects ?? [];
         setProjects(Array.isArray(raw) ? raw : []);
       })
-      .catch(() => setProjects([]))
+      .catch(() => { setLoadError(true); setProjects([]); })
       .finally(() => setIsLoading(false));
   }, [activeTab, isPaid, isRemote, roleFilter, search]);
 
@@ -306,6 +308,16 @@ export default function ProjectsPage() {
                 <div className="h-3 bg-[#f5f5f3] rounded w-2/3" />
               </div>
             ))}
+          </div>
+        ) : loadError ? (
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-red-200 bg-red-50 py-20 text-center">
+            <p className="text-4xl mb-4">⚠️</p>
+            <h3 className="font-['Playfair_Display'] text-xl font-bold text-[#111110] mb-2">Couldn't load projects</h3>
+            <p className="text-sm text-[#6b6b66] mb-6 max-w-xs">Something went wrong while fetching projects. Please check your connection and try again.</p>
+            <button onClick={() => { setLoadError(false); setIsLoading(true); }}
+              className="rounded-lg bg-[#0e0e0d] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#2d2d2b] transition-colors">
+              Try Again
+            </button>
           </div>
         ) : projects.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

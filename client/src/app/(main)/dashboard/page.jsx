@@ -281,9 +281,10 @@ export default function DashboardPage() {
   const [incomingApps,   setIncomingApps]   = useState({});
   const [followingFeed,  setFollowingFeed]  = useState([]);
   const [myReviews,      setMyReviews]      = useState([]);
-  const [isMentor,       setIsMentor]       = useState(false);
-  const [mentorApps,     setMentorApps]     = useState([]);
-  const [savedProjects,  setSavedProjects]  = useState([]);
+  const [isMentor,           setIsMentor]           = useState(false);
+  const [mentorApps,         setMentorApps]         = useState([]);
+  const [sentMentorRequests, setSentMentorRequests] = useState([]);
+  const [savedProjects,      setSavedProjects]      = useState([]);
 
   /* ── loading states ── */
   const [dataLoading, setDataLoading] = useState(true);
@@ -319,7 +320,9 @@ export default function DashboardPage() {
         catch { incoming[p._id] = []; }
       }));
       setIncomingApps(incoming);
-    } catch { toast.error('Failed to load dashboard.'); }
+    } catch {
+      toast.error('Failed to load dashboard. Please refresh the page.');
+    }
     finally { setDataLoading(false); }
   }, [user]);
 
@@ -354,6 +357,9 @@ export default function DashboardPage() {
         mentorAPI.getApplications().then(({ data: d }) => setMentorApps(d.data || [])).catch(() => {});
       }
     }).catch(() => {});
+
+    // Sent mentorship requests (mentee side)
+    mentorAPI.getSentRequests().then(({ data: d }) => setSentMentorRequests(d.data || [])).catch(() => {});
   }, [user, fetchAll]);
 
   /* ── Decision handlers ── */
@@ -367,6 +373,16 @@ export default function DashboardPage() {
 
   const handleMentorDecision = (requestId) => {
     setMentorApps((prev) => prev.filter((r) => r._id !== requestId));
+  };
+
+  const handleWithdraw = async (appId) => {
+    try {
+      await applicationAPI.withdraw(appId);
+      setMyApplications((prev) => prev.filter((a) => a._id !== appId));
+      toast.success('Application withdrawn.');
+    } catch {
+      toast.error('Could not withdraw application.');
+    }
   };
 
   /* ── Derived values ── */
@@ -615,6 +631,13 @@ export default function DashboardPage() {
                         <span className={`text-xs font-semibold px-2.5 py-1 rounded-full inline-flex items-center gap-1 ${STATUS_BADGE[app.status]}`}>
                           {STATUS_ICON[app.status]} {app.status}
                         </span>
+                        {app.status === 'pending' && (
+                          <button
+                            onClick={() => handleWithdraw(app._id)}
+                            className="text-xs font-semibold text-gray-500 bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors whitespace-nowrap">
+                            Withdraw
+                          </button>
+                        )}
                         {app.status === 'accepted' && app.project?.timelineStage !== 'released' && (
                           <Link href={`/projects/${app.project?._id}/team`}
                             className="text-xs font-semibold bg-[#0e0e0d] text-white px-3 py-1.5 rounded-lg hover:bg-[#2d2d2b] transition-colors whitespace-nowrap">
@@ -639,6 +662,48 @@ export default function DashboardPage() {
                 </div>
               )}
             </section>
+
+            {/* ── MENTORSHIP REQUESTS SENT (mentee side) ── */}
+            {sentMentorRequests.length > 0 && (
+              <section>
+                <SectionHeader icon="🎓" title="Mentorship Requests" count={sentMentorRequests.filter((r) => r.status === 'pending').length || undefined} />
+                <div className="bg-white rounded-2xl border border-[#efefed] overflow-hidden">
+                  {sentMentorRequests.map((req) => {
+                    const mentor = req.recipient;
+                    const statusBadge = {
+                      pending:  'bg-amber-50 text-amber-700 border border-amber-200',
+                      accepted: 'bg-green-50 text-green-700 border border-green-200',
+                      declined: 'bg-red-50 text-red-700 border border-red-200',
+                    }[req.status] || 'bg-gray-50 text-gray-600';
+                    const statusIcon = { pending: '⏳', accepted: '✅', declined: '❌' }[req.status] || '🔔';
+                    return (
+                      <div key={req._id}
+                        className="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4 border-b border-[#f5f5f3] last:border-0 hover:bg-[#fafaf9] transition-colors">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-sm text-[#111110]">
+                            {mentor?.name || 'Mentor'}
+                          </p>
+                          <p className="text-xs text-[#6b6b66] mt-0.5">
+                            {req.message ? `"${req.message.slice(0, 80)}${req.message.length > 80 ? '…' : ''}"` : 'Mentorship request'}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full inline-flex items-center gap-1 ${statusBadge}`}>
+                            {statusIcon} {req.status}
+                          </span>
+                          {req.status === 'accepted' && (
+                            <Link href="/messages"
+                              className="text-xs font-semibold bg-[#0e0e0d] text-white px-3 py-1.5 rounded-lg hover:bg-[#2d2d2b] transition-colors whitespace-nowrap">
+                              💬 Chat
+                            </Link>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
 
             {/* ── MENTORSHIP (if mentor) ── */}
             {isMentor && (
