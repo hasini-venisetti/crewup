@@ -1705,7 +1705,6 @@ const TABS = [
   { id: 'contests',      label: '🏆 Contests' },
   { id: 'voting',        label: '🗳 Voting' },
   { id: 'announcements', label: '📢 Announcements' },
-  { id: 'reports',       label: '🚩 Reports (Legacy)' },
   { id: 'waitlist',      label: '✉️ Waitlist' },
 ];
 
@@ -1772,7 +1771,6 @@ export default function AdminPage() {
         {tab === 'contests'      && <ContestsTab />}
         {tab === 'voting'        && <VotingTab />}
         {tab === 'announcements' && <AnnouncementsTab />}
-        {tab === 'reports'       && <ReportsTab />}
         {tab === 'waitlist'      && <WaitlistTab />}
       </div>
     </div>
