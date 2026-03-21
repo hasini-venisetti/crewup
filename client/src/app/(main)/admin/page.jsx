@@ -1590,10 +1590,14 @@ const REPORT_REASON_LABEL = {
 };
 
 function ReportQueueTab() {
-  const [reports, setReports]   = useState([]);
-  const [loading, setLoading]   = useState(true);
+  const [reports, setReports]     = useState([]);
+  const [loading, setLoading]     = useState(true);
   const [statusFilter, setStatus] = useState('pending');
-  const [actingId, setActingId] = useState(null);
+  const [actingId, setActingId]   = useState(null);
+  const [modal,    setModal]      = useState(null);
+  const [note,     setNote]       = useState('');
+  const [warnUser, setWarnUser]   = useState(false);
+  const [suspendAcc, setSuspendAcc] = useState(false);
 
   const load = useCallback(async (s) => {
     setLoading(true);
@@ -1606,11 +1610,27 @@ function ReportQueueTab() {
 
   useEffect(() => { load(statusFilter); }, [statusFilter]);
 
-  const resolve = async (id, action) => {
-    setActingId(id);
+  const openModal = (report, action) => { setModal({ report, action }); setNote(''); setWarnUser(false); setSuspendAcc(false); };
+
+  const resolve = async () => {
+    if (!modal) return;
+    setActingId(modal.report._id);
     try {
-      await reportAPI.resolve(id, action);
-      setReports((prev) => prev.filter((r) => r._id !== id));
+      await reportAPI.resolve(modal.report._id, modal.action, note.trim(), warnUser);
+      if (suspendAcc && modal.report.reportedUser?._id) {
+        await adminAPI.suspendUser(modal.report.reportedUser._id, true);
+      }
+      setReports((prev) => prev.filter((r) => r._id !== modal.report._id));
+      setModal(null);
+    } catch {}
+    finally { setActingId(null); }
+  };
+
+  const reopen = async (report) => {
+    setActingId(report._id);
+    try {
+      await reportAPI.resolve(report._id, 'pending', '', false);
+      setReports((prev) => prev.map((r) => r._id === report._id ? { ...r, status: 'pending' } : r));
     } catch {}
     finally { setActingId(null); }
   };
@@ -1668,24 +1688,25 @@ function ReportQueueTab() {
                         <p className="text-xs text-[#6b6b66] italic mt-1">"{r.details}"</p>
                       )}
                     </div>
-                    {statusFilter === 'pending' && (
-                      <div className="flex gap-2 flex-shrink-0">
-                        <button
-                          onClick={() => resolve(r._id, 'reviewed')}
-                          disabled={actingId === r._id}
-                          className="px-3 py-1.5 text-xs font-semibold bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50"
-                        >
-                          ✓ Reviewed
+                    <div className="flex gap-2 flex-shrink-0">
+                      {statusFilter === 'pending' ? (
+                        <>
+                          <button onClick={() => openModal(r, 'reviewed')} disabled={actingId === r._id}
+                            className="px-3 py-1.5 text-xs font-semibold bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50">
+                            ✓ Reviewed
+                          </button>
+                          <button onClick={() => openModal(r, 'dismissed')} disabled={actingId === r._id}
+                            className="px-3 py-1.5 text-xs font-semibold bg-[#f5f5f3] text-[#6b6b66] border border-[#e0e0dd] rounded-lg hover:border-[#111110] hover:text-[#111110] transition disabled:opacity-50">
+                            Dismiss
+                          </button>
+                        </>
+                      ) : (
+                        <button onClick={() => reopen(r)} disabled={actingId === r._id}
+                          className="px-3 py-1.5 text-xs font-semibold border border-[#e0e0dd] text-[#6b6b66] rounded-lg hover:border-[#111110] hover:text-[#111110] transition disabled:opacity-50">
+                          Reopen
                         </button>
-                        <button
-                          onClick={() => resolve(r._id, 'dismissed')}
-                          disabled={actingId === r._id}
-                          className="px-3 py-1.5 text-xs font-semibold bg-[#f5f5f3] text-[#6b6b66] border border-[#e0e0dd] rounded-lg hover:border-[#111110] hover:text-[#111110] transition disabled:opacity-50"
-                        >
-                          Dismiss
-                        </button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
               );
@@ -1693,6 +1714,54 @@ function ReportQueueTab() {
           </div>
         )}
       </div>
+
+      {/* Resolution Modal */}
+      {modal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <h3 className="font-bold text-[#111110] mb-1">
+              {modal.action === 'reviewed' ? '✅ Mark as Reviewed' : '🗑 Dismiss Report'}
+            </h3>
+            <p className="text-xs text-[#6b6b66] mb-4">
+              Reported: <span className="font-semibold text-[#111110]">{modal.report.reportedUser?.name || modal.report.reportedUser?.email || 'Unknown user'}</span>
+            </p>
+            <textarea
+              value={note} onChange={(e) => setNote(e.target.value)}
+              placeholder="Resolution note (optional)..."
+              className="w-full border border-[#e0e0dd] rounded-xl px-3 py-2 text-sm resize-none focus:outline-none focus:border-[#6C63FF] mb-3"
+              rows={3}
+            />
+            <div className="flex flex-col gap-2 mb-5">
+              <button onClick={() => setWarnUser((v) => !v)}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
+                  warnUser ? 'bg-amber-50 border-amber-300 text-amber-800' : 'border-[#e0e0dd] text-[#444442] hover:bg-[#f7f7f6]'
+                }`}>
+                <span className="text-lg">{warnUser ? '✅' : '⬜'}</span>
+                ⚠️ Send warning to user
+              </button>
+              <button onClick={() => setSuspendAcc((v) => !v)}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
+                  suspendAcc ? 'bg-red-50 border-red-300 text-red-800' : 'border-[#e0e0dd] text-[#444442] hover:bg-[#f7f7f6]'
+                }`}>
+                <span className="text-lg">{suspendAcc ? '✅' : '⬜'}</span>
+                🚫 Suspend user account
+              </button>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setModal(null)}
+                className="flex-1 px-4 py-2.5 text-sm font-semibold border border-[#e0e0dd] text-[#6b6b66] rounded-xl hover:border-[#111110] hover:text-[#111110] transition">
+                Cancel
+              </button>
+              <button onClick={resolve} disabled={!!actingId}
+                className={`flex-1 px-4 py-2.5 text-sm font-semibold text-white rounded-xl transition disabled:opacity-50 ${
+                  suspendAcc ? 'bg-red-600 hover:bg-red-700' : modal.action === 'reviewed' ? 'bg-green-600 hover:bg-green-700' : 'bg-[#444442] hover:bg-[#0e0e0d]'
+                }`}>
+                {actingId ? 'Processing…' : 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
