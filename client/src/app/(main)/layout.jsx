@@ -1,6 +1,7 @@
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import ChatBot from '@/components/ui/ChatBot';
+import ScrollToTop from '@/components/ui/ScrollToTop';
 
 export default function MainLayout({ children }) {
   return (
@@ -11,6 +12,7 @@ export default function MainLayout({ children }) {
       </main>
       <Footer />
       <ChatBot />
+      <ScrollToTop />
     </div>
   );
 }
