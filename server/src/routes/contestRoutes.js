@@ -3,7 +3,8 @@ const { protect }   = require('../middleware/auth');
 const { adminOnly } = require('../middleware/admin');
 const {
   getContests, getContest,
-  createContest, updateContest, endContest, setWinners, deleteContest, submitPrizeClaim,
+  createContest, updateContest, endContest, setWinners, deleteContest,
+  submitPrizeClaim, getPrizeClaims, markClaimProcessed,
 } = require('../controllers/contestController');
 const {
   getSubmissions, getLeaderboard, checkEligibility,
@@ -22,7 +23,9 @@ router.put('/:id',           protect, adminOnly, updateContest);
 router.patch('/:id/end',     protect, adminOnly, endContest);
 router.patch('/:id/winners',     protect, adminOnly, setWinners);
 router.delete('/:id',            protect, adminOnly, deleteContest);
-router.post('/:id/prize-claim',  protect, submitPrizeClaim);
+router.post('/:id/prize-claim',              protect,              submitPrizeClaim);
+router.get('/:id/prize-claims',              protect, adminOnly,   getPrizeClaims);
+router.patch('/:id/prize-claims/:claimId',   protect, adminOnly,   markClaimProcessed);
 
 // Submissions
 router.get( '/:id/submissions',                  getSubmissions);

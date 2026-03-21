@@ -300,6 +300,9 @@ function ContestsTab() {
   const [expandedVotes, setExpandedVotes] = useState({});
   const [votingData, setVotingData] = useState({});
   const [votingLoading, setVotingLoading] = useState({});
+  const [prizeClaims, setPrizeClaims] = useState({});
+  const [claimsLoading, setClaimsLoading] = useState({});
+  const [expandedClaims, setExpandedClaims] = useState({});
 
   const toggleVotes = async (contestId) => {
     if (expandedVotes[contestId]) {
@@ -320,6 +323,27 @@ function ContestsTab() {
     const top = votingData[c._id]?.[0];
     setWinnerModal(c);
     setWinnerInputs([{ userId: top?.submittedBy?._id || '', placement: 1, note: `Top voted: ${top?.title || ''}` }]);
+  };
+
+  const toggleClaims = async (contestId) => {
+    if (expandedClaims[contestId]) { setExpandedClaims((prev) => ({ ...prev, [contestId]: false })); return; }
+    setExpandedClaims((prev) => ({ ...prev, [contestId]: true }));
+    setClaimsLoading((prev) => ({ ...prev, [contestId]: true }));
+    try {
+      const { data } = await contestAPI.getPrizeClaims(contestId);
+      setPrizeClaims((prev) => ({ ...prev, [contestId]: data.data || [] }));
+    } catch {}
+    finally { setClaimsLoading((prev) => ({ ...prev, [contestId]: false })); }
+  };
+
+  const markProcessed = async (contestId, claimId) => {
+    try {
+      await contestAPI.markClaimProcessed(contestId, claimId);
+      setPrizeClaims((prev) => ({
+        ...prev,
+        [contestId]: prev[contestId].map((c) => c._id === claimId ? { ...c, status: 'processed' } : c),
+      }));
+    } catch {}
   };
 
   useEffect(() => {
@@ -553,6 +577,9 @@ function ContestsTab() {
                   <button onClick={() => toggleVotes(c._id)} className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${expandedVotes[c._id] ? 'border-[#6C63FF] bg-[#f0eeff] text-[#6C63FF]' : 'border-[#e0e0dd] text-[#6b6b66] hover:bg-[#f7f7f6]'}`}>
                     🗳 Votes
                   </button>
+                  <button onClick={() => toggleClaims(c._id)} className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${expandedClaims[c._id] ? 'border-amber-400 bg-amber-50 text-amber-700' : 'border-[#e0e0dd] text-[#6b6b66] hover:bg-[#f7f7f6]'}`}>
+                    💰 Claims {prizeClaims[c._id]?.length > 0 && `(${prizeClaims[c._id].length})`}
+                  </button>
                   {c.status === 'open' && (
                     <button onClick={() => handleEnd(c._id)} className="text-xs px-3 py-1.5 rounded-lg border border-orange-200 text-orange-700 hover:bg-orange-50 transition-colors">End</button>
                   )}
@@ -594,6 +621,45 @@ function ContestsTab() {
                           </div>
                         ))}
                       </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Prize Claims Section */}
+              {expandedClaims[c._id] && (
+                <div className="mt-4 border-t border-[#efefed] pt-4">
+                  <p className="text-xs font-bold text-[#6b6b66] uppercase tracking-[0.1em] mb-3">💰 Prize Claims</p>
+                  {claimsLoading[c._id] ? (
+                    <div className="space-y-2">{[1,2].map((i) => <div key={i} className="h-16 bg-[#f5f5f3] rounded-xl animate-pulse" />)}</div>
+                  ) : !prizeClaims[c._id]?.length ? (
+                    <p className="text-sm text-[#a3a39e] text-center py-4">No prize claims submitted yet.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {prizeClaims[c._id].map((claim) => (
+                        <div key={claim._id} className={`rounded-xl border p-4 ${claim.status === 'processed' ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0 space-y-1">
+                              <p className="text-sm font-semibold text-[#111110]">{claim.fullName} <span className="font-normal text-[#6b6b66]">(@{claim.user?.username})</span></p>
+                              <p className="text-xs text-[#444442]">📱 <span className="font-medium">Phone:</span> {claim.phone}</p>
+                              <p className="text-xs text-[#444442]">💳 <span className="font-medium">UPI ID:</span> {claim.upiId}</p>
+                              {claim.bankDetails && <p className="text-xs text-[#444442]">🏦 <span className="font-medium">Bank:</span> {claim.bankDetails}</p>}
+                              {claim.notes && <p className="text-xs text-[#6b6b66] italic">Note: {claim.notes}</p>}
+                              <p className="text-[11px] text-[#a3a39e]">{new Date(claim.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                            </div>
+                            <div className="flex-shrink-0">
+                              {claim.status === 'processed' ? (
+                                <span className="text-xs font-bold text-green-700 bg-green-100 px-2.5 py-1 rounded-full">✅ Processed</span>
+                              ) : (
+                                <button onClick={() => markProcessed(c._id, claim._id)}
+                                  className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white transition-colors">
+                                  Mark Processed
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>

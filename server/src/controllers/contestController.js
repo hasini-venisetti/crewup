@@ -3,6 +3,7 @@ const User               = require('../models/User');
 const Notification       = require('../models/Notification');
 const ContestSubmission  = require('../models/ContestSubmission');
 const Project            = require('../models/Project');
+const PrizeClaim         = require('../models/PrizeClaim');
 
 // GET /api/contests
 const getContests = async (req, res, next) => {
@@ -149,17 +150,21 @@ const submitPrizeClaim = async (req, res, next) => {
     const isWinner = contest.winners?.some((w) => w.user?.toString() === req.user._id.toString());
     if (!isWinner) return res.status(403).json({ success: false, message: 'You are not a winner of this contest.' });
 
-    // Notify all admins with the submitted details
-    const admins = await User.find({ role: 'admin' }).select('_id');
-    const detailsMessage = `Winner: ${req.user.name} (@${req.user.username})\nPhone: ${phone}\nUPI ID: ${upiId}\nBank Details: ${bankDetails || 'Not provided'}\nNotes: ${notes || 'None'}`;
+    // Save to DB
+    const existing = await PrizeClaim.findOne({ contest: contest._id, user: req.user._id });
+    if (existing) {
+      await PrizeClaim.findByIdAndUpdate(existing._id, { fullName, phone, upiId, bankDetails, notes, status: 'pending' });
+    } else {
+      await PrizeClaim.create({ contest: contest._id, user: req.user._id, fullName, phone, upiId, bankDetails, notes });
+    }
 
+    // Notify all admins
+    const admins = await User.find({ role: 'admin' }).select('_id');
     for (const admin of admins) {
       await Notification.create({
-        recipient: admin._id,
-        sender: req.user._id,
-        type: 'contest_announcement',
+        recipient: admin._id, sender: req.user._id, type: 'contest_announcement',
         title: `💰 Prize Claim — ${req.user.name} for "${contest.title}"`,
-        message: detailsMessage,
+        message: `${req.user.name} has submitted payment details. View in Admin → Contests.`,
         link: '/admin?tab=contests',
       });
     }
@@ -168,4 +173,30 @@ const submitPrizeClaim = async (req, res, next) => {
   } catch (e) { next(e); }
 };
 
-module.exports = { getContests, getContest, createContest, updateContest, endContest, setWinners, deleteContest, submitPrizeClaim };
+// GET /api/contests/:id/prize-claims  (admin only)
+const getPrizeClaims = async (req, res, next) => {
+  try {
+    const claims = await PrizeClaim.find({ contest: req.params.id })
+      .populate('user', 'name username profileImage')
+      .sort({ createdAt: -1 });
+    res.json({ success: true, data: claims });
+  } catch (e) { next(e); }
+};
+
+// PATCH /api/contests/:id/prize-claims/:claimId  (admin marks as processed)
+const markClaimProcessed = async (req, res, next) => {
+  try {
+    const claim = await PrizeClaim.findByIdAndUpdate(req.params.claimId, { status: 'processed' }, { new: true })
+      .populate('user', 'name username');
+    // Notify the winner
+    await Notification.create({
+      recipient: claim.user._id, sender: req.user._id, type: 'contest_announcement',
+      title: '✅ Your prize has been processed!',
+      message: `Your prize payment for the contest has been sent. Check your UPI / bank account.`,
+      link: '/notifications',
+    });
+    res.json({ success: true, data: claim });
+  } catch (e) { next(e); }
+};
+
+module.exports = { getContests, getContest, createContest, updateContest, endContest, setWinners, deleteContest, submitPrizeClaim, getPrizeClaims, markClaimProcessed };
