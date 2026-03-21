@@ -43,7 +43,6 @@ const PROJECT_TAGS = [
   { value: 'learning-project',       label: '📚 Learning Project',    desc: 'Great for newcomers to practice' },
   { value: 'practice-collaboration', label: '🤝 Practice Collab',     desc: 'Low-stakes team building' },
   { value: 'portfolio-building',     label: '🎨 Portfolio Building',  desc: 'Build your reel together' },
-  { value: 'mentorship-available',   label: '🎓 Mentorship Available', desc: 'Experienced lead will guide' },
   { value: 'paid-opportunity',       label: '💰 Paid Opportunity',    desc: 'Compensation offered' },
 ];
 const LEVELS = [
