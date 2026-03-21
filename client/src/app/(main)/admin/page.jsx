@@ -297,6 +297,30 @@ function ContestsTab() {
   const [saving, setSaving]       = useState(false);
   const [winnerModal, setWinnerModal] = useState(null);
   const [winnerInputs, setWinnerInputs] = useState([{ userId: '', placement: 1, note: '' }]);
+  const [expandedVotes, setExpandedVotes] = useState({});
+  const [votingData, setVotingData] = useState({});
+  const [votingLoading, setVotingLoading] = useState({});
+
+  const toggleVotes = async (contestId) => {
+    if (expandedVotes[contestId]) {
+      setExpandedVotes((prev) => ({ ...prev, [contestId]: false }));
+      return;
+    }
+    setExpandedVotes((prev) => ({ ...prev, [contestId]: true }));
+    if (votingData[contestId]) return;
+    setVotingLoading((prev) => ({ ...prev, [contestId]: true }));
+    try {
+      const { data } = await contestSubmissionAPI.getLeaderboard(contestId);
+      setVotingData((prev) => ({ ...prev, [contestId]: data.data || [] }));
+    } catch {}
+    finally { setVotingLoading((prev) => ({ ...prev, [contestId]: false })); }
+  };
+
+  const announceWinner = (c) => {
+    const top = votingData[c._id]?.[0];
+    setWinnerModal(c);
+    setWinnerInputs([{ userId: top?.submittedBy?._id || '', placement: 1, note: `Top voted: ${top?.title || ''}` }]);
+  };
 
   useEffect(() => {
     contestAPI.getAll()
@@ -526,16 +550,54 @@ function ContestsTab() {
                 </div>
                 <div className="flex flex-col gap-1.5 flex-shrink-0">
                   <button onClick={() => openEdit(c)} className="text-xs px-3 py-1.5 rounded-lg border border-[#e0e0dd] text-[#6b6b66] hover:bg-[#f7f7f6] transition-colors">Edit</button>
+                  <button onClick={() => toggleVotes(c._id)} className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${expandedVotes[c._id] ? 'border-[#6C63FF] bg-[#f0eeff] text-[#6C63FF]' : 'border-[#e0e0dd] text-[#6b6b66] hover:bg-[#f7f7f6]'}`}>
+                    🗳 Votes
+                  </button>
                   {c.status === 'open' && (
-                    <>
-                      <button onClick={() => { setWinnerModal(c); setWinnerInputs([{ userId: '', placement: 1, note: '' }]); }}
-                        className="text-xs px-3 py-1.5 rounded-lg border border-amber-200 text-amber-700 hover:bg-amber-50 transition-colors">Winners</button>
-                      <button onClick={() => handleEnd(c._id)} className="text-xs px-3 py-1.5 rounded-lg border border-orange-200 text-orange-700 hover:bg-orange-50 transition-colors">End</button>
-                    </>
+                    <button onClick={() => handleEnd(c._id)} className="text-xs px-3 py-1.5 rounded-lg border border-orange-200 text-orange-700 hover:bg-orange-50 transition-colors">End</button>
                   )}
                   <button onClick={() => handleDelete(c._id)} className="text-xs px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors">Delete</button>
                 </div>
               </div>
+
+              {/* Inline Voting Results */}
+              {expandedVotes[c._id] && (
+                <div className="mt-4 border-t border-[#efefed] pt-4">
+                  {votingLoading[c._id] ? (
+                    <div className="space-y-2">{[1,2,3].map((i) => <div key={i} className="h-10 bg-[#f5f5f3] rounded-xl animate-pulse" />)}</div>
+                  ) : !votingData[c._id]?.length ? (
+                    <p className="text-sm text-[#a3a39e] text-center py-4">No submissions yet.</p>
+                  ) : (
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-xs font-bold text-[#6b6b66] uppercase tracking-[0.1em]">🗳 Vote Rankings</p>
+                        <button onClick={() => announceWinner(c)}
+                          className="text-xs px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-semibold transition-colors">
+                          🏆 Announce Winner
+                        </button>
+                      </div>
+                      <div className="space-y-2">
+                        {votingData[c._id].map((sub, idx) => (
+                          <div key={sub._id} className={`flex items-center gap-3 px-3 py-2 rounded-xl ${idx === 0 ? 'bg-amber-50 border border-amber-200' : 'bg-[#fafaf9] border border-[#efefed]'}`}>
+                            <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                              idx === 0 ? 'bg-amber-400 text-amber-900' : idx === 1 ? 'bg-gray-200 text-gray-600' : idx === 2 ? 'bg-orange-300 text-orange-800' : 'bg-[#f0eeff] text-[#6C63FF]'
+                            }`}>{idx + 1}</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-semibold text-[#111110] truncate">{sub.title}</p>
+                              <p className="text-[11px] text-[#a3a39e]">{sub.submittedBy?.name} · @{sub.submittedBy?.username}</p>
+                            </div>
+                            <div className="flex items-center gap-3 text-xs text-[#6b6b66] flex-shrink-0">
+                              <span className="font-bold text-[#6C63FF]">🗳 {sub.voteCount ?? sub.votes?.length ?? 0}</span>
+                              <span>♥ {sub.likeCount ?? sub.likes?.length ?? 0}</span>
+                              {sub.youtubeLink && <a href={sub.youtubeLink} target="_blank" rel="noopener noreferrer" className="text-[#6C63FF] hover:underline font-semibold">Watch ↗</a>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -1772,7 +1834,6 @@ const TABS = [
   { id: 'report-queue',  label: '⚑ Report Queue' },
   { id: 'users',         label: '👥 Users' },
   { id: 'contests',      label: '🏆 Contests' },
-  { id: 'voting',        label: '🗳 Voting' },
   { id: 'announcements', label: '📢 Announcements' },
   { id: 'waitlist',      label: '✉️ Waitlist' },
 ];
@@ -1838,7 +1899,6 @@ export default function AdminPage() {
         {tab === 'report-queue'  && <ReportQueueTab />}
         {tab === 'users'         && <UsersTab />}
         {tab === 'contests'      && <ContestsTab />}
-        {tab === 'voting'        && <VotingTab />}
         {tab === 'announcements' && <AnnouncementsTab />}
         {tab === 'waitlist'      && <WaitlistTab />}
       </div>
