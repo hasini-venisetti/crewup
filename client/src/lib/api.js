@@ -268,8 +268,9 @@ export const contestAPI = {
   create:     (data)     => api.post('/contests', data),
   update:     (id, data) => api.put(`/contests/${id}`, data),
   end:        (id)       => api.patch(`/contests/${id}/end`),
-  setWinners: (id, data) => api.patch(`/contests/${id}/winners`, data),
-  delete:     (id)       => api.delete(`/contests/${id}`),
+  setWinners:      (id, data) => api.patch(`/contests/${id}/winners`, data),
+  delete:          (id)       => api.delete(`/contests/${id}`),
+  submitPrizeClaim:(id, data) => api.post(`/contests/${id}/prize-claim`, data),
 };
 
 /* ── Contest Submissions ── */

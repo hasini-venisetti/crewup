@@ -112,9 +112,9 @@ const setWinners = async (req, res, next) => {
           if (ownerId) {
             await Notification.create({
               recipient: ownerId, sender: req.user._id, type: 'contest_announcement',
-              title: `💰 Payment Details Required — "${contest.title}"`,
-              message: `Congratulations! Your team placed #${w.placement}. To process your prize, please reply to crewupfilms@gmail.com with your full name, phone number, UPI ID, and bank details.`,
-              link: '/messages',
+              title: `💰 Submit Your Payment Details — "${contest.title}"`,
+              message: `Congratulations! Your team placed #${w.placement}. Click here to securely submit your payment details (phone, UPI ID, bank info) to receive your prize.`,
+              link: `/prize-claim/${contest._id}`,
             });
           }
         }
@@ -134,4 +134,38 @@ const deleteContest = async (req, res, next) => {
   } catch (e) { next(e); }
 };
 
-module.exports = { getContests, getContest, createContest, updateContest, endContest, setWinners, deleteContest };
+// POST /api/contests/:id/prize-claim  (winner submits payment details)
+const submitPrizeClaim = async (req, res, next) => {
+  try {
+    const { fullName, phone, upiId, bankDetails, notes } = req.body;
+    if (!fullName || !phone || !upiId) {
+      return res.status(400).json({ success: false, message: 'Full name, phone, and UPI ID are required.' });
+    }
+
+    const contest = await Contest.findById(req.params.id);
+    if (!contest) return res.status(404).json({ success: false, message: 'Contest not found' });
+
+    // Check the user is actually a winner
+    const isWinner = contest.winners?.some((w) => w.user?.toString() === req.user._id.toString());
+    if (!isWinner) return res.status(403).json({ success: false, message: 'You are not a winner of this contest.' });
+
+    // Notify all admins with the submitted details
+    const admins = await User.find({ role: 'admin' }).select('_id');
+    const detailsMessage = `Winner: ${req.user.name} (@${req.user.username})\nPhone: ${phone}\nUPI ID: ${upiId}\nBank Details: ${bankDetails || 'Not provided'}\nNotes: ${notes || 'None'}`;
+
+    for (const admin of admins) {
+      await Notification.create({
+        recipient: admin._id,
+        sender: req.user._id,
+        type: 'contest_announcement',
+        title: `💰 Prize Claim — ${req.user.name} for "${contest.title}"`,
+        message: detailsMessage,
+        link: '/admin?tab=contests',
+      });
+    }
+
+    res.json({ success: true, message: 'Your payment details have been submitted. We will process your prize soon!' });
+  } catch (e) { next(e); }
+};
+
+module.exports = { getContests, getContest, createContest, updateContest, endContest, setWinners, deleteContest, submitPrizeClaim };
