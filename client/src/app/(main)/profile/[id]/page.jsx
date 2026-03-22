@@ -88,6 +88,11 @@ export default function ProfilePage() {
   const [showReportModal, setShowReportModal]   = useState(false);
   const [portfolioFilter, setPortfolioFilter]   = useState('all');
 
+  /* ── Collapsible sections ── */
+  const [collapsedSections, setCollapsedSections] = useState({});
+  const toggleSection = (key) =>
+    setCollapsedSections((prev) => ({ ...prev, [key]: !prev[key] }));
+
   // Load message-request status when viewing another user's profile
   useEffect(() => {
     if (!user || !id) return;
@@ -776,6 +781,13 @@ export default function ProfilePage() {
                       + Add Work
                     </Link>
                   )}
+                  <button
+                    onClick={() => toggleSection('portfolio')}
+                    title={collapsedSections.portfolio ? 'Expand' : 'Collapse'}
+                    className="text-xs font-bold text-[#a3a39e] hover:text-[#6C63FF] w-8 h-8 rounded-lg bg-[#f7f7f6] border border-[#efefed] hover:border-[#6C63FF]/30 hover:bg-[#f0eeff] flex items-center justify-center transition-all"
+                  >
+                    {collapsedSections.portfolio ? '▼' : '▲'}
+                  </button>
                   {/* Share profile */}
                   <button
                     onClick={() => {
@@ -788,6 +800,7 @@ export default function ProfilePage() {
                 </div>
               </div>
 
+              {!collapsedSections.portfolio && <>
               {/* Filter tabs */}
               {portfolio?.length > 0 && typesPresent.length > 2 && (
                 <div className="flex gap-2 flex-wrap mb-6">
@@ -971,6 +984,7 @@ export default function ProfilePage() {
 
                 </div>
               )}
+              </>}
             </div>
           );
         })()}
@@ -987,17 +1001,26 @@ export default function ProfilePage() {
                   </span>
                 )}
               </div>
-              {isOwnProfile && !filmsLoading && (
+              <div className="flex items-center gap-2">
+                {isOwnProfile && !filmsLoading && (
+                  <button
+                    onClick={() => setShowUploadGuide(true)}
+                    className="text-xs font-semibold text-[#6C63FF] hover:text-[#4740CC] transition-colors"
+                  >
+                    + Upload Film
+                  </button>
+                )}
                 <button
-                  onClick={() => setShowUploadGuide(true)}
-                  className="text-xs font-semibold text-[#6C63FF] hover:text-[#4740CC] transition-colors"
+                  onClick={() => toggleSection('films')}
+                  title={collapsedSections.films ? 'Expand' : 'Collapse'}
+                  className="text-xs font-bold text-[#a3a39e] hover:text-[#6C63FF] w-8 h-8 rounded-lg bg-[#f7f7f6] border border-[#efefed] hover:border-[#6C63FF]/30 hover:bg-[#f0eeff] flex items-center justify-center transition-all"
                 >
-                  + Upload Film
+                  {collapsedSections.films ? '▼' : '▲'}
                 </button>
-              )}
+              </div>
             </div>
 
-            {filmsLoading ? (
+            {!collapsedSections.films && (filmsLoading ? (
               <div className="space-y-3">
                 {[1, 2].map((i) => (
                   <div key={i} className="flex gap-4 p-4 bg-white border border-[#efefed] rounded-2xl animate-pulse">
@@ -1218,7 +1241,7 @@ export default function ProfilePage() {
                   );
                 })}
               </div>
-            )}
+            ))}
           </div>
         )}
 
@@ -1381,8 +1404,15 @@ export default function ProfilePage() {
                 <span className="ml-2 text-base font-normal text-[#6b6b66]">· ⭐ {avgRating} ({reviews.length})</span>
               )}
             </h2>
+            <button
+              onClick={() => toggleSection('reviews')}
+              title={collapsedSections.reviews ? 'Expand' : 'Collapse'}
+              className="text-xs font-bold text-[#a3a39e] hover:text-[#6C63FF] w-8 h-8 rounded-lg bg-[#f7f7f6] border border-[#efefed] hover:border-[#6C63FF]/30 hover:bg-[#f0eeff] flex items-center justify-center transition-all"
+            >
+              {collapsedSections.reviews ? '▼' : '▲'}
+            </button>
           </div>
-          {reviewsLoading ? (
+          {!collapsedSections.reviews && (reviewsLoading ? (
             <div className="space-y-3">
               {[1,2].map(i => <div key={i} className="bg-[#efefed] rounded-xl h-24 animate-pulse" />)}
             </div>
@@ -1429,7 +1459,7 @@ export default function ProfilePage() {
                 </div>
               ))}
             </div>
-          )}
+          ))}
         </div>
 
           </div>{/* end main content */}

@@ -5,6 +5,8 @@ const Profile        = require('../models/Profile');
 const Notification   = require('../models/Notification');
 const MessageRequest = require('../models/MessageRequest');
 const Conversation   = require('../models/Conversation');
+const User           = require('../models/User');
+const emailService   = require('../utils/emailService');
 
 // GET /api/mentors — list all mentors
 router.get('/', async (req, res) => {
@@ -111,6 +113,18 @@ router.post('/:mentorUserId/apply', protect, async (req, res) => {
       } else throw notifErr;
     }
 
+    // Send email to mentor (fire-and-forget)
+    const mentorUser = await User.findById(mentorUserId).select('email name').lean();
+    if (mentorUser?.email) {
+      emailService.sendMentorApplicationReceived(
+        mentorUser.email,
+        mentorUser.name,
+        req.user.name,
+        req.user.role,
+        message.trim()
+      ).catch(() => {});
+    }
+
     return res.status(201).json({ success: true, message: 'Application sent! The mentor will be notified.' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -163,6 +177,17 @@ router.patch('/requests/:requestId/accept', protect, async (req, res) => {
 
     const populated = await Conversation.findById(conversation._id)
       .populate('members', 'name username role profileImage');
+
+    // Send email to the applicant (fire-and-forget)
+    const applicantUser = await User.findById(request.sender._id).select('email name').lean();
+    if (applicantUser?.email) {
+      emailService.sendMentorApplicationAccepted(
+        applicantUser.email,
+        applicantUser.name,
+        req.user.name,
+        conversation._id
+      ).catch(() => {});
+    }
 
     return res.status(200).json({ success: true, data: populated });
   } catch (err) {

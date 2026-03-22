@@ -406,6 +406,82 @@ const sendPasswordReset = async (email, name, resetUrl) => {
   }
 };
 
+// ── Mentor application emails ─────────────────────────────────────────────────
+
+const sendMentorApplicationReceived = async (mentorEmail, mentorName, applicantName, applicantRole, message) => {
+  try {
+    const siteUrl = process.env.CLIENT_URL || 'https://crewupfilms.com';
+    const link    = `${siteUrl}/messages?tab=requests`;
+    const preview = message?.trim() ? `<p style="margin:0 0 20px;font-size:14px;color:#666666;font-style:italic;line-height:1.6;background:#f7f7f6;padding:12px 16px;border-left:3px solid #6C63FF;border-radius:4px;">"${message.trim()}"</p>` : '';
+
+    const html = transactionalHtml(`
+      <p style="margin:0 0 8px;font-size:16px;font-weight:600;color:#111110;">Hi ${mentorName},</p>
+      <p style="margin:0 0 20px;font-size:15px;color:#444444;line-height:1.6;">
+        <strong>${applicantName}</strong> (${applicantRole || 'Filmmaker'}) has sent you a mentorship request.
+      </p>
+      ${preview}
+      <p style="margin:0 0 24px;font-size:14px;color:#666666;line-height:1.6;">
+        Review their profile and decide whether to accept or decline from your messages inbox.
+      </p>
+      <a href="${link}" style="display:inline-block;background:#6C63FF;color:#ffffff;padding:11px 24px;text-decoration:none;border-radius:6px;font-size:14px;font-weight:600;">View Request</a>
+    `);
+
+    const text = `Hi ${mentorName},\n\n${applicantName} has sent you a mentorship request.\n\nMessage: ${message || '(no message)'}\n\nReview the request here:\n${link}\n\n— CREWUPFILMS`;
+    await sendEmail(mentorEmail, `${applicantName} wants you as their mentor`, html, text);
+    console.log(`[EMAIL SENT] sendMentorApplicationReceived to ${mentorEmail}`);
+  } catch (error) {
+    console.error('[EMAIL ERROR] sendMentorApplicationReceived:', error.message);
+  }
+};
+
+const sendMentorApplicationAccepted = async (applicantEmail, applicantName, mentorName, conversationId) => {
+  try {
+    const siteUrl = process.env.CLIENT_URL || 'https://crewupfilms.com';
+    const link    = conversationId ? `${siteUrl}/messages?conv=${conversationId}` : `${siteUrl}/messages`;
+
+    const html = transactionalHtml(`
+      <p style="margin:0 0 8px;font-size:16px;font-weight:600;color:#111110;">Hi ${applicantName},</p>
+      <p style="margin:0 0 20px;font-size:15px;color:#444444;line-height:1.6;">
+        Great news! <strong>${mentorName}</strong> has accepted your mentorship request. You can now chat directly.
+      </p>
+      <p style="margin:0 0 24px;font-size:14px;color:#666666;line-height:1.6;">
+        Open your chat to introduce yourself and get started on your journey.
+      </p>
+      <a href="${link}" style="display:inline-block;background:#6C63FF;color:#ffffff;padding:11px 24px;text-decoration:none;border-radius:6px;font-size:14px;font-weight:600;">Open Chat with ${mentorName}</a>
+    `);
+
+    const text = `Hi ${applicantName},\n\n${mentorName} has accepted your mentorship request. You can now chat directly.\n\nOpen your chat here:\n${link}\n\n— CREWUPFILMS`;
+    await sendEmail(applicantEmail, `${mentorName} accepted your mentorship request!`, html, text);
+    console.log(`[EMAIL SENT] sendMentorApplicationAccepted to ${applicantEmail}`);
+  } catch (error) {
+    console.error('[EMAIL ERROR] sendMentorApplicationAccepted:', error.message);
+  }
+};
+
+const sendMentorApplicationDeclined = async (applicantEmail, applicantName, mentorName) => {
+  try {
+    const siteUrl = process.env.CLIENT_URL || 'https://crewupfilms.com';
+    const link    = `${siteUrl}/mentors`;
+
+    const html = transactionalHtml(`
+      <p style="margin:0 0 8px;font-size:16px;font-weight:600;color:#111110;">Hi ${applicantName},</p>
+      <p style="margin:0 0 20px;font-size:15px;color:#444444;line-height:1.6;">
+        Thank you for reaching out to <strong>${mentorName}</strong>. Unfortunately, they are unable to take on a new mentee at this time.
+      </p>
+      <p style="margin:0 0 24px;font-size:14px;color:#666666;line-height:1.6;">
+        Don't be discouraged — there are many talented mentors on CREWUPFILMS who would love to help you grow.
+      </p>
+      <a href="${link}" style="display:inline-block;background:#111110;color:#ffffff;padding:11px 24px;text-decoration:none;border-radius:6px;font-size:14px;font-weight:600;">Find Another Mentor</a>
+    `);
+
+    const text = `Hi ${applicantName},\n\nThank you for reaching out to ${mentorName}. They are currently unable to take on a new mentee.\n\nFind other mentors here:\n${link}\n\n— CREWUPFILMS`;
+    await sendEmail(applicantEmail, `Update on your mentorship request to ${mentorName}`, html, text);
+    console.log(`[EMAIL SENT] sendMentorApplicationDeclined to ${applicantEmail}`);
+  } catch (error) {
+    console.error('[EMAIL ERROR] sendMentorApplicationDeclined:', error.message);
+  }
+};
+
 module.exports = {
   sendEmail,
   sendApplicationReceived,
@@ -418,4 +494,7 @@ module.exports = {
   sendProjectRejected,
   sendProjectEditedNotice,
   sendPasswordReset,
+  sendMentorApplicationReceived,
+  sendMentorApplicationAccepted,
+  sendMentorApplicationDeclined,
 };

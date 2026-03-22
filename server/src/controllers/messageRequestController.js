@@ -3,6 +3,7 @@ const MessageRequest   = require('../models/MessageRequest');
 const Conversation     = require('../models/Conversation');
 const Notification     = require('../models/Notification');
 const User             = require('../models/User');
+const emailService     = require('../utils/emailService');
 
 /* ─────────────────────────────────────────────────────────────
    POST /api/message-requests
@@ -181,7 +182,8 @@ const acceptRequest = async (req, res, next) => {
 ───────────────────────────────────────────────────────────── */
 const declineRequest = async (req, res, next) => {
   try {
-    const request = await MessageRequest.findById(req.params.requestId);
+    const request = await MessageRequest.findById(req.params.requestId)
+      .populate('sender', 'name email');
 
     if (!request) {
       return res.status(404).json({ success: false, message: 'Request not found' });
@@ -192,6 +194,27 @@ const declineRequest = async (req, res, next) => {
 
     request.status = 'declined';
     await request.save();
+
+    // Notify the applicant that their request was declined
+    try {
+      await Notification.create({
+        recipient: request.sender._id,
+        sender:    req.user._id,
+        type:      'application_declined',
+        title:     `${req.user.name} declined your mentorship request`,
+        message:   `Unfortunately, ${req.user.name} is unable to take on a new mentee right now. Browse other mentors and keep going!`,
+        link:      '/mentors',
+      });
+    } catch (_) { /* non-critical */ }
+
+    // Send email to the applicant (fire-and-forget)
+    if (request.sender?.email) {
+      emailService.sendMentorApplicationDeclined(
+        request.sender.email,
+        request.sender.name,
+        req.user.name
+      ).catch(() => {});
+    }
 
     return res.status(200).json({ success: true, message: 'Request declined.' });
   } catch (err) {
