@@ -83,8 +83,14 @@ function SuggestionCard({ creator, projectId, projectTitle, onInvited }) {
         link:        `/projects/${projectId}`,
       });
 
-      // 2. Open/find a DM conversation so the owner can follow up with a message
-      await conversationAPI.start({ recipientId: creator._id });
+      // 2. Try to open/find a DM so the owner can follow up — non-fatal.
+      // This fails if no accepted message request exists yet, which is fine;
+      // the notification above is the actual invite.
+      try {
+        await conversationAPI.start({ recipientId: creator._id });
+      } catch (_) {
+        // Silently ignore — conversation will be available once they connect
+      }
 
       setInvited(true);
       onInvited?.(creator._id);
