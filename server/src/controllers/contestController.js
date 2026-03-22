@@ -19,6 +19,7 @@ const getContest = async (req, res, next) => {
   try {
     const contest = await Contest.findById(req.params.id)
       .populate('winners.user', 'name username profileImage')
+      .populate('winners.teamMembers', 'name username profileImage')
       .lean();
     if (!contest) return res.status(404).json({ success: false, message: 'Contest not found' });
     res.json({ success: true, data: contest });
@@ -74,7 +75,23 @@ const setWinners = async (req, res, next) => {
     const contest = await Contest.findById(req.params.id);
     if (!contest) return res.status(404).json({ success: false, message: 'Contest not found' });
 
-    contest.winners = winners.map((w) => ({ user: w.userId, placement: w.placement, note: w.note || '' }));
+    // Build winner entries — include team member IDs from submission's project
+    const winnerEntries = await Promise.all(winners.map(async (w) => {
+      const submission = await ContestSubmission.findOne({ contest: contest._id, submittedBy: w.userId });
+      let teamMemberIds = [];
+      if (submission?.project) {
+        const project = await Project.findById(submission.project).select('teamMembers createdBy').lean();
+        if (project) {
+          teamMemberIds = [
+            project.createdBy,
+            ...project.teamMembers.map((m) => m.user).filter(Boolean),
+          ].filter((id) => id?.toString() !== w.userId.toString());
+        }
+      }
+      return { user: w.userId, placement: w.placement, note: w.note || '', teamMembers: teamMemberIds };
+    }));
+
+    contest.winners = winnerEntries;
     contest.status  = 'ended';
     await contest.save();
 
@@ -151,6 +168,7 @@ const setWinners = async (req, res, next) => {
     }
 
     await contest.populate('winners.user', 'name username profileImage');
+    await contest.populate('winners.teamMembers', 'name username profileImage');
     res.json({ success: true, data: contest });
   } catch (e) { next(e); }
 };

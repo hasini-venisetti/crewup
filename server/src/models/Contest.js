@@ -56,9 +56,10 @@ const contestSchema = new mongoose.Schema(
     },
     winners: [
       {
-        user:      { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-        placement: { type: Number },   // 1st, 2nd, 3rd …
-        note:      { type: String, default: '' },
+        user:        { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        placement:   { type: Number },   // 1st, 2nd, 3rd …
+        note:        { type: String, default: '' },
+        teamMembers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
       },
     ],
     createdBy: {
