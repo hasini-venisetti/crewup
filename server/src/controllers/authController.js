@@ -16,6 +16,7 @@ function userPayload(user) {
     username:        user.username,
     email:           user.email,
     role:            user.role,
+    roles:           user.roles?.length ? user.roles : (user.role ? [user.role] : []),
     profileImage:    user.profileImage,
     isAdmin:         user.isAdmin         || false,
     isSuspended:     user.isSuspended     || false,
@@ -71,7 +72,7 @@ const register = async (req, res, next) => {
     if (!errors.isEmpty())
       return res.status(400).json({ success: false, errors: errors.array() });
 
-    const { name, username, email, password, role, dateOfBirth, gender } = req.body;
+    const { name, username, email, password, role, roles, dateOfBirth, gender } = req.body;
 
     const existingUser = await User.findOne({ $or: [{ email }, { username }] });
     if (existingUser) {
@@ -83,9 +84,13 @@ const register = async (req, res, next) => {
     const otp = generateOTP();
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
+    // Support multi-role: `roles` array (new) or single `role` string (legacy)
+    const rolesArray  = Array.isArray(roles) && roles.length ? roles : (role ? [role] : []);
+    const primaryRole = rolesArray[0] || 'other';
+
     const validGenders = ['male', 'female', 'non-binary', 'prefer-not-to-say', ''];
     const user = await User.create({
-      name, username, email, password, role,
+      name, username, email, password, role: primaryRole, roles: rolesArray,
       dateOfBirth: dateOfBirth || null,
       isMinor,
       gender: validGenders.includes(gender) ? gender : '',

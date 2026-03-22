@@ -55,6 +55,10 @@ const userSchema = new mongoose.Schema(
       type:    String,
       default: 'other',
     },
+    roles: {
+      type:    [String],
+      default: [],
+    },
     profileImage: { type: String, default: '' },
     isActive:     { type: Boolean, default: true },
     isSuspended:  { type: Boolean, default: false },

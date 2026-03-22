@@ -58,10 +58,13 @@ const updateProfile = async (req, res, next) => {
 
     // Also update role/name/gender on User if provided
     const validGenders = ['male', 'female', 'non-binary', 'prefer-not-to-say', ''];
-    if (req.body.role || req.body.name || req.body.gender !== undefined) {
+    const rolesArray  = Array.isArray(req.body.roles) && req.body.roles.length ? req.body.roles : null;
+    const primaryRole = rolesArray?.[0] || req.body.role || null;
+    if (primaryRole || req.body.name || req.body.gender !== undefined) {
       await User.findByIdAndUpdate(req.user._id, {
-        ...(req.body.name && { name: req.body.name }),
-        ...(req.body.role && { role: req.body.role }),
+        ...(req.body.name  && { name: req.body.name }),
+        ...(primaryRole    && { role: primaryRole }),
+        ...(rolesArray     && { roles: rolesArray }),
         ...(req.body.gender !== undefined && validGenders.includes(req.body.gender) && { gender: req.body.gender }),
       });
     }
