@@ -24,6 +24,9 @@ const sendViaBrevo = async (to, subject, html, text) => {
       subject,
       htmlContent:  html,
       textContent:  text || stripHtml(html),   // always include plain text
+      headers:      { 'X-Mailin-notimestamp': 'true' },
+      trackClicks:  false,   // disable Brevo link-wrapping so links go directly to the site
+      trackOpens:   false,
     }),
     signal: AbortSignal.timeout(20000),
   });
