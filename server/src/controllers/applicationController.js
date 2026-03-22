@@ -25,9 +25,9 @@ const applyToProject = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'You cannot apply to your own project' });
     }
 
-    const existing = await Application.findOne({ project: projectId, applicant: req.user._id });
+    const existing = await Application.findOne({ project: projectId, applicant: req.user._id, roleApplyingFor });
     if (existing) {
-      return res.status(409).json({ success: false, message: 'You have already applied to this project' });
+      return res.status(409).json({ success: false, message: `You have already applied for the "${roleApplyingFor}" role on this project` });
     }
 
     const application = await Application.create({
@@ -47,7 +47,7 @@ const applyToProject = async (req, res, next) => {
       sender: req.user._id,
       type: 'application_received',
       title: 'New Application',
-      message: `${applicant.name} applied to join "${project.title}"`,
+      message: `${applicant.name} applied for "${roleApplyingFor}" in "${project.title}"`,
       link: `/projects/${project._id}/applications`,
     });
 
@@ -57,7 +57,8 @@ const applyToProject = async (req, res, next) => {
       project.createdBy.name,
       applicant.name,
       project.title,
-      project._id
+      project._id,
+      roleApplyingFor
     ).catch(() => {});
 
     res.status(201).json({ success: true, message: 'Application submitted', data: application });

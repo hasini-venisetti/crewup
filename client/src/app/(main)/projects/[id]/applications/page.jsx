@@ -214,6 +214,7 @@ export default function ApplicationsPage() {
   const [project, setProject] = useState(null);
   const [applications, setApplications] = useState([]);
   const [filter, setFilter] = useState('all');
+  const [roleFilter, setRoleFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [filledRoles, setFilledRoles] = useState({});
 
@@ -270,9 +271,13 @@ export default function ApplicationsPage() {
   };
 
   const filtered = applications.filter((a) => {
-    if (filter === 'all') return true;
-    return a.status === filter;
+    const statusMatch = filter === 'all' || a.status === filter;
+    const roleMatch   = roleFilter === 'all' || a.roleApplyingFor === roleFilter;
+    return statusMatch && roleMatch;
   });
+
+  // Unique roles that have applications
+  const rolesWithApps = ['all', ...new Set(applications.map((a) => a.roleApplyingFor).filter(Boolean))];
 
   const stats = {
     total: applications.length,
@@ -334,19 +339,52 @@ export default function ApplicationsPage() {
           ))}
         </div>
 
-        {/* Filter Tabs */}
-        <div className="flex gap-1 bg-[#f7f7f6] border border-[#efefed]  p-1 mb-8 w-fit overflow-x-auto">
+        {/* Role Filter */}
+        {rolesWithApps.length > 2 && (
+          <div className="mb-4">
+            <p className="text-xs font-bold text-[#a3a39e] uppercase tracking-widest mb-2">Filter by Role</p>
+            <div className="flex flex-wrap gap-2">
+              {rolesWithApps.map((r) => {
+                const count = r === 'all' ? applications.length : applications.filter((a) => a.roleApplyingFor === r).length;
+                return (
+                  <button
+                    key={r}
+                    onClick={() => setRoleFilter(r)}
+                    className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-all ${
+                      roleFilter === r
+                        ? 'bg-[#0e0e0d] text-white border-[#0e0e0d]'
+                        : 'bg-white text-[#6b6b66] border-[#e0e0dd] hover:border-[#6C63FF] hover:text-[#6C63FF]'
+                    }`}
+                  >
+                    {r === 'all' ? 'All Roles' : r}
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${roleFilter === r ? 'bg-white/20 text-white' : 'bg-[#f0eeff] text-[#5750D4]'}`}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Status Filter Tabs */}
+        <div className="flex gap-1 bg-[#f7f7f6] border border-[#efefed] p-1 mb-8 w-fit overflow-x-auto rounded-xl">
           {['all', 'pending', 'accepted', 'rejected'].map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
               className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap capitalize ${
                 filter === f
-                  ? 'bg-white text-black'
+                  ? 'bg-white text-black shadow-sm'
                   : 'text-[#6b6b66] hover:text-[#111110]'
               }`}
             >
               {f}
+              {f !== 'all' && (
+                <span className="ml-1.5 text-[10px] font-bold text-[#a3a39e]">
+                  {applications.filter((a) => (roleFilter === 'all' || a.roleApplyingFor === roleFilter) && a.status === f).length}
+                </span>
+              )}
             </button>
           ))}
         </div>

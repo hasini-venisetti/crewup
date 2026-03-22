@@ -176,15 +176,17 @@ const transactionalHtml = (body) => `<!DOCTYPE html>
 
 // ─── Email templates ──────────────────────────────────────────────────────────
 
-const sendApplicationReceived = async (ownerEmail, ownerName, applicantName, projectTitle, projectId) => {
+const sendApplicationReceived = async (ownerEmail, ownerName, applicantName, projectTitle, projectId, roleApplyingFor) => {
   try {
     const siteUrl = process.env.CLIENT_URL || 'https://crewupfilms.com';
     const link    = `${siteUrl}/projects/${projectId}/applications`;
+    const roleText = roleApplyingFor ? ` for the <strong>${roleApplyingFor}</strong> role` : '';
+    const roleTextPlain = roleApplyingFor ? ` for the "${roleApplyingFor}" role` : '';
 
     const html = transactionalHtml(`
       <p style="margin:0 0 8px;font-size:16px;font-weight:600;color:#111110;">Hi ${ownerName},</p>
       <p style="margin:0 0 20px;font-size:15px;color:#444444;line-height:1.6;">
-        <strong>${applicantName}</strong> has applied to your project <strong>"${projectTitle}"</strong>.
+        <strong>${applicantName}</strong> has applied to your project <strong>"${projectTitle}"</strong>${roleText}.
       </p>
       <p style="margin:0 0 24px;font-size:14px;color:#666666;line-height:1.6;">
         Review the application and decide whether to accept or decline.
@@ -192,9 +194,9 @@ const sendApplicationReceived = async (ownerEmail, ownerName, applicantName, pro
       <a href="${link}" style="display:inline-block;background:#111110;color:#ffffff;padding:11px 24px;text-decoration:none;border-radius:6px;font-size:14px;font-weight:600;">View Application</a>
     `);
 
-    const text = `Hi ${ownerName},\n\n${applicantName} has applied to your project "${projectTitle}".\n\nReview the application here:\n${link}\n\n— CREWUPFILMS`;
+    const text = `Hi ${ownerName},\n\n${applicantName} has applied to your project "${projectTitle}"${roleTextPlain}.\n\nReview the application here:\n${link}\n\n— CREWUPFILMS`;
 
-    await sendEmail(ownerEmail, `New application from ${applicantName} for "${projectTitle}"`, html, text);
+    await sendEmail(ownerEmail, `New application from ${applicantName} for "${projectTitle}"${roleTextPlain}`, html, text);
     console.log(`[EMAIL SENT] sendApplicationReceived to ${ownerEmail}`);
   } catch (error) {
     console.error('[EMAIL ERROR] sendApplicationReceived:', error.message);

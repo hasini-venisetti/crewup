@@ -38,8 +38,9 @@ const STAGE_LABELS = {
   released:          { label: 'Released',        icon: '🚀' },
 };
 
-function ApplyModal({ project, onClose, onSuccess }) {
-  const [form, setForm]     = useState({ roleApplyingFor: '', message: '' });
+function ApplyModal({ project, onClose, onSuccess, appliedRoles = [], preselectedRole = '' }) {
+  const availableRoles = (project.requiredRoles || []).filter((r) => !appliedRoles.includes(r));
+  const [form, setForm]     = useState({ roleApplyingFor: preselectedRole || availableRoles[0] || '', message: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError]   = useState('');
 
@@ -49,7 +50,7 @@ function ApplyModal({ project, onClose, onSuccess }) {
     setLoading(true);
     try {
       await applicationAPI.apply({ projectId: project._id, ...form });
-      onSuccess(); onClose();
+      onSuccess(form.roleApplyingFor); onClose();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to submit application');
     } finally { setLoading(false); }
@@ -63,42 +64,69 @@ function ApplyModal({ project, onClose, onSuccess }) {
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
         </button>
-        <h2 className="text-xl font-[Playfair_Display] text-[#0e0e0d] mb-6">Apply to "{project.title}"</h2>
+        <h2 className="text-xl font-[Playfair_Display] text-[#0e0e0d] mb-1">Apply to "{project.title}"</h2>
+        {appliedRoles.length > 0 && (
+          <p className="text-xs text-[#a3a39e] mb-5">
+            Already applied for: {appliedRoles.map((r) => (
+              <span key={r} className="inline-block bg-[#f0eeff] text-[#5750D4] px-2 py-0.5 rounded-full mr-1 font-semibold">{r}</span>
+            ))}
+          </p>
+        )}
+        {!appliedRoles.length && <div className="mb-6" />}
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-lg mb-5">{error}</div>
         )}
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div>
-            <label className="block text-xs font-semibold text-[#6b6b66] uppercase tracking-[0.12em] mb-2">Role You're Applying For</label>
-            <select
-              className="w-full rounded-lg border border-[#e0e0dd] bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] transition"
-              value={form.roleApplyingFor}
-              onChange={(e) => setForm({ ...form, roleApplyingFor: e.target.value })}
-              required
-            >
-              <option value="">Select a role</option>
-              {project.requiredRoles?.map((r) => <option key={r} value={r}>{r}</option>)}
-            </select>
+        {availableRoles.length === 0 ? (
+          <div className="text-center py-6">
+            <p className="text-2xl mb-2">✅</p>
+            <p className="font-semibold text-sm text-[#111110]">You've applied to all available roles!</p>
+            <p className="text-xs text-[#6b6b66] mt-1">Check your dashboard for application statuses.</p>
+            <button onClick={onClose} className="mt-4 px-5 py-2 rounded-lg bg-[#f5f5f3] text-sm font-semibold text-[#111110] hover:bg-[#efefed] transition-colors">Close</button>
           </div>
-          <div>
-            <label className="block text-xs font-semibold text-[#6b6b66] uppercase tracking-[0.12em] mb-2">
-              Your Message <span className="text-[#a3a39e] normal-case font-normal">(max 1000 chars)</span>
-            </label>
-            <textarea
-              className="w-full rounded-lg border border-[#e0e0dd] bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] transition min-h-[120px] resize-none"
-              placeholder="Tell the project owner why you're a great fit, what you bring, and any relevant experience…"
-              value={form.message}
-              onChange={(e) => setForm({ ...form, message: e.target.value })}
-              maxLength={1000}
-              required
-            />
-            <p className="text-xs text-[#a3a39e] mt-1">{form.message.length}/1000</p>
-          </div>
-          <button type="submit" disabled={loading}
-            className="w-full py-3 rounded-lg bg-[#6C63FF] hover:bg-[#7C75FF] text-white font-semibold text-sm shadow-lg shadow-[#6C63FF]/20 transition-all active:scale-[0.98] disabled:opacity-50">
-            {loading ? 'Submitting…' : 'Submit Application'}
-          </button>
-        </form>
+        ) : (
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-[#6b6b66] uppercase tracking-[0.12em] mb-2">Role You're Applying For</label>
+              <div className="flex flex-wrap gap-2 mb-1">
+                {availableRoles.map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setForm({ ...form, roleApplyingFor: r })}
+                    className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all ${
+                      form.roleApplyingFor === r
+                        ? 'bg-[#6C63FF] text-white border-[#6C63FF] shadow-sm'
+                        : 'bg-white text-[#6b6b66] border-[#e0e0dd] hover:border-[#6C63FF] hover:text-[#6C63FF]'
+                    }`}
+                  >
+                    {r}
+                  </button>
+                ))}
+              </div>
+              {!form.roleApplyingFor && (
+                <p className="text-xs text-red-500 mt-1">Please select a role above</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-[#6b6b66] uppercase tracking-[0.12em] mb-2">
+                Your Message <span className="text-[#a3a39e] normal-case font-normal">(max 1000 chars)</span>
+              </label>
+              <textarea
+                className="w-full rounded-lg border border-[#e0e0dd] bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] transition min-h-[120px] resize-none"
+                placeholder="Tell the project owner why you're a great fit, what you bring, and any relevant experience…"
+                value={form.message}
+                onChange={(e) => setForm({ ...form, message: e.target.value })}
+                maxLength={1000}
+                required
+              />
+              <p className="text-xs text-[#a3a39e] mt-1">{form.message.length}/1000</p>
+            </div>
+            <button type="submit" disabled={loading || !form.roleApplyingFor}
+              className="w-full py-3 rounded-lg bg-[#6C63FF] hover:bg-[#7C75FF] text-white font-semibold text-sm shadow-lg shadow-[#6C63FF]/20 transition-all active:scale-[0.98] disabled:opacity-50">
+              {loading ? 'Submitting…' : `Apply as ${form.roleApplyingFor || '…'}`}
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );
@@ -385,8 +413,7 @@ function ProjectDetailContent() {
   const [project, setProject]                       = useState(null);
   const [loading, setLoading]                       = useState(true);
   const [showModal, setShowModal]                   = useState(false);
-  const [applied, setApplied]                       = useState(false);
-  const [myApplication, setMyApplication]           = useState(null); // full application object
+  const [myApplications, setMyApplications]         = useState([]); // all applications for this project by the user
   const [deleting, setDeleting]                     = useState(false);
   const [updatingTimeline, setUpdatingTimeline]     = useState(false);
   const [waitlistRole, setWaitlistRole]             = useState('');
@@ -419,18 +446,18 @@ function ProjectDetailContent() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  // Check if logged-in user already applied to this project + get their status
+  // Fetch all of the logged-in user's applications for this project
   useEffect(() => {
     if (!user || !id) return;
     applicationAPI.getMine()
       .then(({ data }) => {
         const apps = data.data || [];
-        const myApp = apps.find(
+        const mine = apps.filter(
           (app) => app.project?._id === id || app.project === id
         );
-        if (myApp) { setApplied(true); setMyApplication(myApp); }
+        setMyApplications(mine);
       })
-      .catch(() => {/* silent — applied state stays false */});
+      .catch(() => {});
   }, [user, id]);
 
   // Fetch creator's verified status from their Profile
@@ -570,7 +597,20 @@ function ProjectDetailContent() {
 
   return (
     <div className="min-h-screen bg-[#fafaf9]">
-      {showModal && <ApplyModal project={project} onClose={() => setShowModal(false)} onSuccess={() => setApplied(true)} />}
+      {showModal && (
+        <ApplyModal
+          project={project}
+          onClose={() => setShowModal(false)}
+          appliedRoles={myApplications.map((a) => a.roleApplyingFor)}
+          onSuccess={(role) => {
+            // Optimistically add the new application so UI updates immediately
+            setMyApplications((prev) => [
+              ...prev,
+              { _id: Date.now(), roleApplyingFor: role, status: 'pending' },
+            ]);
+          }}
+        />
+      )}
       {showYoutubeModal && (
         <YouTubeLinkModal
           projectTitle={project.title}
@@ -680,35 +720,51 @@ function ProjectDetailContent() {
                   </span>
                   {user && <p className="text-xs text-white/40">Join the waitlist for an open role below ↓</p>}
                 </div>
-              ) : user ? (
-                applied && myApplication ? (
-                  <div className="flex flex-col items-end gap-1">
-                    <div className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border ${
-                      myApplication.status === 'accepted' ? 'bg-green-50 text-green-700 border-green-200' :
-                      myApplication.status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200' :
-                      'bg-amber-50 text-amber-700 border-amber-200'
-                    }`}>
-                      {myApplication.status === 'accepted' ? '✅' : myApplication.status === 'rejected' ? '❌' : '⏳'}
-                      {' '}Application {myApplication.status === 'rejected' ? 'Declined' : myApplication.status === 'accepted' ? 'Accepted' : 'Pending'}
-                    </div>
-                    {myApplication.status === 'accepted' && (
+              ) : user ? (() => {
+                const appliedRoles = myApplications.map((a) => a.roleApplyingFor);
+                const availableRoles = (project.requiredRoles || []).filter((r) => !appliedRoles.includes(r));
+                const hasAccepted = myApplications.some((a) => a.status === 'accepted');
+                const STATUS_CFG = {
+                  accepted: { bg: 'bg-green-500/15 border-green-500/30 text-green-300', icon: '✅' },
+                  rejected: { bg: 'bg-red-500/15 border-red-500/30 text-red-300',   icon: '❌' },
+                  pending:  { bg: 'bg-amber-500/15 border-amber-500/30 text-amber-300', icon: '⏳' },
+                };
+                return (
+                  <div className="flex flex-col items-end gap-2">
+                    {/* Show each existing application as a pill */}
+                    {myApplications.map((app) => {
+                      const cfg = STATUS_CFG[app.status] || STATUS_CFG.pending;
+                      return (
+                        <div key={app._id} className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border ${cfg.bg}`}>
+                          {cfg.icon} {app.roleApplyingFor} — {app.status === 'rejected' ? 'Declined' : app.status === 'accepted' ? 'Accepted' : 'Pending'}
+                        </div>
+                      );
+                    })}
+                    {/* Team Dashboard link if any accepted */}
+                    {hasAccepted && (
                       <Link href={`/projects/${id}/team`}
                         className="text-xs font-semibold bg-[#6C63FF] text-white px-3 py-1.5 rounded-lg hover:bg-[#5750D4] transition-colors">
                         👥 Go to Team Dashboard
                       </Link>
                     )}
-                    {myApplication.status === 'pending' && (
-                      <p className="text-[11px] text-white/50">We'll notify you when the creator reviews your application.</p>
+                    {/* Apply for another role if available */}
+                    {availableRoles.length > 0 && (
+                      <button
+                        onClick={() => { if (checkVerification()) setShowModal(true); }}
+                        className={`text-sm font-semibold px-5 py-2.5 rounded-lg transition-all active:scale-[0.98] ${
+                          myApplications.length > 0
+                            ? 'bg-white/10 border border-white/20 text-white/80 hover:bg-white/20'
+                            : 'bg-[#6C63FF] hover:bg-[#7C75FF] text-white shadow-lg shadow-[#6C63FF]/20'
+                        }`}>
+                        {myApplications.length > 0 ? '+ Apply for Another Role' : 'Apply Now'}
+                      </button>
+                    )}
+                    {myApplications.length > 0 && availableRoles.length === 0 && (
+                      <p className="text-[11px] text-white/40">Applied to all available roles</p>
                     )}
                   </div>
-                ) : (
-                  <button
-                    onClick={() => { if (checkVerification()) setShowModal(true); }}
-                    className="text-sm font-semibold px-6 py-2.5 rounded-lg bg-[#6C63FF] hover:bg-[#7C75FF] text-white shadow-lg shadow-[#6C63FF]/20 transition-all active:scale-[0.98]">
-                    Apply Now
-                  </button>
-                )
-              ) : (
+                );
+              })() : (
                 <Link href="/login"
                   className="text-sm font-semibold px-6 py-2.5 rounded-lg bg-[#6C63FF] hover:bg-[#7C75FF] text-white transition-all">
                   Login to Apply
