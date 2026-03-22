@@ -19,6 +19,7 @@ const notificationSchema = new mongoose.Schema(
         'message_request_accepted', // message request was accepted
         'mentorship_request',       // user wants mentorship
         'contest_announcement',     // admin announces a contest
+        'contest_submission',       // contest submission approved / rejected
         'platform_update',          // admin broadcasts a platform update
       ],
       required: true,
