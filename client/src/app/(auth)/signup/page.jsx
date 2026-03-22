@@ -147,7 +147,7 @@ export default function SignupPage() {
   const { register, loginWithToken } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
-    name: '', role: '',
+    name: '', roles: [],
     location: { city: '', country: '' },
     skills: [], username: '', email: '', password: '',
     dateOfBirth: '', gender: '',
@@ -252,11 +252,15 @@ export default function SignupPage() {
     if (err) { toast.error(err); return; }
     setIsLoading(true);
     try {
-      const resolvedRole = formData.role === 'other' && otherRoleText.trim()
-        ? otherRoleText.trim().toLowerCase() : (formData.role || 'other');
+      const resolvedRoles = [
+        ...formData.roles,
+        ...(otherRoleText.trim() ? [otherRoleText.trim().toLowerCase()] : []),
+      ];
+      if (!resolvedRoles.length) resolvedRoles.push('other');
       const { data } = await authAPI.googleAuth({
         idToken: googleIdToken, username: formData.username,
-        role: resolvedRole, location: formData.location, skills: formData.skills,
+        role: resolvedRoles[0], roles: resolvedRoles,
+        location: formData.location, skills: formData.skills,
       });
       if (data.success && data.token) {
         loginWithToken(data.token, data.user);
@@ -288,10 +292,7 @@ export default function SignupPage() {
         .replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '').slice(0, 20) || 'creator';
       setFormData((prev) => ({ ...prev, username: suggested }));
     }
-    if (currentStep === 2 && !formData.role) { toast.error('Please select a role'); return; }
-    if (currentStep === 2 && formData.role === 'other' && !otherRoleText.trim()) {
-      toast.error('Please describe your role'); return;
-    }
+    if (currentStep === 2 && formData.roles.length === 0 && !otherRoleText.trim()) { toast.error('Please select at least one role'); return; }
     if (currentStep === 3 && (!formData.location.city.trim() || !formData.location.country.trim())) {
       toast.error('Please enter city and country'); return;
     }
@@ -322,12 +323,15 @@ export default function SignupPage() {
 
     setIsLoading(true);
     try {
-      const resolvedRole = formData.role === 'other' && otherRoleText.trim()
-        ? otherRoleText.trim().toLowerCase() : (formData.role || 'other');
+      const resolvedRoles = [
+        ...formData.roles,
+        ...(otherRoleText.trim() ? [otherRoleText.trim().toLowerCase()] : []),
+      ];
+      if (!resolvedRoles.length) resolvedRoles.push('other');
       await register({
         name: formData.name, username: formData.username,
         email: formData.email, password: formData.password,
-        role: resolvedRole,
+        role: resolvedRoles[0], roles: resolvedRoles,
         location: formData.location, skills: formData.skills,
         dateOfBirth: formData.dateOfBirth,
         gender: formData.gender || '',
@@ -528,34 +532,38 @@ export default function SignupPage() {
                 </div>
               )}
 
-              {/* ── Step 2 — Role ── */}
+              {/* ── Step 2 — Roles (multi-select) ── */}
               {currentStep === 2 && (
                 <div className="form-anim" style={{ animationDelay: '0.16s' }}>
+                  <p className="text-xs text-[#6b6b66] mb-3">Select all that apply — you can pick more than one.</p>
                   <div className="grid grid-cols-2 gap-2.5 mb-4">
-                    {roleOptions.map((role) => (
-                      <button key={role.label}
-                        onClick={() => {
-                          setFormData({ ...formData, role: role.value });
-                          if (role.value !== 'other') setOtherRoleText('');
-                        }}
-                        className={`py-3 px-4 text-sm font-medium transition-colors text-left ${
-                          formData.role === role.value
-                            ? 'bg-[#111110] text-white'
-                            : 'border border-[#e0e0dd] text-[#111110] hover:border-[#111110]'
-                        }`}>
-                        {role.label}
-                      </button>
-                    ))}
+                    {roleOptions.filter(r => r.value !== 'other').map((role) => {
+                      const selected = formData.roles.includes(role.value);
+                      return (
+                        <button key={role.label} type="button"
+                          onClick={() => {
+                            const next = selected
+                              ? formData.roles.filter(r => r !== role.value)
+                              : [...formData.roles, role.value];
+                            setFormData({ ...formData, roles: next });
+                          }}
+                          className={`py-3 px-4 text-sm font-medium transition-colors text-left flex items-center gap-2 ${
+                            selected
+                              ? 'bg-[#111110] text-white'
+                              : 'border border-[#e0e0dd] text-[#111110] hover:border-[#111110]'
+                          }`}>
+                          {selected && <span className="text-xs">✓</span>}
+                          {role.label}
+                        </button>
+                      );
+                    })}
                   </div>
-                  {formData.role === 'other' && (
-                    <div className="mb-8">
-                      <label className="block text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-2">Describe your role</label>
-                      <input type="text" placeholder="e.g. Lighting Technician, Stunt Coordinator…"
-                        className="field-input" value={otherRoleText}
-                        onChange={(e) => setOtherRoleText(e.target.value)} maxLength={50} autoFocus />
-                    </div>
-                  )}
-                  {formData.role !== 'other' && <div className="mb-4" />}
+                  <div className="mb-4">
+                    <label className="block text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-2">Other role (optional)</label>
+                    <input type="text" placeholder="e.g. Lighting Technician, Stunt Coordinator…"
+                      className="field-input" value={otherRoleText}
+                      onChange={(e) => setOtherRoleText(e.target.value)} maxLength={50} />
+                  </div>
                 </div>
               )}
 

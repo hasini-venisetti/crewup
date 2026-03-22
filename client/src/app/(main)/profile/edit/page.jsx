@@ -9,7 +9,8 @@ import { useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
-const ROLES = ['Director','Cinematographer','Editor','Musician','Actor','Photographer','Writer','Producer','Sound Designer','Colorist','VFX Artist','Animator','Scriptwriter','Production Designer','Costume Designer','Makeup Artist'];
+const ROLES = ['Director','Cinematographer','Editor','Musician','Actor','Photographer','Writer','Producer','Sound Designer','Colorist','VFX Artist','Animator','Scriptwriter','Production Designer','Costume Designer','Makeup Artist','Other'];
+const ROLE_VALUES = ROLES.map(r => r.toLowerCase().replace(/\s+/g, '-'));
 const EXP_LEVELS = ['beginner','intermediate','advanced','professional'];
 const AVAIL_OPTIONS = [
   { value: 'available',      label: '🟢 Available',       desc: 'Actively looking for projects' },
@@ -39,7 +40,7 @@ export default function EditProfilePage() {
   const [saving, setSaving]     = useState(false);
   const [tab, setTab]           = useState('basic');
   const [form, setForm]         = useState({
-    name: '', role: '', bio: '', gender: '',
+    name: '', roles: [], bio: '', gender: '',
     experienceLevel: 'beginner', availability: 'available',
     location: { city: '', country: '' },
     skills: [],
@@ -79,7 +80,7 @@ export default function EditProfilePage() {
         })));
         setForm({
           name:            p.user?.name       || '',
-          role:            p.user?.role       || '',
+          roles:           p.user?.roles?.length ? p.user.roles : (p.user?.role ? [p.user.role] : []),
           bio:             p.bio              || '',
           gender:          p.user?.gender     || '',
           experienceLevel: p.experienceLevel  || 'beginner',
@@ -121,7 +122,7 @@ export default function EditProfilePage() {
     setSaving(true);
     try {
       await profileAPI.update({
-        ...form, name: form.name, role: form.role,
+        ...form, name: form.name, roles: form.roles, role: form.roles[0] || 'other',
         portfolioLinks: form.portfolioLinks.filter((l) => l.url),
         availabilitySlots: availSlots.filter((s) => s.startDate && s.endDate),
         isMentor: form.isMentor, mentorBio: form.mentorBio, mentorFields: form.mentorFields,
@@ -311,11 +312,33 @@ export default function EditProfilePage() {
               </select>
             </div>
             <div>
-              <label className={labelCls}>Primary Role</label>
-              <select className={inputCls} value={form.role} onChange={(e) => set('role', e.target.value)}>
-                <option value="">Select your role…</option>
-                {ROLES.map((r) => <option key={r} value={r.toLowerCase().replace(' ', '-')}>{r}</option>)}
-              </select>
+              <label className={labelCls}>Roles <span className="normal-case font-normal text-[#a3a39e]">(select all that apply)</span></label>
+              <div className="grid grid-cols-2 gap-2 mt-1">
+                {ROLES.map((r, i) => {
+                  const val = ROLE_VALUES[i];
+                  const selected = form.roles.includes(val);
+                  return (
+                    <button key={r} type="button"
+                      onClick={() => {
+                        const next = selected
+                          ? form.roles.filter(x => x !== val)
+                          : [...form.roles, val];
+                        set('roles', next);
+                      }}
+                      className={`py-2.5 px-3 rounded-lg border text-sm font-medium text-left transition-all flex items-center gap-1.5 ${
+                        selected
+                          ? 'bg-[#0e0e0d] text-white border-[#0e0e0d]'
+                          : 'bg-white text-[#6b6b66] border-[#e0e0dd] hover:border-[#0e0e0d]'
+                      }`}>
+                      {selected && <span className="text-xs leading-none">✓</span>}
+                      {r}
+                    </button>
+                  );
+                })}
+              </div>
+              {form.roles.length > 0 && (
+                <p className="text-xs text-[#6C63FF] mt-2">Primary role: <strong>{form.roles[0]}</strong></p>
+              )}
             </div>
             <div>
               <label className={labelCls}>Bio</label>
