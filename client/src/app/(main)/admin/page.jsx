@@ -704,6 +704,274 @@ function ContestsTab() {
 }
 
 /* ══════════════════════════════════════════════════════════════════════
+   TAB: Contest Submissions
+══════════════════════════════════════════════════════════════════════ */
+const STATUS_CFG = {
+  pending_check:  { label: 'Checking…',      cls: 'bg-yellow-50 text-yellow-700 border-yellow-200' },
+  auto_rejected:  { label: 'Auto-rejected',  cls: 'bg-orange-50 text-orange-700 border-orange-200' },
+  pending_review: { label: 'Pending review', cls: 'bg-blue-50 text-blue-700 border-blue-200' },
+  approved:       { label: 'Approved',       cls: 'bg-green-50 text-green-700 border-green-200' },
+  rejected:       { label: 'Rejected',       cls: 'bg-red-50 text-red-700 border-red-200' },
+};
+
+function ContestSubmissionsTab() {
+  const [submissions, setSubmissions]   = useState([]);
+  const [loading, setLoading]           = useState(true);
+  const [statusFilter, setStatusFilter] = useState('pending_review');
+  const [expandedId, setExpandedId]     = useState(null);
+  const [rejectModal, setRejectModal]   = useState(null); // { subId, title }
+  const [rejectReason, setRejectReason] = useState('');
+  const [acting, setActing]             = useState(false);
+  const [counts, setCounts]             = useState({});
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Load counts for each status badge
+      const statusKeys = ['pending_review', 'auto_rejected', 'pending_check', 'approved', 'rejected'];
+      const [mainRes, ...countRes] = await Promise.all([
+        contestSubmissionAPI.adminGetAll({ status: statusFilter, limit: 50 }),
+        ...statusKeys.map((s) => contestSubmissionAPI.adminGetAll({ status: s, limit: 1 })),
+      ]);
+      setSubmissions(mainRes.data.data || []);
+      const c = {};
+      statusKeys.forEach((s, i) => { c[s] = countRes[i].data.total || 0; });
+      setCounts(c);
+    } catch { setSubmissions([]); }
+    finally { setLoading(false); }
+  }, [statusFilter]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleApprove = async (sub) => {
+    if (acting) return;
+    setActing(true);
+    try {
+      await contestSubmissionAPI.adminApprove(sub._id, '');
+      toast.success(`"${sub.title}" approved!`);
+      load();
+    } catch { toast.error('Failed to approve.'); }
+    finally { setActing(false); }
+  };
+
+  const handleRejectSubmit = async () => {
+    if (!rejectReason.trim() || acting) return;
+    setActing(true);
+    try {
+      await contestSubmissionAPI.adminReject(rejectModal.subId, rejectReason.trim());
+      toast.success('Submission rejected.');
+      setRejectModal(null); setRejectReason('');
+      load();
+    } catch { toast.error('Failed to reject.'); }
+    finally { setActing(false); }
+  };
+
+  const STATUS_TABS = [
+    { key: 'pending_review', label: 'Needs Review' },
+    { key: 'auto_rejected',  label: 'Auto-rejected' },
+    { key: 'pending_check',  label: 'Checking' },
+    { key: 'approved',       label: 'Approved' },
+    { key: 'rejected',       label: 'Rejected' },
+  ];
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-lg font-bold text-[#111110]">Contest Submissions</h2>
+          <p className="text-xs text-[#a3a39e] mt-0.5">Review films submitted to all contests. Auto-check verifies YouTube description mentions before they reach you.</p>
+        </div>
+      </div>
+
+      {/* Status filter tabs */}
+      <div className="flex gap-1 bg-[#f7f7f6] border border-[#efefed] rounded-xl p-1 mb-6 w-fit flex-wrap">
+        {STATUS_TABS.map(({ key, label }) => (
+          <button key={key} onClick={() => setStatusFilter(key)}
+            className={`relative px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              statusFilter === key ? 'bg-white text-[#111110] shadow-sm border border-[#efefed]' : 'text-[#6b6b66] hover:text-[#111110]'
+            }`}>
+            {label}
+            {counts[key] > 0 && (
+              <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                key === 'pending_review' ? 'bg-blue-100 text-blue-700' :
+                key === 'auto_rejected'  ? 'bg-orange-100 text-orange-700' : 'bg-[#f0eeff] text-[#6C63FF]'
+              }`}>{counts[key]}</span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <div className="space-y-3">
+          {[...Array(3)].map((_, i) => <div key={i} className="h-24 bg-[#f7f7f6] rounded-xl animate-pulse" />)}
+        </div>
+      ) : submissions.length === 0 ? (
+        <div className="text-center py-16 text-[#a3a39e]">
+          <p className="text-3xl mb-2">📭</p>
+          <p className="text-sm font-medium">No submissions in this queue.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {submissions.map((sub) => {
+            const cfg       = STATUS_CFG[sub.reviewStatus] || STATUS_CFG.pending_check;
+            const isExpanded = expandedId === sub._id;
+            const autoCheck  = sub.autoCheck || {};
+
+            return (
+              <div key={sub._id} className="bg-white border border-[#efefed] rounded-xl overflow-hidden">
+                {/* Main row */}
+                <div className="p-4 flex items-start gap-4">
+                  {/* Thumbnail */}
+                  {sub.thumbnail ? (
+                    <img src={sub.thumbnail} alt="" className="w-20 h-14 object-cover rounded-lg flex-shrink-0 bg-[#f0f0ee]" />
+                  ) : (
+                    <div className="w-20 h-14 rounded-lg bg-[#f0f0ee] flex items-center justify-center text-xl flex-shrink-0">🎬</div>
+                  )}
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2 flex-wrap">
+                      <div>
+                        <p className="text-sm font-bold text-[#111110] truncate">{sub.title}</p>
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                          {sub.submittedBy && (
+                            <Link href={`/profile/${sub.submittedBy._id}`} target="_blank"
+                              className="text-xs text-[#6C63FF] hover:underline font-medium">
+                              @{sub.submittedBy.username}
+                            </Link>
+                          )}
+                          {sub.contest && (
+                            <span className="text-[10px] text-[#a3a39e]">in {sub.contest.title}</span>
+                          )}
+                          <span className="text-[10px] text-[#a3a39e]">
+                            {new Date(sub.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </span>
+                          {sub.resubmitCount > 0 && (
+                            <span className="text-[10px] bg-yellow-50 text-yellow-700 border border-yellow-200 px-1.5 py-0.5 rounded-full">
+                              Resubmit #{sub.resubmitCount}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border flex-shrink-0 ${cfg.cls}`}>
+                        {cfg.label}
+                      </span>
+                    </div>
+
+                    {/* Auto-check result chips */}
+                    {autoCheck.ran && (
+                      <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                          autoCheck.hasCrewupMention ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-600 border-red-200'
+                        }`}>
+                          {autoCheck.hasCrewupMention ? '✓' : '✗'} crewupfilms
+                        </span>
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                          autoCheck.hasUsernameMention ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-600 border-red-200'
+                        }`}>
+                          {autoCheck.hasUsernameMention ? '✓' : '✗'} @username
+                        </span>
+                      </div>
+                    )}
+                    {!autoCheck.ran && sub.reviewStatus === 'pending_review' && (
+                      <p className="text-[10px] text-[#a3a39e] mt-1.5">Auto-check skipped (no YouTube API key) — manual review required.</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Actions + expand */}
+                <div className="px-4 pb-3 flex items-center justify-between gap-2 flex-wrap border-t border-[#fafaf9]">
+                  <div className="flex items-center gap-2">
+                    <a href={sub.youtubeLink} target="_blank" rel="noopener noreferrer"
+                      className="text-xs font-semibold text-[#6C63FF] hover:underline flex items-center gap-1">
+                      ▶ Watch on YouTube
+                    </a>
+                    <button onClick={() => setExpandedId(isExpanded ? null : sub._id)}
+                      className="text-xs text-[#a3a39e] hover:text-[#6b6b66] transition-colors">
+                      {isExpanded ? '▲ Hide description' : '▼ Show description'}
+                    </button>
+                  </div>
+
+                  {sub.reviewStatus === 'pending_review' && (
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => { setRejectModal({ subId: sub._id, title: sub.title }); setRejectReason(''); }}
+                        disabled={acting}
+                        className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-all disabled:opacity-50">
+                        Reject
+                      </button>
+                      <button onClick={() => handleApprove(sub)} disabled={acting}
+                        className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-green-500 hover:bg-green-600 text-white transition-all disabled:opacity-50">
+                        ✓ Approve
+                      </button>
+                    </div>
+                  )}
+
+                  {sub.reviewStatus === 'approved' && (
+                    <span className="text-xs text-green-600 font-semibold">✓ Approved</span>
+                  )}
+                  {sub.reviewStatus === 'rejected' && sub.adminNote && (
+                    <p className="text-xs text-red-500">Rejected: {sub.adminNote}</p>
+                  )}
+                </div>
+
+                {/* Expanded: YouTube description */}
+                {isExpanded && (
+                  <div className="border-t border-[#efefed] bg-[#fafaf9] px-4 py-3">
+                    <p className="text-[10px] font-semibold text-[#a3a39e] uppercase tracking-wider mb-2">YouTube Description (fetched)</p>
+                    {autoCheck.fetchedDescription ? (
+                      <pre className="text-xs text-[#3d3d3a] whitespace-pre-wrap font-mono bg-white border border-[#efefed] rounded-lg p-3 max-h-48 overflow-y-auto">
+                        {autoCheck.fetchedDescription}
+                      </pre>
+                    ) : (
+                      <p className="text-xs text-[#a3a39e] italic">
+                        {autoCheck.ran
+                          ? 'Description was empty or could not be fetched.'
+                          : 'Description not fetched — add YOUTUBE_API_KEY to enable auto-check.'}
+                      </p>
+                    )}
+                    {sub.caption && (
+                      <div className="mt-3">
+                        <p className="text-[10px] font-semibold text-[#a3a39e] uppercase tracking-wider mb-1">Filmmaker's caption</p>
+                        <p className="text-xs text-[#3d3d3a]">{sub.caption}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Reject modal */}
+      {rejectModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setRejectModal(null)}>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-bold text-[#111110] text-base mb-1">Reject Submission</h3>
+            <p className="text-xs text-[#6b6b66] mb-4">"{rejectModal.title}" — the filmmaker will be notified with your reason and can resubmit.</p>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="e.g. YouTube description doesn't mention @crewupfilms clearly enough. Please add it and resubmit."
+              rows={3}
+              className="w-full text-sm border border-[#e0e0dd] rounded-xl p-3 resize-none focus:outline-none focus:border-[#6C63FF] mb-4"
+            />
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setRejectModal(null)} className="text-xs font-semibold px-4 py-2 rounded-lg border border-[#e0e0dd] text-[#6b6b66] hover:border-[#a3a39e]">
+                Cancel
+              </button>
+              <button onClick={handleRejectSubmit} disabled={acting || !rejectReason.trim()}
+                className="text-xs font-semibold px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white disabled:opacity-50">
+                Reject & Notify
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════
    TAB: Announcements
 ══════════════════════════════════════════════════════════════════════ */
 function AnnouncementsTab() {
@@ -1895,13 +2163,14 @@ function ReportQueueTab() {
 }
 
 const TABS = [
-  { id: 'overview',      label: '📊 Overview' },
-  { id: 'risk-monitor',  label: '🚨 Risk Monitor' },
-  { id: 'report-queue',  label: '⚑ Report Queue' },
-  { id: 'users',         label: '👥 Users' },
-  { id: 'contests',      label: '🏆 Contests' },
-  { id: 'announcements', label: '📢 Announcements' },
-  { id: 'waitlist',      label: '✉️ Waitlist' },
+  { id: 'overview',             label: '📊 Overview' },
+  { id: 'risk-monitor',         label: '🚨 Risk Monitor' },
+  { id: 'report-queue',         label: '⚑ Report Queue' },
+  { id: 'users',                label: '👥 Users' },
+  { id: 'contests',             label: '🏆 Contests' },
+  { id: 'contest-submissions',  label: '🎬 Submissions' },
+  { id: 'announcements',        label: '📢 Announcements' },
+  { id: 'waitlist',             label: '✉️ Waitlist' },
 ];
 
 export default function AdminPage() {
@@ -1960,13 +2229,14 @@ export default function AdminPage() {
         </div>
 
         {/* Content */}
-        {tab === 'overview'      && <OverviewTab />}
-        {tab === 'risk-monitor'  && <RiskMonitorTab />}
-        {tab === 'report-queue'  && <ReportQueueTab />}
-        {tab === 'users'         && <UsersTab />}
-        {tab === 'contests'      && <ContestsTab />}
-        {tab === 'announcements' && <AnnouncementsTab />}
-        {tab === 'waitlist'      && <WaitlistTab />}
+        {tab === 'overview'             && <OverviewTab />}
+        {tab === 'risk-monitor'         && <RiskMonitorTab />}
+        {tab === 'report-queue'         && <ReportQueueTab />}
+        {tab === 'users'                && <UsersTab />}
+        {tab === 'contests'             && <ContestsTab />}
+        {tab === 'contest-submissions'  && <ContestSubmissionsTab />}
+        {tab === 'announcements'        && <AnnouncementsTab />}
+        {tab === 'waitlist'             && <WaitlistTab />}
       </div>
     </div>
   );

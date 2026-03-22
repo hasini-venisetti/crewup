@@ -270,8 +270,14 @@ function SubmissionCard({ sub, contestId, user, rank, onLikeToggle, onVoteToggle
 }
 
 /* ─── SubmitModal ───────────────────────────────────────────────────────────── */
-function SubmitModal({ contestId, onClose, onSuccess }) {
-  const [form, setForm]           = useState({ title: '', youtubeLink: '', projectId: '', caption: '' });
+function SubmitModal({ contestId, onClose, onSuccess, existingSubmission }) {
+  const isResubmit = !!existingSubmission;
+  const [form, setForm]           = useState({
+    title:       existingSubmission?.title       || '',
+    youtubeLink: existingSubmission?.youtubeLink || '',
+    projectId:   '',
+    caption:     existingSubmission?.caption     || '',
+  });
   const [error, setError]         = useState('');
   const [loading, setLoading]     = useState(false);
   const [eligibility, setElig]    = useState(null);
@@ -301,9 +307,25 @@ function SubmitModal({ contestId, onClose, onSuccess }) {
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="font-bold text-[#111110]">Submit Your Film</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-bold text-[#111110]">{isResubmit ? '↩ Resubmit Your Film' : 'Submit Your Film'}</h3>
           <button onClick={onClose} className="w-8 h-8 rounded-full bg-[#f7f7f6] flex items-center justify-center text-[#6b6b66] hover:bg-[#efefed] transition-colors text-lg">×</button>
+        </div>
+
+        {/* YouTube description requirements */}
+        <div className="bg-[#f0eeff] border border-[#c7c2f5] rounded-xl p-3.5 mb-5">
+          <p className="text-xs font-bold text-[#4d44c8] mb-1.5">📋 Required: YouTube description must include</p>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-xs text-[#5750D4]">
+              <span className="w-4 h-4 rounded-full bg-[#6C63FF] text-white flex items-center justify-center text-[9px] font-bold flex-shrink-0">1</span>
+              The word <strong>crewupfilms</strong> (or "crewup films")
+            </div>
+            <div className="flex items-center gap-2 text-xs text-[#5750D4]">
+              <span className="w-4 h-4 rounded-full bg-[#6C63FF] text-white flex items-center justify-center text-[9px] font-bold flex-shrink-0">2</span>
+              Your CrewUp <strong>@username</strong>
+            </div>
+          </div>
+          <p className="text-[10px] text-[#7c74e8] mt-2">Submissions missing either mention will be auto-rejected. You can resubmit after fixing your description.</p>
         </div>
 
         {/* Eligibility check */}
@@ -416,6 +438,7 @@ export default function ContestDetailPage() {
   const [showSubmit, setShowSubmit]     = useState(false);
   const [commentSub, setCommentSub]     = useState(null);
   const [activeSection, setActiveSection] = useState('submissions'); // 'submissions' | 'leaderboard'
+  const [mySubmission, setMySubmission] = useState(null); // current user's own submission
 
   /* Load contest */
   useEffect(() => {
@@ -447,6 +470,14 @@ export default function ContestDetailPage() {
   }, [id]);
 
   useEffect(() => { loadSubmissions(1); loadLeaderboard(); }, [id]);
+
+  /* Load the current user's own submission status */
+  useEffect(() => {
+    if (!user) return;
+    contestSubmissionAPI.getMySubmission(id)
+      .then(({ data }) => setMySubmission(data.data || null))
+      .catch(() => {});
+  }, [id, user]);
 
   const handleLikeToggle = async (subId) => {
     if (!user) return;
@@ -496,9 +527,14 @@ export default function ContestDetailPage() {
 
   const handleSubmitSuccess = (newSub) => {
     setShowSubmit(false);
-    setSubmissions((prev) => [newSub, ...prev]);
-    setTotal((t) => t + 1);
-    loadLeaderboard();
+    setMySubmission(newSub);
+    // Only add to public list if already approved (won't happen on first submit,
+    // but covers admin-approved submissions showing up instantly)
+    if (newSub.reviewStatus === 'approved') {
+      setSubmissions((prev) => [newSub, ...prev]);
+      setTotal((t) => t + 1);
+      loadLeaderboard();
+    }
   };
 
   if (loading) {
@@ -520,7 +556,7 @@ export default function ContestDetailPage() {
   return (
     <>
       {showSubmit && (
-        <SubmitModal contestId={id} onClose={() => setShowSubmit(false)} onSuccess={handleSubmitSuccess} />
+        <SubmitModal contestId={id} onClose={() => setShowSubmit(false)} onSuccess={handleSubmitSuccess} existingSubmission={mySubmission} />
       )}
       {commentSub && (
         <CommentPanel contestId={id} sub={commentSub} user={user} onClose={() => setCommentSub(null)} />
@@ -711,7 +747,7 @@ export default function ContestDetailPage() {
                   { step: '01', title: 'Create an Account', desc: 'Sign up on CREWUPFILMS to join the contest.' },
                   { step: '02', title: 'Post a Project & Build a Team',
                     desc: `Create a project and recruit at least 1 crew member — 2 members minimum total.${contest.teamFormedAfter ? ` Your project must be created on or after ${new Date(contest.teamFormedAfter).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })}.` : ''}` },
-                  { step: '03', title: 'Upload to YouTube', desc: 'Upload your film as Public or Unlisted on YouTube.' },
+                  { step: '03', title: 'Upload to YouTube', desc: 'Upload your film as Public or Unlisted on YouTube. Your video description must mention "crewupfilms" and your @username — submissions are auto-checked.' },
                   { step: '04', title: 'Submit Your Film', desc: 'Click "Submit Your Film", select your team project, and paste the YouTube link.' },
                   { step: '05', title: 'Get Community Votes', desc: 'Earn votes and comments from the community to rise up the leaderboard.' },
                 ].map(({ step, title, desc }) => (
@@ -771,6 +807,56 @@ export default function ContestDetailPage() {
               </div>
             </section>
           )}
+
+          {/* ── MY SUBMISSION STATUS ── */}
+          {user && mySubmission && (() => {
+            const s = mySubmission;
+            const statusMap = {
+              pending_check:  { icon: '⏳', color: 'bg-yellow-50 border-yellow-200', title: 'Checking your submission…', body: 'We\'re verifying your YouTube description. This only takes a moment.' },
+              auto_rejected:  { icon: '❌', color: 'bg-red-50 border-red-200', title: 'Auto-check failed', body: `Your YouTube description is missing required mentions. Please update it and resubmit.` },
+              pending_review: { icon: '🔍', color: 'bg-blue-50 border-blue-200', title: 'Under admin review', body: 'Your film passed the auto-check and is now being reviewed by our team.' },
+              approved:       { icon: '🎉', color: 'bg-green-50 border-green-200', title: 'Submission approved!', body: 'Your film is live in the contest. Share it to get more votes!' },
+              rejected:       { icon: '❌', color: 'bg-red-50 border-red-200', title: 'Submission rejected', body: s.adminNote ? `Reason: ${s.adminNote}` : 'Your submission was rejected. Please review the requirements and resubmit.' },
+            };
+            const cfg = statusMap[s.reviewStatus] || statusMap.pending_check;
+            const canResubmit = ['auto_rejected', 'rejected'].includes(s.reviewStatus) && canSubmit;
+            const autoCheck = s.autoCheck || {};
+
+            return (
+              <div className={`border rounded-2xl p-5 mb-2 ${cfg.color}`}>
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <div className="flex items-start gap-3">
+                    <span className="text-2xl leading-none mt-0.5">{cfg.icon}</span>
+                    <div>
+                      <p className="font-bold text-[#111110] text-sm">Your Submission — {s.title}</p>
+                      <p className="text-xs text-[#6b6b66] mt-0.5">{cfg.body}</p>
+                      {/* Auto-check detail for rejected */}
+                      {s.reviewStatus === 'auto_rejected' && autoCheck.ran && (
+                        <div className="flex gap-1.5 mt-2 flex-wrap">
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${autoCheck.hasCrewupMention ? 'bg-green-100 text-green-700 border-green-300' : 'bg-red-100 text-red-600 border-red-300'}`}>
+                            {autoCheck.hasCrewupMention ? '✓' : '✗'} "crewupfilms" in description
+                          </span>
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${autoCheck.hasUsernameMention ? 'bg-green-100 text-green-700 border-green-300' : 'bg-red-100 text-red-600 border-red-300'}`}>
+                            {autoCheck.hasUsernameMention ? '✓' : '✗'} Your @username in description
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <a href={s.youtubeLink} target="_blank" rel="noopener noreferrer"
+                      className="text-xs font-semibold text-[#6C63FF] hover:underline">▶ Watch</a>
+                    {canResubmit && (
+                      <button onClick={() => setShowSubmit(true)}
+                        className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#6C63FF] hover:bg-[#5750D4] text-white transition-all">
+                        ↩ Resubmit
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* ── TABS: Submissions / Leaderboard ── */}
           <section>

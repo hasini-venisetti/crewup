@@ -11,6 +11,8 @@ const {
   submitFilm, deleteSubmission,
   toggleLike, toggleVote,
   getComments, addComment, deleteComment,
+  adminGetSubmissions, adminApprove, adminReject,
+  getMySubmission,
 } = require('../controllers/contestSubmissionController');
 
 const router = express.Router();
@@ -31,8 +33,14 @@ router.patch('/:id/prize-claims/:claimId',   protect, adminOnly,   markClaimProc
 router.get( '/:id/submissions',                  getSubmissions);
 router.get( '/:id/leaderboard',                  getLeaderboard);
 router.get( '/:id/eligibility',  protect,        checkEligibility);
+router.get( '/:id/my-submission', protect,       getMySubmission);
 router.post('/:id/submissions',  protect,        submitFilm);
 router.delete('/:id/submissions/:subId', protect, deleteSubmission);
+
+// Admin review routes
+router.get(   '/admin/submissions',                   protect, adminOnly, adminGetSubmissions);
+router.patch( '/admin/submissions/:subId/approve',    protect, adminOnly, adminApprove);
+router.patch( '/admin/submissions/:subId/reject',     protect, adminOnly, adminReject);
 
 // Submission interactions
 router.post(  '/:id/submissions/:subId/like',                protect, toggleLike);

@@ -282,6 +282,7 @@ export const contestSubmissionAPI = {
   getSubmissions:    (contestId, params)            => api.get(`/contests/${contestId}/submissions`, { params }),
   getLeaderboard:    (contestId)                    => api.get(`/contests/${contestId}/leaderboard`),
   checkEligibility:  (contestId)                    => api.get(`/contests/${contestId}/eligibility`),
+  getMySubmission:   (contestId)                    => api.get(`/contests/${contestId}/my-submission`),
   submitFilm:        (contestId, data)              => api.post(`/contests/${contestId}/submissions`, data),
   deleteSubmission:  (contestId, subId)             => api.delete(`/contests/${contestId}/submissions/${subId}`),
   toggleLike:        (contestId, subId)             => api.post(`/contests/${contestId}/submissions/${subId}/like`),
@@ -289,6 +290,10 @@ export const contestSubmissionAPI = {
   getComments:       (contestId, subId)             => api.get(`/contests/${contestId}/submissions/${subId}/comments`),
   addComment:        (contestId, subId, text)       => api.post(`/contests/${contestId}/submissions/${subId}/comments`, { text }),
   deleteComment:     (contestId, subId, commentId)  => api.delete(`/contests/${contestId}/submissions/${subId}/comments/${commentId}`),
+  // Admin
+  adminGetAll:    (params)        => api.get('/contests/admin/submissions', { params }),
+  adminApprove:   (subId, note)   => api.patch(`/contests/admin/submissions/${subId}/approve`, { note }),
+  adminReject:    (subId, reason) => api.patch(`/contests/admin/submissions/${subId}/reject`, { reason }),
 };
 
 /* ── Film Interactions (likes, comments, bookmarks, analytics, report) ── */

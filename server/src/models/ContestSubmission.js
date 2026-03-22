@@ -35,6 +35,37 @@ const contestSubmissionSchema = new mongoose.Schema(
     // Custom message from the filmmaker (shown on the submission card)
     caption: { type: String, default: '', maxlength: 300, trim: true },
 
+    // ── Moderation ────────────────────────────────────────────────────────────
+    // pending_check  → just submitted, auto-check running
+    // auto_rejected  → failed auto-check (missing crewupfilms / @username in description)
+    // pending_review → passed auto-check, waiting for admin decision
+    // approved       → admin approved — visible publicly
+    // rejected       → admin rejected — user can resubmit
+    reviewStatus: {
+      type:    String,
+      enum:    ['pending_check', 'auto_rejected', 'pending_review', 'approved', 'rejected'],
+      default: 'pending_check',
+      index:   true,
+    },
+
+    // Auto-check results (populated after YouTube description fetch)
+    autoCheck: {
+      ran:                { type: Boolean, default: false },
+      passed:             { type: Boolean, default: false },
+      hasCrewupMention:   { type: Boolean, default: false },
+      hasUsernameMention: { type: Boolean, default: false },
+      fetchedDescription: { type: String,  default: '' },
+      checkedAt:          { type: Date },
+    },
+
+    // Admin review
+    adminNote:   { type: String, default: '' },   // rejection reason or approval note
+    reviewedBy:  { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    reviewedAt:  { type: Date },
+
+    // How many times the user has resubmitted after rejection
+    resubmitCount: { type: Number, default: 0 },
+
     // Legacy likes (kept for backward compat)
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
 

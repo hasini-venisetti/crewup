@@ -2,6 +2,9 @@ const Contest            = require('../models/Contest');
 const ContestSubmission  = require('../models/ContestSubmission');
 const FilmComment        = require('../models/FilmComment');
 const Project            = require('../models/Project');
+const Notification       = require('../models/Notification');
+const User               = require('../models/User');
+const { runAutoCheck }   = require('../utils/youtubeChecker');
 
 function extractYtId(url) {
   if (!url) return null;
@@ -10,20 +13,28 @@ function extractYtId(url) {
 }
 
 // GET /api/contests/:id/submissions?page=1&limit=12
+// Public: only approved submissions. Admin sees all (pass ?all=1 with admin token).
 const getSubmissions = async (req, res, next) => {
   try {
     const { page = 1, limit = 12 } = req.query;
     const skip = (Number(page) - 1) * Number(limit);
 
+    // Admins can pass ?all=1 to see every submission regardless of status
+    const isAdmin = req.user?.role === 'admin';
+    const showAll = isAdmin && req.query.all === '1';
+    const filter  = showAll
+      ? { contest: req.params.id }
+      : { contest: req.params.id, reviewStatus: 'approved' };
+
     const [submissions, total] = await Promise.all([
-      ContestSubmission.find({ contest: req.params.id })
+      ContestSubmission.find(filter)
         .populate('submittedBy', 'name username profileImage')
         .populate('project', 'title')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(Number(limit))
         .lean(),
-      ContestSubmission.countDocuments({ contest: req.params.id }),
+      ContestSubmission.countDocuments(filter),
     ]);
 
     const ids = submissions.map((s) => s._id);
@@ -45,10 +56,10 @@ const getSubmissions = async (req, res, next) => {
   } catch (e) { next(e); }
 };
 
-// GET /api/contests/:id/leaderboard  — top 10 by votes then likes
+// GET /api/contests/:id/leaderboard  — top 10 approved submissions by votes then likes
 const getLeaderboard = async (req, res, next) => {
   try {
-    const submissions = await ContestSubmission.find({ contest: req.params.id })
+    const submissions = await ContestSubmission.find({ contest: req.params.id, reviewStatus: 'approved' })
       .populate('submittedBy', 'name username profileImage')
       .lean();
 
@@ -96,11 +107,17 @@ const checkEligibility = async (req, res, next) => {
     const alreadySubmitted = await ContestSubmission.find({
       contest: req.params.id,
       project: { $in: eligibleIds },
-    }).select('project submittedBy').lean();
+    }).select('project submittedBy reviewStatus').lean();
 
-    const submittedProjectIds  = new Set(alreadySubmitted.map((s) => s.project?.toString()));
+    // Projects with approved/pending submissions are locked — rejected ones can resubmit
+    const lockedStatuses       = ['approved', 'pending_review', 'pending_check'];
+    const lockedProjectIds     = new Set(
+      alreadySubmitted
+        .filter((s) => lockedStatuses.includes(s.reviewStatus))
+        .map((s) => s.project?.toString())
+    );
     const submittedByMe        = alreadySubmitted.find((s) => s.submittedBy?.toString() === userId.toString());
-    const availableProjects    = eligibleProjects.filter((p) => !submittedProjectIds.has(p._id.toString()));
+    const availableProjects    = eligibleProjects.filter((p) => !lockedProjectIds.has(p._id.toString()));
     const eligible             = availableProjects.length > 0;
 
     let reason = null;
@@ -131,6 +148,64 @@ const checkEligibility = async (req, res, next) => {
     });
   } catch (e) { next(e); }
 };
+
+// ── Shared helper: run auto-check and update submission + notify ──────────
+async function runCheckAndUpdate(submission, username, contestTitle) {
+  const check = await runAutoCheck(submission.videoId, username);
+
+  let newStatus;
+  if (check.skipped) {
+    // No YouTube API key — go straight to admin review
+    newStatus = 'pending_review';
+  } else if (check.passed) {
+    newStatus = 'pending_review';
+  } else {
+    newStatus = 'auto_rejected';
+  }
+
+  submission.autoCheck    = check;
+  submission.reviewStatus = newStatus;
+  await submission.save();
+
+  // Notify the submitter of the auto-check result
+  let notifTitle, notifMsg;
+  if (newStatus === 'pending_review') {
+    notifTitle = `✅ Submission received: ${contestTitle}`;
+    notifMsg   = check.skipped
+      ? `Your film "${submission.title}" has been submitted and is pending admin review.`
+      : `Your film "${submission.title}" passed the auto-check and is now pending admin review.`;
+  } else {
+    const missing = [];
+    if (!check.hasCrewupMention)   missing.push('"crewupfilms"');
+    if (!check.hasUsernameMention) missing.push(`"@${username}"`);
+    notifTitle = `❌ Submission auto-rejected: ${contestTitle}`;
+    notifMsg   = `Your film "${submission.title}" was auto-rejected because the YouTube description is missing: ${missing.join(' and ')}. Please add the required mentions and resubmit.`;
+  }
+
+  await Notification.create({
+    recipient: submission.submittedBy,
+    type:      'contest_submission',
+    title:     notifTitle,
+    message:   notifMsg,
+    link:      `/contests/${submission.contest}`,
+  });
+
+  // Notify all admins when a film reaches pending_review
+  if (newStatus === 'pending_review') {
+    const admins = await User.find({ role: 'admin' }).select('_id').lean();
+    if (admins.length > 0) {
+      await Notification.insertMany(admins.map((a) => ({
+        recipient: a._id,
+        type:      'contest_submission',
+        title:     `📽️ New contest submission: ${contestTitle}`,
+        message:   `"${submission.title}" by @${username} passed auto-check and is ready for review.`,
+        link:      `/admin?tab=contest-submissions`,
+      })));
+    }
+  }
+
+  return submission;
+}
 
 // POST /api/contests/:id/submissions  (auth required)
 const submitFilm = async (req, res, next) => {
@@ -173,31 +248,55 @@ const submitFilm = async (req, res, next) => {
       ? eligibleProjects.find((p) => p._id.toString() === projectId) || eligibleProjects[0]
       : eligibleProjects[0];
 
-    // ── Team duplicate check: one submission per project per contest ──
-    const teamAlreadySubmitted = await ContestSubmission.findOne({
+    // ── Block only if existing submission is in a locked state ──
+    const existingSubmission = await ContestSubmission.findOne({
       contest: req.params.id,
       project: chosenProject._id,
-    }).lean();
-    if (teamAlreadySubmitted) {
+    });
+    const lockedStatuses = ['approved', 'pending_review', 'pending_check'];
+    if (existingSubmission && lockedStatuses.includes(existingSubmission.reviewStatus)) {
       return res.status(409).json({
         success: false,
-        message: 'Your team has already submitted a film to this contest. Only one submission per team is allowed.',
+        message: 'Your team already has an active submission for this contest.',
         teamAlreadySubmitted: true,
       });
     }
 
-    const submission = await ContestSubmission.create({
-      contest:     req.params.id,
-      submittedBy: req.user._id,
-      project:     chosenProject._id,
-      title, youtubeLink, videoId, thumbnail,
-      caption: (caption || '').trim().slice(0, 300),
-    });
+    // If a rejected submission exists, update it (resubmit) rather than creating a new one
+    let submission;
+    if (existingSubmission) {
+      existingSubmission.title        = title;
+      existingSubmission.youtubeLink  = youtubeLink;
+      existingSubmission.videoId      = videoId;
+      existingSubmission.thumbnail    = thumbnail;
+      existingSubmission.caption      = (caption || '').trim().slice(0, 300);
+      existingSubmission.reviewStatus = 'pending_check';
+      existingSubmission.adminNote    = '';
+      existingSubmission.resubmitCount += 1;
+      await existingSubmission.save();
+      submission = existingSubmission;
+    } else {
+      submission = await ContestSubmission.create({
+        contest:     req.params.id,
+        submittedBy: req.user._id,
+        project:     chosenProject._id,
+        title, youtubeLink, videoId, thumbnail,
+        caption:      (caption || '').trim().slice(0, 300),
+        reviewStatus: 'pending_check',
+      });
+    }
+
     await submission.populate('submittedBy', 'name username profileImage');
 
+    // Return immediately so the user isn't kept waiting — check runs async
     res.status(201).json({ success: true, data: submission });
+
+    // Run the YouTube description check in the background
+    const username = req.user.username || '';
+    runCheckAndUpdate(submission, username, contest.title).catch(console.error);
+
   } catch (e) {
-    if (e.code === 11000) return res.status(409).json({ success: false, message: 'Your team has already submitted a film to this contest. Only one submission per team is allowed.', teamAlreadySubmitted: true });
+    if (e.code === 11000) return res.status(409).json({ success: false, message: 'Your team already has a submission for this contest.', teamAlreadySubmitted: true });
     next(e);
   }
 };
@@ -282,9 +381,109 @@ const deleteComment = async (req, res, next) => {
   } catch (e) { next(e); }
 };
 
+// ── Admin: list all submissions pending review (or any status) ────────────
+// GET /api/admin/contest-submissions?status=pending_review&contestId=xxx
+const adminGetSubmissions = async (req, res, next) => {
+  try {
+    const { status, contestId, page = 1, limit = 20 } = req.query;
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const filter = {};
+    if (status)    filter.reviewStatus = status;
+    if (contestId) filter.contest      = contestId;
+
+    const [submissions, total] = await Promise.all([
+      ContestSubmission.find(filter)
+        .populate('submittedBy', 'name username profileImage')
+        .populate('contest',     'title')
+        .populate('project',     'title')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit))
+        .lean(),
+      ContestSubmission.countDocuments(filter),
+    ]);
+
+    res.json({ success: true, data: submissions, total, page: Number(page), pages: Math.ceil(total / Number(limit)) });
+  } catch (e) { next(e); }
+};
+
+// ── Admin: approve a submission ───────────────────────────────────────────
+// PATCH /api/admin/contest-submissions/:subId/approve
+const adminApprove = async (req, res, next) => {
+  try {
+    const sub = await ContestSubmission.findById(req.params.subId)
+      .populate('submittedBy', 'name username')
+      .populate('contest', 'title');
+    if (!sub) return res.status(404).json({ success: false, message: 'Submission not found' });
+
+    sub.reviewStatus = 'approved';
+    sub.adminNote    = (req.body.note || '').trim();
+    sub.reviewedBy   = req.user._id;
+    sub.reviewedAt   = new Date();
+    await sub.save();
+
+    // Notify the submitter
+    await Notification.create({
+      recipient: sub.submittedBy._id,
+      type:      'contest_submission',
+      title:     `🎉 Submission approved: ${sub.contest.title}`,
+      message:   `Your film "${sub.title}" has been approved and is now live in the contest!${sub.adminNote ? ` Note: ${sub.adminNote}` : ''}`,
+      link:      `/contests/${sub.contest._id}`,
+    });
+
+    res.json({ success: true, data: sub });
+  } catch (e) { next(e); }
+};
+
+// ── Admin: reject a submission ────────────────────────────────────────────
+// PATCH /api/admin/contest-submissions/:subId/reject
+const adminReject = async (req, res, next) => {
+  try {
+    const sub = await ContestSubmission.findById(req.params.subId)
+      .populate('submittedBy', 'name username')
+      .populate('contest', 'title');
+    if (!sub) return res.status(404).json({ success: false, message: 'Submission not found' });
+
+    const reason = (req.body.reason || '').trim();
+    if (!reason) return res.status(400).json({ success: false, message: 'A rejection reason is required' });
+
+    sub.reviewStatus = 'rejected';
+    sub.adminNote    = reason;
+    sub.reviewedBy   = req.user._id;
+    sub.reviewedAt   = new Date();
+    await sub.save();
+
+    // Notify the submitter with the reason and resubmit link
+    await Notification.create({
+      recipient: sub.submittedBy._id,
+      type:      'contest_submission',
+      title:     `❌ Submission rejected: ${sub.contest.title}`,
+      message:   `Your film "${sub.title}" was rejected. Reason: ${reason}. You can update your submission and resubmit.`,
+      link:      `/contests/${sub.contest._id}`,
+    });
+
+    res.json({ success: true, data: sub });
+  } catch (e) { next(e); }
+};
+
+// GET /api/contests/:id/my-submission  — get the current user's own submission
+const getMySubmission = async (req, res, next) => {
+  try {
+    const sub = await ContestSubmission.findOne({
+      contest:     req.params.id,
+      submittedBy: req.user._id,
+    }).populate('project', 'title').lean();
+
+    res.json({ success: true, data: sub || null });
+  } catch (e) { next(e); }
+};
+
 module.exports = {
   getSubmissions, getLeaderboard, checkEligibility,
   submitFilm, deleteSubmission,
   toggleLike, toggleVote,
   getComments, addComment, deleteComment,
+  adminGetSubmissions, adminApprove, adminReject,
+  getMySubmission,
 };
