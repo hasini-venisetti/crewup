@@ -34,7 +34,8 @@ const search = async (req, res, next) => {
         .populate('createdBy', 'name username role profileImage')
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(limit);
+        .limit(limit)
+        .lean();
 
       results.projects = projects;
       results.total = projectsCount;
@@ -75,12 +76,18 @@ const search = async (req, res, next) => {
         .skip(skip)
         .limit(limit);
 
-      const creatorsWithProfiles = await Promise.all(
-        creators.map(async (user) => {
-          const profile = await Profile.findOne({ user: user._id });
-          return { ...user.toObject(), profile };
-        })
-      );
+      // Batch-fetch all profiles in ONE query instead of N individual queries (N+1 fix)
+      const creatorIds = creators.map((u) => u._id);
+      const profileDocs = await Profile.find({ user: { $in: creatorIds } })
+        .select('user bio experienceLevel location skills availability')
+        .lean();
+      const profileMap = {};
+      profileDocs.forEach((p) => { profileMap[p.user.toString()] = p; });
+
+      const creatorsWithProfiles = creators.map((user) => ({
+        ...user.toObject(),
+        profile: profileMap[user._id.toString()] || null,
+      }));
 
       results.creators = creatorsWithProfiles;
       results.total = creatorsCount;

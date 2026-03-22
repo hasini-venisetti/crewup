@@ -1,10 +1,12 @@
 require('dotenv').config();
-const express    = require('express');
-const http       = require('http');
-const { Server } = require('socket.io');
-const cors       = require('cors');
-const helmet     = require('helmet');
-const morgan     = require('morgan');
+const express       = require('express');
+const http          = require('http');
+const { Server }    = require('socket.io');
+const cors          = require('cors');
+const helmet        = require('helmet');
+const morgan        = require('morgan');
+const compression   = require('compression');
+const rateLimit     = require('express-rate-limit');
 
 const connectDB            = require('./config/db');
 const errorHandler         = require('./middleware/errorHandler');
@@ -81,8 +83,30 @@ const io = new Server(server, {
 // Attach all socket event handlers
 socketHandler(io);
 
+// ── Rate limiters ────────────────────────────────────────────────────────
+// Strict: auth endpoints (login / register / password reset)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,   // 15 minutes
+  max:      20,                // 20 attempts per IP per 15 min
+  standardHeaders: true,
+  legacyHeaders:   false,
+  message: { success: false, message: 'Too many attempts, please try again later.' },
+  skip: () => process.env.NODE_ENV === 'development',
+});
+
+// General: all other API endpoints
+const generalLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,    // 1 minute
+  max:      120,               // 120 req/min per IP
+  standardHeaders: true,
+  legacyHeaders:   false,
+  message: { success: false, message: 'Too many requests, please slow down.' },
+  skip: () => process.env.NODE_ENV === 'development',
+});
+
 // ── Express middleware ───────────────────────────────────────────────────
 app.use(helmet());
+app.use(compression());         // gzip all responses — saves 60-80% bandwidth
 app.use(
   cors({
     origin:      corsOrigin,
@@ -92,6 +116,10 @@ app.use(
 app.use(morgan(process.env.NODE_ENV === 'development' ? 'dev' : 'combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// Apply rate limits
+app.use('/api/auth', authLimiter);
+app.use('/api', generalLimiter);
 
 // ── Health check ─────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
@@ -142,6 +170,30 @@ const PORT = process.env.PORT || 5001;
 server.listen(PORT, () => {
   console.log(`🚀 CREWUP Server running on port ${PORT} [${process.env.NODE_ENV}]`);
   console.log(`🔌 Socket.io ready`);
+});
+
+// ── Graceful shutdown ─────────────────────────────────────────────────────
+// Lets Railway/Render drain in-flight requests before killing the process
+const gracefulShutdown = (signal) => {
+  console.log(`\n${signal} received — shutting down gracefully…`);
+  server.close(() => {
+    console.log('✅ HTTP server closed');
+    const mongoose = require('mongoose');
+    mongoose.connection.close(false, () => {
+      console.log('✅ MongoDB connection closed');
+      process.exit(0);
+    });
+  });
+  // Force kill after 10 s if still hanging
+  setTimeout(() => { console.error('⛔ Forced shutdown'); process.exit(1); }, 10_000);
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT',  () => gracefulShutdown('SIGINT'));
+
+// Log unhandled rejections (don't crash, but surface them)
+process.on('unhandledRejection', (reason) => {
+  console.error('⚠️  Unhandled Rejection:', reason);
 });
 
 module.exports = { app, server, io };

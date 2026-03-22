@@ -3,6 +3,21 @@ const Profile = require('../models/Profile');
 const Review  = require('../models/Review');
 const Project = require('../models/Project');
 
+// ── Simple in-memory cache (no Redis needed for this scale) ───────────────
+// Leaderboard scores change rarely — cache for 10 minutes per period+role combo
+const cache = new Map(); // key → { data, expiresAt }
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+const getCached = (key) => {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) { cache.delete(key); return null; }
+  return entry.data;
+};
+const setCache = (key, data) => {
+  cache.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS });
+};
+
 /**
  * Reputation score formula (0–100):
  *
@@ -36,6 +51,13 @@ function computeScore({ averageRating, reviewCount, projectsCompleted, collabora
 const getLeaderboard = async (req, res, next) => {
   try {
     const { period = 'alltime', role = '' } = req.query;
+
+    // Return cached result if fresh
+    const cacheKey = `leaderboard:${period}:${role}`;
+    const cached = getCached(cacheKey);
+    if (cached) {
+      return res.status(200).json({ success: true, data: cached, cached: true });
+    }
 
     // ── Step 1: Review stats per user ────────────────────────────────────────
     let matchStage = {};
@@ -155,6 +177,8 @@ const getLeaderboard = async (req, res, next) => {
       .sort((a, b) => b.reputationScore - a.reputationScore || b.reviewCount - a.reviewCount)
       .slice(0, 20);
 
+    // Store in cache before responding
+    setCache(cacheKey, leaderboard);
     res.status(200).json({ success: true, data: leaderboard });
   } catch (error) {
     next(error);
