@@ -350,10 +350,13 @@ export default function ProfilePage() {
 
       {/* Hero Section — dark */}
       <div
-        className="bg-[#0e0e0d] relative overflow-hidden"
+        className="bg-[#0e0e0d] relative"
         style={{ backgroundImage: 'radial-gradient(circle, #1a1a18 1px, transparent 1px)', backgroundSize: '24px 24px' }}
       >
-        <div className="absolute top-0 right-1/4 w-80 h-64 bg-[#6C63FF]/6 rounded-full blur-3xl pointer-events-none" />
+        {/* Decorative blob — clipped to hero only, does not clip dropdown */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-0 right-1/4 w-80 h-64 bg-[#6C63FF]/6 rounded-full blur-3xl" />
+        </div>
         <div className="relative max-w-[900px] mx-auto px-3 sm:px-6 pt-8 pb-12">
           {/* Back + actions */}
           <div className="flex items-center justify-between mb-6 sm:mb-10">
@@ -380,7 +383,7 @@ export default function ProfilePage() {
                       </button>
 
                       {showInviteMenu && (
-                        <div className="absolute top-full right-0 mt-2 w-72 bg-gray-900 border border-white/10 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] z-50">
+                        <div className="absolute top-full right-0 mt-2 w-72 bg-gray-900 border border-white/10 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] z-50 overflow-hidden">
                           <div className="px-4 py-2.5 border-b border-white/10 bg-gray-800/50">
                             <p className="text-xs font-semibold text-white/60 uppercase tracking-wider">Select a Project</p>
                           </div>
