@@ -29,6 +29,11 @@ router.post('/:id/prize-claim',              protect,              submitPrizeCl
 router.get('/:id/prize-claims',              protect, adminOnly,   getPrizeClaims);
 router.patch('/:id/prize-claims/:claimId',   protect, adminOnly,   markClaimProcessed);
 
+// Admin review routes — MUST be before /:id/* to avoid param collision
+router.get(   '/admin/submissions',                   protect, adminOnly, adminGetSubmissions);
+router.patch( '/admin/submissions/:subId/approve',    protect, adminOnly, adminApprove);
+router.patch( '/admin/submissions/:subId/reject',     protect, adminOnly, adminReject);
+
 // Submissions
 router.get( '/:id/submissions',                  getSubmissions);
 router.get( '/:id/leaderboard',                  getLeaderboard);
@@ -36,11 +41,6 @@ router.get( '/:id/eligibility',  protect,        checkEligibility);
 router.get( '/:id/my-submission', protect,       getMySubmission);
 router.post('/:id/submissions',  protect,        submitFilm);
 router.delete('/:id/submissions/:subId', protect, deleteSubmission);
-
-// Admin review routes
-router.get(   '/admin/submissions',                   protect, adminOnly, adminGetSubmissions);
-router.patch( '/admin/submissions/:subId/approve',    protect, adminOnly, adminApprove);
-router.patch( '/admin/submissions/:subId/reject',     protect, adminOnly, adminReject);
 
 // Submission interactions
 router.post(  '/:id/submissions/:subId/like',                protect, toggleLike);
