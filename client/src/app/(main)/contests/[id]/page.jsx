@@ -783,27 +783,51 @@ export default function ContestDetailPage() {
             <section>
               <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#a3a39e] mb-5">🏆 Winners</h2>
               <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {contest.winners.map((w) => (
-                  <div key={w._id || w.placement}
-                    className={`bg-white border rounded-2xl p-5 flex items-center gap-4 ${
-                      w.placement === 1 ? 'border-amber-300 bg-amber-50/30' :
-                      w.placement === 2 ? 'border-gray-300 bg-gray-50/40' :
-                      w.placement === 3 ? 'border-orange-300 bg-orange-50/20' :
-                                          'border-[#efefed]'
-                    }`}>
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold flex-shrink-0 ${
-                      w.placement === 1 ? 'bg-amber-400 text-amber-900' :
-                      w.placement === 2 ? 'bg-gray-300 text-gray-700' :
-                      w.placement === 3 ? 'bg-orange-300 text-orange-800' :
-                                          'bg-[#f0f0ee] text-[#6b6b66]'
-                    }`}>#{w.placement}</div>
-                    <div className="min-w-0">
-                      <p className="font-semibold text-[#111110] truncate">{w.user?.name || 'Anonymous'}</p>
-                      <p className="text-xs text-[#6b6b66]">@{w.user?.username}</p>
-                      {w.note && <p className="text-xs text-[#a3a39e] mt-1 italic">"{w.note}"</p>}
+                {contest.winners.map((w) => {
+                  const allMembers = [w.user, ...(w.teamMembers || [])].filter(Boolean);
+                  return (
+                    <div key={w._id || w.placement}
+                      className={`bg-white border rounded-2xl p-5 ${
+                        w.placement === 1 ? 'border-amber-300 bg-amber-50/30' :
+                        w.placement === 2 ? 'border-gray-300 bg-gray-50/40' :
+                        w.placement === 3 ? 'border-orange-300 bg-orange-50/20' :
+                                            'border-[#efefed]'
+                      }`}>
+                      {/* Placement badge + main winner */}
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold flex-shrink-0 ${
+                          w.placement === 1 ? 'bg-amber-400 text-amber-900' :
+                          w.placement === 2 ? 'bg-gray-300 text-gray-700' :
+                          w.placement === 3 ? 'bg-orange-300 text-orange-800' :
+                                              'bg-[#f0f0ee] text-[#6b6b66]'
+                        }`}>#{w.placement}</div>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-[#111110] truncate">{w.user?.name || 'Anonymous'}</p>
+                          <p className="text-xs text-[#6b6b66]">@{w.user?.username}</p>
+                        </div>
+                      </div>
+                      {/* Team members */}
+                      {allMembers.length > 0 && (
+                        <div className="border-t border-[#f0f0ee] pt-3">
+                          <p className="text-[10px] uppercase tracking-widest text-[#a3a39e] font-semibold mb-2">Team</p>
+                          <div className="flex flex-wrap gap-2">
+                            {allMembers.map((m) => (
+                              <a key={m._id} href={`/profile/${m._id}`}
+                                className="flex items-center gap-1.5 bg-[#f7f7f6] hover:bg-[#efefed] rounded-full px-2.5 py-1 transition-colors">
+                                {m.profileImage
+                                  ? <img src={m.profileImage} alt={m.name} className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
+                                  : <div className="w-5 h-5 rounded-full bg-[#6C63FF] flex items-center justify-center text-[9px] text-white font-bold flex-shrink-0">{m.name?.[0]?.toUpperCase()}</div>
+                                }
+                                <span className="text-xs font-medium text-[#111110]">@{m.username}</span>
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {w.note && <p className="text-xs text-[#a3a39e] mt-3 italic">"{w.note}"</p>}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </section>
           )}
