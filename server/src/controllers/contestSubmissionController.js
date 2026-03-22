@@ -5,6 +5,7 @@ const Project            = require('../models/Project');
 const Notification       = require('../models/Notification');
 const User               = require('../models/User');
 const { runAutoCheck }   = require('../utils/youtubeChecker');
+const { sendSubmissionApproved, sendSubmissionRejected } = require('../utils/emailService');
 
 function extractYtId(url) {
   if (!url) return null;
@@ -413,7 +414,7 @@ const adminGetSubmissions = async (req, res, next) => {
 const adminApprove = async (req, res, next) => {
   try {
     const sub = await ContestSubmission.findById(req.params.subId)
-      .populate('submittedBy', 'name username')
+      .populate('submittedBy', 'name username email')
       .populate('contest', 'title');
     if (!sub) return res.status(404).json({ success: false, message: 'Submission not found' });
 
@@ -423,7 +424,7 @@ const adminApprove = async (req, res, next) => {
     sub.reviewedAt   = new Date();
     await sub.save();
 
-    // Notify the submitter
+    // In-app notification
     await Notification.create({
       recipient: sub.submittedBy._id,
       type:      'contest_submission',
@@ -431,6 +432,17 @@ const adminApprove = async (req, res, next) => {
       message:   `Your film "${sub.title}" has been approved and is now live in the contest!${sub.adminNote ? ` Note: ${sub.adminNote}` : ''}`,
       link:      `/contests/${sub.contest._id}`,
     });
+
+    // Email notification
+    if (sub.submittedBy.email) {
+      sendSubmissionApproved(
+        sub.submittedBy.email,
+        sub.submittedBy.name,
+        sub.title,
+        sub.contest.title,
+        sub.contest._id,
+      ).catch(console.error);
+    }
 
     res.json({ success: true, data: sub });
   } catch (e) { next(e); }
@@ -441,7 +453,7 @@ const adminApprove = async (req, res, next) => {
 const adminReject = async (req, res, next) => {
   try {
     const sub = await ContestSubmission.findById(req.params.subId)
-      .populate('submittedBy', 'name username')
+      .populate('submittedBy', 'name username email')
       .populate('contest', 'title');
     if (!sub) return res.status(404).json({ success: false, message: 'Submission not found' });
 
@@ -454,7 +466,7 @@ const adminReject = async (req, res, next) => {
     sub.reviewedAt   = new Date();
     await sub.save();
 
-    // Notify the submitter with the reason and resubmit link
+    // In-app notification
     await Notification.create({
       recipient: sub.submittedBy._id,
       type:      'contest_submission',
@@ -462,6 +474,18 @@ const adminReject = async (req, res, next) => {
       message:   `Your film "${sub.title}" was rejected. Reason: ${reason}. You can update your submission and resubmit.`,
       link:      `/contests/${sub.contest._id}`,
     });
+
+    // Email notification
+    if (sub.submittedBy.email) {
+      sendSubmissionRejected(
+        sub.submittedBy.email,
+        sub.submittedBy.name,
+        sub.title,
+        sub.contest.title,
+        sub.contest._id,
+        reason,
+      ).catch(console.error);
+    }
 
     res.json({ success: true, data: sub });
   } catch (e) { next(e); }

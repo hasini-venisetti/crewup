@@ -484,6 +484,114 @@ const sendMentorApplicationDeclined = async (applicantEmail, applicantName, ment
   }
 };
 
+// ── Contest submission emails ──────────────────────────────────────────────────
+
+const sendSubmissionApproved = async (recipientEmail, recipientName, filmTitle, contestTitle, contestId) => {
+  try {
+    const siteUrl = process.env.CLIENT_URL || 'https://crewupfilms.com';
+    const link    = `${siteUrl}/contests/${contestId}`;
+
+    const html = transactionalHtml(`
+      <p style="margin:0 0 8px;font-size:16px;font-weight:600;color:#111110;">Hi ${recipientName},</p>
+      <p style="margin:0 0 20px;font-size:15px;color:#444444;line-height:1.6;">
+        Great news — your film <strong>"${filmTitle}"</strong> has been reviewed and approved for <strong>${contestTitle}</strong>. It's now live in the contest!
+      </p>
+      <p style="margin:0 0 24px;font-size:14px;color:#666666;line-height:1.6;">
+        Share it with your audience to get more views and votes. Good luck!
+      </p>
+      <a href="${link}" style="display:inline-block;background:#6C63FF;color:#ffffff;padding:11px 24px;text-decoration:none;border-radius:6px;font-size:14px;font-weight:600;">View Contest</a>
+    `);
+
+    const text = `Hi ${recipientName},\n\nYour film "${filmTitle}" has been approved for ${contestTitle} and is now live in the contest!\n\nView it here: ${link}\n\n— CREWUPFILMS`;
+    await sendEmail(recipientEmail, `✅ Your film "${filmTitle}" is approved for ${contestTitle}`, html, text);
+    console.log(`[EMAIL SENT] sendSubmissionApproved to ${recipientEmail}`);
+  } catch (error) {
+    console.error('[EMAIL ERROR] sendSubmissionApproved:', error.message);
+  }
+};
+
+const sendSubmissionRejected = async (recipientEmail, recipientName, filmTitle, contestTitle, contestId, reason) => {
+  try {
+    const siteUrl = process.env.CLIENT_URL || 'https://crewupfilms.com';
+    const link    = `${siteUrl}/contests/${contestId}`;
+
+    const html = transactionalHtml(`
+      <p style="margin:0 0 8px;font-size:16px;font-weight:600;color:#111110;">Hi ${recipientName},</p>
+      <p style="margin:0 0 20px;font-size:15px;color:#444444;line-height:1.6;">
+        Your submission <strong>"${filmTitle}"</strong> for <strong>${contestTitle}</strong> was not approved at this time.
+      </p>
+      ${reason ? `<p style="margin:0 0 20px;font-size:14px;color:#666666;line-height:1.6;background:#fff8f8;padding:12px 16px;border-left:3px solid #f0a0a0;border-radius:0 4px 4px 0;"><strong>Reason:</strong> ${reason}</p>` : ''}
+      <p style="margin:0 0 24px;font-size:14px;color:#666666;line-height:1.6;">
+        You can fix the issue and resubmit from the contest page. Make sure your YouTube description includes <strong>crewupfilms</strong> and your <strong>@username</strong>.
+      </p>
+      <a href="${link}" style="display:inline-block;background:#111110;color:#ffffff;padding:11px 24px;text-decoration:none;border-radius:6px;font-size:14px;font-weight:600;">Resubmit Your Film</a>
+    `);
+
+    const text = `Hi ${recipientName},\n\nYour submission "${filmTitle}" for ${contestTitle} was not approved.${reason ? `\n\nReason: ${reason}` : ''}\n\nYou can fix the issue and resubmit here: ${link}\n\n— CREWUPFILMS`;
+    await sendEmail(recipientEmail, `Update on your submission for ${contestTitle}`, html, text);
+    console.log(`[EMAIL SENT] sendSubmissionRejected to ${recipientEmail}`);
+  } catch (error) {
+    console.error('[EMAIL ERROR] sendSubmissionRejected:', error.message);
+  }
+};
+
+const sendContestWinner = async (recipientEmail, recipientName, filmTitle, contestTitle, contestId, placement, note) => {
+  try {
+    const siteUrl   = process.env.CLIENT_URL || 'https://crewupfilms.com';
+    const link      = `${siteUrl}/contests/${contestId}`;
+    const claimLink = `${siteUrl}/prize-claim/${contestId}`;
+    const medal     = placement === 1 ? '🥇' : placement === 2 ? '🥈' : placement === 3 ? '🥉' : '🏆';
+    const ordinal   = placement === 1 ? '1st' : placement === 2 ? '2nd' : placement === 3 ? '3rd' : `${placement}th`;
+
+    const html = transactionalHtml(`
+      <p style="margin:0 0 8px;font-size:16px;font-weight:600;color:#111110;">Hi ${recipientName},</p>
+      <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111110;">${medal} Congratulations!</p>
+      <p style="margin:0 0 20px;font-size:15px;color:#444444;line-height:1.6;">
+        Your film <strong>"${filmTitle}"</strong> has been announced as the <strong>${ordinal} place winner</strong> in <strong>${contestTitle}</strong>!
+      </p>
+      ${note ? `<p style="margin:0 0 20px;font-size:14px;color:#666666;line-height:1.6;background:#f7f7ff;padding:12px 16px;border-left:3px solid #6C63FF;border-radius:0 4px 4px 0;">${note}</p>` : ''}
+      <p style="margin:0 0 24px;font-size:14px;color:#666666;line-height:1.6;">
+        To claim your prize, please submit your payment details (UPI / bank info) via the link below.
+      </p>
+      <a href="${claimLink}" style="display:inline-block;background:#6C63FF;color:#ffffff;padding:11px 24px;text-decoration:none;border-radius:6px;font-size:14px;font-weight:600;margin-right:12px;">Claim Your Prize</a>
+      <a href="${link}" style="display:inline-block;background:#f0f0f0;color:#111110;padding:11px 24px;text-decoration:none;border-radius:6px;font-size:14px;font-weight:600;">View Contest</a>
+    `);
+
+    const text = `Hi ${recipientName},\n\n${medal} Congratulations! Your film "${filmTitle}" placed ${ordinal} in ${contestTitle}!\n\n${note ? `Note from the team: ${note}\n\n` : ''}Claim your prize here: ${claimLink}\n\nView contest: ${link}\n\n— CREWUPFILMS`;
+    await sendEmail(recipientEmail, `${medal} You placed ${ordinal} in ${contestTitle}!`, html, text);
+    console.log(`[EMAIL SENT] sendContestWinner to ${recipientEmail}`);
+  } catch (error) {
+    console.error('[EMAIL ERROR] sendContestWinner:', error.message);
+  }
+};
+
+const sendContestTeamWin = async (recipientEmail, recipientName, projectTitle, contestTitle, contestId, placement) => {
+  try {
+    const siteUrl = process.env.CLIENT_URL || 'https://crewupfilms.com';
+    const link    = `${siteUrl}/contests/${contestId}`;
+    const medal   = placement === 1 ? '🥇' : placement === 2 ? '🥈' : placement === 3 ? '🥉' : '🏆';
+    const ordinal = placement === 1 ? '1st' : placement === 2 ? '2nd' : placement === 3 ? '3rd' : `${placement}th`;
+
+    const html = transactionalHtml(`
+      <p style="margin:0 0 8px;font-size:16px;font-weight:600;color:#111110;">Hi ${recipientName},</p>
+      <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111110;">${medal} Your team won!</p>
+      <p style="margin:0 0 20px;font-size:15px;color:#444444;line-height:1.6;">
+        The project <strong>"${projectTitle}"</strong> you worked on has been announced as the <strong>${ordinal} place winner</strong> in <strong>${contestTitle}</strong>!
+      </p>
+      <p style="margin:0 0 24px;font-size:14px;color:#666666;line-height:1.6;">
+        Congratulations to the whole team — this is a shared achievement. Keep creating!
+      </p>
+      <a href="${link}" style="display:inline-block;background:#6C63FF;color:#ffffff;padding:11px 24px;text-decoration:none;border-radius:6px;font-size:14px;font-weight:600;">View Contest</a>
+    `);
+
+    const text = `Hi ${recipientName},\n\n${medal} Your team won! The project "${projectTitle}" placed ${ordinal} in ${contestTitle}.\n\nCongratulations to the whole team!\n\nView contest: ${link}\n\n— CREWUPFILMS`;
+    await sendEmail(recipientEmail, `${medal} Your team placed ${ordinal} in ${contestTitle}!`, html, text);
+    console.log(`[EMAIL SENT] sendContestTeamWin to ${recipientEmail}`);
+  } catch (error) {
+    console.error('[EMAIL ERROR] sendContestTeamWin:', error.message);
+  }
+};
+
 module.exports = {
   sendEmail,
   sendApplicationReceived,
@@ -499,4 +607,8 @@ module.exports = {
   sendMentorApplicationReceived,
   sendMentorApplicationAccepted,
   sendMentorApplicationDeclined,
+  sendSubmissionApproved,
+  sendSubmissionRejected,
+  sendContestWinner,
+  sendContestTeamWin,
 };

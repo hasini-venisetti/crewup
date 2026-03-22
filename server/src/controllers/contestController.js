@@ -4,6 +4,7 @@ const Notification       = require('../models/Notification');
 const ContestSubmission  = require('../models/ContestSubmission');
 const Project            = require('../models/Project');
 const PrizeClaim         = require('../models/PrizeClaim');
+const { sendContestWinner, sendContestTeamWin } = require('../utils/emailService');
 
 // GET /api/contests
 const getContests = async (req, res, next) => {
@@ -79,33 +80,60 @@ const setWinners = async (req, res, next) => {
 
     // Notify winners + their full team
     for (const w of winners) {
-      // 1. Notify the winner directly
+      // Look up winner's full details (including email)
+      const winnerUser = await User.findById(w.userId).select('name username email');
+
+      // 1. Notify the winner directly (in-app + email)
       await Notification.create({
         recipient: w.userId, sender: req.user._id, type: 'contest_announcement',
         title: `🏆 You placed #${w.placement} in "${contest.title}"!`,
         message: w.note || `Congratulations on your placement in the contest!`,
-        link: '/films',
+        link: `/contests/${contest._id}`,
       });
 
-      // 2. Find the submission to get the linked project
+      // 2. Find the submission to get the linked project + film title
       const submission = await ContestSubmission.findOne({ contest: contest._id, submittedBy: w.userId });
+
+      // Send winner email
+      if (winnerUser?.email) {
+        sendContestWinner(
+          winnerUser.email,
+          winnerUser.name,
+          submission?.title || 'your film',
+          contest.title,
+          contest._id,
+          w.placement,
+          w.note || '',
+        ).catch(console.error);
+      }
+
       if (submission?.project) {
-        const project = await Project.findById(submission.project).populate('teamMembers.user', '_id');
+        const project = await Project.findById(submission.project).populate('teamMembers.user', '_id name email');
 
         if (project) {
-          // Collect all team member IDs (excluding the winner who already got notified)
-          const teamMemberIds = project.teamMembers
-            .map((m) => m.user?._id?.toString())
-            .filter((id) => id && id !== w.userId.toString());
+          // Collect all team members (excluding the winner who already got notified)
+          const teamMembers = project.teamMembers
+            .filter((m) => m.user?._id?.toString() !== w.userId.toString());
 
-          // 3. Notify each team member
-          for (const memberId of teamMemberIds) {
+          // 3. Notify each team member (in-app + email)
+          for (const member of teamMembers) {
+            if (!member.user?._id) continue;
             await Notification.create({
-              recipient: memberId, sender: req.user._id, type: 'contest_announcement',
+              recipient: member.user._id, sender: req.user._id, type: 'contest_announcement',
               title: `🏆 Your team won #${w.placement} in "${contest.title}"!`,
               message: `Your project "${project.title}" has been announced as a winner! Congratulations to the whole team.`,
-              link: '/films',
+              link: `/contests/${contest._id}`,
             });
+            if (member.user.email) {
+              sendContestTeamWin(
+                member.user.email,
+                member.user.name,
+                project.title,
+                contest.title,
+                contest._id,
+                w.placement,
+              ).catch(console.error);
+            }
           }
 
           // 4. Special payment notification to the project owner (createdBy)
