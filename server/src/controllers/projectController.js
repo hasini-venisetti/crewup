@@ -612,6 +612,12 @@ const removeMember = async (req, res, next) => {
       },
     });
 
+    // Mark their application as 'removed' so the project page reflects the change
+    await Application.findOneAndUpdate(
+      { project: project._id, applicant: member.user, status: 'accepted' },
+      { status: 'removed' }
+    );
+
     // Notify the removed member
     await Notification.create({
       recipient: member.user,
@@ -654,6 +660,12 @@ const leaveProject = async (req, res, next) => {
         filledRoles: { role: roleToReopen },
       },
     });
+
+    // Mark their application as 'left' so the project page reflects the change
+    await Application.findOneAndUpdate(
+      { project: project._id, applicant: req.user._id, status: 'accepted' },
+      { status: 'left' }
+    );
 
     // Notify the project owner
     await Notification.create({

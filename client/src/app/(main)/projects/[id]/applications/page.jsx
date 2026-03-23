@@ -7,8 +7,9 @@ import toast from 'react-hot-toast';
 import { projectAPI, applicationAPI, fillRoleAPI } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 
-const STATUS_CLASS = { pending: 'badge-pending', accepted: 'badge-accepted', rejected: 'badge-rejected' };
-const STATUS_ICON = { pending: '⏳', accepted: '✅', rejected: '❌' };
+const STATUS_CLASS = { pending: 'badge-pending', accepted: 'badge-accepted', rejected: 'badge-rejected', left: 'badge-rejected', removed: 'badge-rejected' };
+const STATUS_ICON  = { pending: '⏳', accepted: '✅', rejected: '❌', left: '🚪', removed: '🚫' };
+const STATUS_LABEL = { pending: 'Pending', accepted: 'Accepted', rejected: 'Declined', left: 'Left', removed: 'Removed' };
 
 function Avatar({ name, image, size = 'sm' }) {
   const sz = size === 'sm' ? 'w-10 h-10 text-sm' : 'w-12 h-12 text-base';
@@ -93,8 +94,8 @@ function ApplicationCard({ app, onDecision }) {
               </button>
             </>
           ) : (
-            <span className={STATUS_CLASS[app.status]}>
-              {STATUS_ICON[app.status]} {app.status}
+            <span className={STATUS_CLASS[app.status] || 'badge-pending'}>
+              {STATUS_ICON[app.status] || '⏳'} {STATUS_LABEL[app.status] || app.status}
             </span>
           )}
         </div>
@@ -281,9 +282,10 @@ export default function ApplicationsPage() {
 
   const stats = {
     total: applications.length,
-    pending: applications.filter((a) => a.status === 'pending').length,
+    pending:  applications.filter((a) => a.status === 'pending').length,
     accepted: applications.filter((a) => a.status === 'accepted').length,
     declined: applications.filter((a) => a.status === 'rejected').length,
+    left:     applications.filter((a) => a.status === 'left' || a.status === 'removed').length,
   };
 
   const allRolesFilled = project?.requiredRoles?.every((r) => filledRoles[r]);

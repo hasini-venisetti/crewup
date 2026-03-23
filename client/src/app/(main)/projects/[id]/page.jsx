@@ -721,9 +721,11 @@ function ProjectDetailContent() {
                   {user && <p className="text-xs text-white/40">Join the waitlist for an open role below ↓</p>}
                 </div>
               ) : user ? (() => {
-                const appliedRoles = myApplications.map((a) => a.roleApplyingFor);
+                // Filter out applications where the user has left or been removed
+                const activeApplications = myApplications.filter((a) => a.status !== 'left' && a.status !== 'removed');
+                const appliedRoles = activeApplications.map((a) => a.roleApplyingFor);
                 const availableRoles = (project.requiredRoles || []).filter((r) => !appliedRoles.includes(r));
-                const hasAccepted = myApplications.some((a) => a.status === 'accepted');
+                const hasAccepted = activeApplications.some((a) => a.status === 'accepted') && isTeamMember;
                 const STATUS_CFG = {
                   accepted: { bg: 'bg-green-500/15 border-green-500/30 text-green-300', icon: '✅' },
                   rejected: { bg: 'bg-red-500/15 border-red-500/30 text-red-300',   icon: '❌' },
@@ -731,8 +733,8 @@ function ProjectDetailContent() {
                 };
                 return (
                   <div className="flex flex-col items-end gap-2">
-                    {/* Show each existing application as a pill */}
-                    {myApplications.map((app) => {
+                    {/* Show each existing application as a pill (hide left/removed) */}
+                    {activeApplications.map((app) => {
                       const cfg = STATUS_CFG[app.status] || STATUS_CFG.pending;
                       return (
                         <div key={app._id} className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border ${cfg.bg}`}>
@@ -740,7 +742,7 @@ function ProjectDetailContent() {
                         </div>
                       );
                     })}
-                    {/* Team Dashboard link if any accepted */}
+                    {/* Team Dashboard link only if still an active team member */}
                     {hasAccepted && (
                       <Link href={`/projects/${id}/team`}
                         className="text-xs font-semibold bg-[#6C63FF] text-white px-3 py-1.5 rounded-lg hover:bg-[#5750D4] transition-colors">
