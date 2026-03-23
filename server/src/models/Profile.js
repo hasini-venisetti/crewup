@@ -44,12 +44,19 @@ const profileSchema = new mongoose.Schema(
       enum: ['available', 'busy', 'open-to-offers'],
       default: 'available',
     },
-    isMentor:        { type: Boolean, default: false },
-    mentorStatus:    { type: String, enum: ['open', 'paused', 'closed'], default: 'open' }, // mentor availability
-    mentorFields:    { type: [String], default: [] },
-    mentorBio:       { type: String, default: '', maxlength: 500 },
-    mentorRate:      { type: Number, default: null },      // hourly rate
-    mentorCurrency:  { type: String, default: 'INR' },     // currency code
+    isMentor:           { type: Boolean, default: false },
+    mentorStatus:       { type: String, enum: ['open', 'paused', 'closed'], default: 'open' },
+    mentorFields:       { type: [String], default: [] },
+    mentorBio:          { type: String, default: '', maxlength: 500 },
+    mentorRate:         { type: Number, default: null },
+    mentorCurrency:     { type: String, default: 'INR' },
+    mentorExperience:   { type: Number, default: null },   // years of experience
+    mentorSessionTypes: { type: [String], default: [] },   // e.g. ['1:1 Video Call', 'Portfolio Review']
+    mentorLocationType: { type: String, enum: ['online', 'offline', 'both'], default: 'online' },
+    mentorLanguages:    { type: [String], default: [] },   // e.g. ['Telugu', 'Hindi', 'English']
+    // Ratings (auto-updated when reviews are submitted)
+    mentorRatingAvg:    { type: Number, default: 0 },
+    mentorRatingCount:  { type: Number, default: 0 },
     socialLinks: {
       instagram: { type: String, default: '' },
       youtube: { type: String, default: '' },

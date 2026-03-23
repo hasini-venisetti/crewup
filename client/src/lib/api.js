@@ -212,14 +212,17 @@ export const waitlistAPI = {
 
 /* ── Mentor API ── */
 export const mentorAPI = {
-  getAll:              (params)                 => api.get('/mentors', { params }),
-  updateSettings:      (data)                   => api.patch('/mentors/settings', data),
-  updateStatus:        (mentorStatus)           => api.patch('/mentors/settings', { mentorStatus }),
-  apply:               (mentorUserId, message)  => api.post(`/mentors/${mentorUserId}/apply`, { message }),
-  getApplications:     ()                       => api.get('/message-requests'),           // incoming pending requests (as mentor)
-  getSentRequests:     ()                       => api.get('/message-requests/sent'),      // outgoing requests (as mentee)
-  acceptRequest:       (requestId)              => api.patch(`/mentors/requests/${requestId}/accept`),
-  declineRequest:      (requestId)              => api.patch(`/message-requests/${requestId}/decline`),
+  getAll:              (params)                      => api.get('/mentors', { params }),
+  updateSettings:      (data)                        => api.patch('/mentors/settings', data),
+  updateStatus:        (mentorStatus)                => api.patch('/mentors/settings', { mentorStatus }),
+  apply:               (mentorUserId, message)       => api.post(`/mentors/${mentorUserId}/apply`, { message }),
+  getApplications:     ()                            => api.get('/message-requests'),
+  getSentRequests:     ()                            => api.get('/message-requests/sent'),
+  acceptRequest:       (requestId)                   => api.patch(`/mentors/requests/${requestId}/accept`),
+  declineRequest:      (requestId)                   => api.patch(`/message-requests/${requestId}/decline`),
+  getReviews:          (mentorUserId)                => api.get(`/mentors/${mentorUserId}/reviews`),
+  submitReview:        (mentorUserId, data)          => api.post(`/mentors/${mentorUserId}/reviews`, data),
+  deleteReview:        (mentorUserId)                => api.delete(`/mentors/${mentorUserId}/reviews`),
 };
 
 /* ── Launch Waitlist ── */

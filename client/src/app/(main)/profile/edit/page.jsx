@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { profileAPI, portfolioAPI } from '@/lib/api';
@@ -26,19 +26,27 @@ const PORTFOLIO_TYPES = [
   { value: 'other',       label: '📁  Other',       desc: 'Anything else' },
 ];
 const COMMON_SKILLS = ['Premiere Pro','After Effects','DaVinci Resolve','Final Cut Pro','Lightroom','Photoshop','Illustrator','Blender','Cinema 4D','Audacity','Logic Pro','Ableton','Avid','CapCut','Canva','Photography','Videography','Color Grading','Sound Mixing','Motion Graphics','3D Modeling','Scriptwriting','Storyboarding','Directing','Acting','Voice Acting','Narration'];
-const MENTOR_FIELDS = ['Film', 'Music', 'Photography', 'Writing', 'Design', 'Editing', 'Acting', 'Animation'];
+const MENTOR_FIELDS = [
+  'Directing', 'Screenwriting', 'Cinematography', 'Editing', 'Color Grading',
+  'Sound Design', 'VFX', 'Animation', 'Acting', 'Production Design',
+  'Film', 'Photography', 'Music', 'Writing', 'Design',
+  'Casting', 'Producing', 'Makeup & Styling', 'Storyboarding', 'Motion Graphics',
+];
+const SESSION_TYPES = ['1:1 Video Call', 'Portfolio Review', 'Project Guidance', 'Career Mentorship', 'Script Review', 'Reel Feedback'];
+const LANGUAGES = ['Telugu', 'Hindi', 'English', 'Tamil', 'Kannada', 'Malayalam', 'Bengali', 'Marathi', 'Gujarati', 'Punjabi'];
 
 const inputCls = 'w-full rounded-lg border border-[#e0e0dd] bg-white px-4 py-2.5 text-sm text-[#111110] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] transition';
 const labelCls = 'block text-xs font-semibold text-[#6b6b66] uppercase tracking-[0.12em] mb-2';
 
 export default function EditProfilePage() {
   const { user, loading: authLoading } = useAuth();
-  const router = useRouter();
+  const router       = useRouter();
+  const searchParams = useSearchParams();
 
   const [profile, setProfile]   = useState(null);
   const [loading, setLoading]   = useState(true);
   const [saving, setSaving]     = useState(false);
-  const [tab, setTab]           = useState('basic');
+  const [tab, setTab]           = useState(searchParams.get('tab') || 'basic');
   const [form, setForm]         = useState({
     name: '', roles: [], bio: '', gender: '',
     experienceLevel: 'beginner', availability: 'available',
@@ -47,6 +55,7 @@ export default function EditProfilePage() {
     socialLinks: { instagram: '', youtube: '', vimeo: '', linkedin: '', website: '' },
     portfolioLinks: [{ label: '', url: '' }],
     isMentor: false, mentorBio: '', mentorFields: [], mentorRate: '', mentorCurrency: 'INR',
+    mentorStatus: 'open', mentorExperience: '', mentorSessionTypes: [], mentorLocationType: 'online', mentorLanguages: [],
     locationVisible: true,
     // Phase 5: Emergency contact & verification links
     emergencyContact: { name: '', phone: '', relationship: '' },
@@ -91,11 +100,16 @@ export default function EditProfilePage() {
           skills:          p.skills           || [],
           socialLinks:     p.socialLinks      || { instagram: '', youtube: '', vimeo: '', linkedin: '', website: '' },
           portfolioLinks:  p.portfolioLinks?.length ? p.portfolioLinks : [{ label: '', url: '' }],
-          isMentor:        p.isMentor         || false,
-          mentorBio:       p.mentorBio        || '',
-          mentorFields:    p.mentorFields     || [],
-          mentorRate:      p.mentorRate != null ? String(p.mentorRate) : '',
-          mentorCurrency:  p.mentorCurrency   || 'INR',
+          isMentor:           p.isMentor            || false,
+          mentorBio:          p.mentorBio           || '',
+          mentorFields:       p.mentorFields        || [],
+          mentorRate:         p.mentorRate != null ? String(p.mentorRate) : '',
+          mentorCurrency:     p.mentorCurrency      || 'INR',
+          mentorStatus:       p.mentorStatus        || 'open',
+          mentorExperience:   p.mentorExperience != null ? String(p.mentorExperience) : '',
+          mentorSessionTypes: p.mentorSessionTypes  || [],
+          mentorLocationType: p.mentorLocationType  || 'online',
+          mentorLanguages:    p.mentorLanguages     || [],
           emergencyContact:   p.emergencyContact   || { name: '', phone: '', relationship: '' },
           verificationLinks:  p.verificationLinks  || { imdb: '', instagram: '' },
         });
@@ -129,6 +143,11 @@ export default function EditProfilePage() {
         isMentor: form.isMentor, mentorBio: form.mentorBio, mentorFields: form.mentorFields,
         mentorRate: form.mentorRate !== '' ? Number(form.mentorRate) : null,
         mentorCurrency: form.mentorCurrency,
+        mentorStatus: form.mentorStatus,
+        mentorExperience: form.mentorExperience !== '' ? Number(form.mentorExperience) : null,
+        mentorSessionTypes: form.mentorSessionTypes,
+        mentorLocationType: form.mentorLocationType,
+        mentorLanguages: form.mentorLanguages,
         locationVisible: form.locationVisible,
         // Phase 5: Emergency contact & verification links
         emergencyContact:  form.emergencyContact,
@@ -806,15 +825,17 @@ export default function EditProfilePage() {
               <h2 className="text-lg font-semibold text-[#111110] mb-1">Mentor Settings</h2>
               <p className="text-sm text-[#6b6b66]">Become a mentor to help creators in your field. Your profile will appear in the Mentor Directory.</p>
             </div>
+
+            {/* Earnings banner */}
             <div className="bg-[#0e0e0d] rounded-xl p-5 flex gap-3">
               <span className="text-xl flex-shrink-0">💡</span>
               <div>
                 <p className="text-sm font-semibold text-white mb-1">How earnings work</p>
-                <p className="text-xs leading-relaxed text-white/60">
-                  You set your own rate — free or paid. Every rupee goes directly to you. CREWUPFILMS takes no commission.
-                </p>
+                <p className="text-xs leading-relaxed text-white/60">You set your own rate — free or paid. Every rupee goes directly to you. CREWUPFILMS takes no commission.</p>
               </div>
             </div>
+
+            {/* Enable mentoring toggle */}
             <div className="flex items-center justify-between p-4 border border-[#efefed] rounded-xl">
               <div>
                 <p className="font-medium text-[#111110]">Open to Mentoring</p>
@@ -825,59 +846,156 @@ export default function EditProfilePage() {
                 <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${form.isMentor ? 'translate-x-6' : 'translate-x-0.5'}`} />
               </button>
             </div>
-            <div>
-              <label className={labelCls}>Mentor Bio</label>
-              <textarea value={form.mentorBio || ''} onChange={e => setForm(f => ({ ...f, mentorBio: e.target.value }))}
-                rows={3} maxLength={500} placeholder="Briefly describe what you can help with as a mentor…"
-                className={`${inputCls} resize-none`} />
-            </div>
-            <div>
-              <label className={labelCls}>Mentorship Fields</label>
-              <div className="flex flex-wrap gap-2">
-                {MENTOR_FIELDS.map(f => {
-                  const active = (form.mentorFields || []).includes(f);
-                  return (
-                    <button key={f} type="button"
-                      onClick={() => setForm(prev => ({
-                        ...prev,
-                        mentorFields: active ? (prev.mentorFields || []).filter(x => x !== f) : [...(prev.mentorFields || []), f],
-                      }))}
-                      className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${active ? 'bg-[#0e0e0d] text-white border-[#0e0e0d]' : 'border-[#efefed] text-[#6b6b66] hover:border-[#0e0e0d]'}`}>
-                      {f}
+
+            {form.isMentor && (<>
+
+              {/* Mentor Status */}
+              <div>
+                <label className={labelCls}>Listing Status</label>
+                <p className="text-xs text-[#6b6b66] mb-3">Control whether new mentees can apply to you right now.</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { key: 'open',   label: '🟢 Open',   desc: 'Accepting requests' },
+                    { key: 'paused', label: '⏸ Paused',  desc: 'Temporarily closed' },
+                    { key: 'closed', label: '🔴 Closed',  desc: 'Not accepting' },
+                  ].map(({ key, label, desc }) => (
+                    <button key={key} type="button"
+                      onClick={() => setForm(f => ({ ...f, mentorStatus: key }))}
+                      className={`p-3 rounded-xl border text-left transition-colors ${form.mentorStatus === key ? 'border-[#6C63FF] bg-[#f0eeff]' : 'border-[#efefed] hover:border-[#6C63FF]/40'}`}>
+                      <p className={`text-xs font-semibold ${form.mentorStatus === key ? 'text-[#4740CC]' : 'text-[#111110]'}`}>{label}</p>
+                      <p className="text-[10px] text-[#6b6b66] mt-0.5">{desc}</p>
                     </button>
-                  );
-                })}
+                  ))}
+                </div>
               </div>
-            </div>
-            <div>
-              <div className="flex items-center gap-2 mb-1.5">
-                <label className={`${labelCls} mb-0`}>Hourly Rate</label>
-                <span className="text-xs bg-[#f0f0ee] text-[#6b6b66] border border-[#e0e0dd] px-2 py-0.5 rounded-full font-medium">Optional — set 0 for free</span>
+
+              {/* Mentor Bio */}
+              <div>
+                <label className={labelCls}>Mentor Bio</label>
+                <textarea value={form.mentorBio || ''} onChange={e => setForm(f => ({ ...f, mentorBio: e.target.value }))}
+                  rows={3} maxLength={500} placeholder="Briefly describe your experience and what you can help mentees with…"
+                  className={`${inputCls} resize-none`} />
+                <p className="text-[11px] text-[#a3a39e] text-right mt-1">{(form.mentorBio || '').length}/500</p>
               </div>
-              <p className="text-xs text-[#6b6b66] mb-3">Set your rate per 1-hour session. Enter 0 to offer free mentorship.</p>
-              <div className="flex gap-2">
-                <select value={form.mentorCurrency} onChange={e => setForm(f => ({ ...f, mentorCurrency: e.target.value }))}
-                  className="rounded-lg border border-[#e0e0dd] text-sm text-[#111110] px-3 py-2.5 focus:outline-none focus:border-[#6C63FF] bg-white w-24">
-                  {['INR','USD','EUR','GBP','AED','SGD','AUD','CAD'].map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-                <input type="number" min="0" step="1" placeholder="e.g. 500 or 0 for free" value={form.mentorRate}
-                  onChange={e => setForm(f => ({ ...f, mentorRate: e.target.value }))}
-                  className={`${inputCls} flex-1`} />
+
+              {/* Experience */}
+              <div>
+                <label className={labelCls}>Years of Experience</label>
+                <input type="number" min="0" max="50" step="1" placeholder="e.g. 5"
+                  value={form.mentorExperience}
+                  onChange={e => setForm(f => ({ ...f, mentorExperience: e.target.value }))}
+                  className={`${inputCls} w-40`} />
               </div>
-              {form.mentorRate !== '' && form.mentorRate !== undefined && form.mentorRate !== null ? (
-                Number(form.mentorRate) === 0 ? (
-                  <p className="text-xs text-[#6b6b66] mt-2">
-                    Mentees will see: <strong className="text-green-700">Free</strong>
-                    <span className="text-green-600 ml-1">— you keep 100%</span>
-                  </p>
-                ) : Number(form.mentorRate) > 0 ? (
-                  <p className="text-xs text-[#6b6b66] mt-2">
-                    Mentees will see: <strong className="text-[#111110]">{form.mentorCurrency} {Number(form.mentorRate).toLocaleString()} / hr</strong>
-                    <span className="text-green-600 ml-1">— you keep 100%</span>
-                  </p>
-                ) : null
-              ) : null}
-            </div>
+
+              {/* Session Types */}
+              <div>
+                <label className={labelCls}>Session Types</label>
+                <p className="text-xs text-[#6b6b66] mb-3">What kind of sessions do you offer?</p>
+                <div className="flex flex-wrap gap-2">
+                  {SESSION_TYPES.map(s => {
+                    const active = (form.mentorSessionTypes || []).includes(s);
+                    return (
+                      <button key={s} type="button"
+                        onClick={() => setForm(prev => ({
+                          ...prev,
+                          mentorSessionTypes: active
+                            ? (prev.mentorSessionTypes || []).filter(x => x !== s)
+                            : [...(prev.mentorSessionTypes || []), s],
+                        }))}
+                        className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${active ? 'bg-[#6C63FF] text-white border-[#6C63FF]' : 'border-[#efefed] text-[#6b6b66] hover:border-[#6C63FF]/40'}`}>
+                        {s}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Location Type */}
+              <div>
+                <label className={labelCls}>Session Mode</label>
+                <div className="flex gap-2">
+                  {[
+                    { key: 'online',  label: '🌐 Online Only' },
+                    { key: 'offline', label: '📍 In-Person Only' },
+                    { key: 'both',    label: '✅ Both' },
+                  ].map(({ key, label }) => (
+                    <button key={key} type="button"
+                      onClick={() => setForm(f => ({ ...f, mentorLocationType: key }))}
+                      className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition-colors ${form.mentorLocationType === key ? 'border-[#6C63FF] bg-[#f0eeff] text-[#4740CC]' : 'border-[#efefed] text-[#6b6b66] hover:border-[#6C63FF]/40'}`}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Languages */}
+              <div>
+                <label className={labelCls}>Languages You Mentor In</label>
+                <div className="flex flex-wrap gap-2">
+                  {LANGUAGES.map(lang => {
+                    const active = (form.mentorLanguages || []).includes(lang);
+                    return (
+                      <button key={lang} type="button"
+                        onClick={() => setForm(prev => ({
+                          ...prev,
+                          mentorLanguages: active
+                            ? (prev.mentorLanguages || []).filter(x => x !== lang)
+                            : [...(prev.mentorLanguages || []), lang],
+                        }))}
+                        className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${active ? 'bg-[#0e0e0d] text-white border-[#0e0e0d]' : 'border-[#efefed] text-[#6b6b66] hover:border-[#0e0e0d]'}`}>
+                        {lang}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Mentorship Fields */}
+              <div>
+                <label className={labelCls}>Mentorship Fields</label>
+                <div className="flex flex-wrap gap-2">
+                  {MENTOR_FIELDS.map(f => {
+                    const active = (form.mentorFields || []).includes(f);
+                    return (
+                      <button key={f} type="button"
+                        onClick={() => setForm(prev => ({
+                          ...prev,
+                          mentorFields: active ? (prev.mentorFields || []).filter(x => x !== f) : [...(prev.mentorFields || []), f],
+                        }))}
+                        className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${active ? 'bg-[#0e0e0d] text-white border-[#0e0e0d]' : 'border-[#efefed] text-[#6b6b66] hover:border-[#0e0e0d]'}`}>
+                        {f}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Hourly Rate */}
+              <div>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <label className={`${labelCls} mb-0`}>Hourly Rate</label>
+                  <span className="text-xs bg-[#f0f0ee] text-[#6b6b66] border border-[#e0e0dd] px-2 py-0.5 rounded-full font-medium">Enter 0 for free</span>
+                </div>
+                <p className="text-xs text-[#6b6b66] mb-3">Set your rate per 1-hour session.</p>
+                <div className="flex gap-2">
+                  <select value={form.mentorCurrency} onChange={e => setForm(f => ({ ...f, mentorCurrency: e.target.value }))}
+                    className="rounded-lg border border-[#e0e0dd] text-sm text-[#111110] px-3 py-2.5 focus:outline-none focus:border-[#6C63FF] bg-white w-24">
+                    {['INR','USD','EUR','GBP','AED','SGD','AUD','CAD'].map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <input type="number" min="0" step="1" placeholder="e.g. 500 or 0 for free" value={form.mentorRate}
+                    onChange={e => setForm(f => ({ ...f, mentorRate: e.target.value }))}
+                    className={`${inputCls} flex-1`} />
+                </div>
+                {form.mentorRate !== '' && form.mentorRate !== undefined && form.mentorRate !== null ? (
+                  Number(form.mentorRate) === 0 ? (
+                    <p className="text-xs text-[#6b6b66] mt-2">Mentees will see: <strong className="text-green-700">Free</strong> <span className="text-green-600">— you keep 100%</span></p>
+                  ) : Number(form.mentorRate) > 0 ? (
+                    <p className="text-xs text-[#6b6b66] mt-2">Mentees will see: <strong className="text-[#111110]">{form.mentorCurrency} {Number(form.mentorRate).toLocaleString()} / hr</strong> <span className="text-green-600">— you keep 100%</span></p>
+                  ) : null
+                ) : null}
+              </div>
+
+            </>)}
           </div>
         )}
 
