@@ -1,7 +1,8 @@
 // ─── Email Service ────────────────────────────────────────────────────────────
-// Option 1: Brevo HTTP API  (set BREVO_API_KEY in Railway) — FREE 300/day
-// Option 2: Resend HTTP API (set RESEND_API_KEY in Railway) — FREE 100/day
-// Fallback:  SMTP via nodemailer (EMAIL_HOST/PORT/USER/PASS or GMAIL_USER/GMAIL_PASS)
+// Priority 1: Gmail SMTP  (set GMAIL_USER + GMAIL_PASS in Railway) — any recipient
+// Priority 2: Brevo HTTP API  (set BREVO_API_KEY in Railway) — FREE 300/day
+// Priority 3: Resend HTTP API (set RESEND_API_KEY in Railway) — FREE 100/day, own domain required
+// Fallback:   SMTP via nodemailer (EMAIL_HOST/PORT/USER/PASS)
 // ─────────────────────────────────────────────────────────────────────────────
 
 const BREVO_API_KEY  = process.env.BREVO_API_KEY;
@@ -78,17 +79,36 @@ const sendViaResend = async (to, subject, html, text) => {
 let smtpTransporter = null;
 let SMTP_FROM        = process.env.EMAIL_FROM;
 
-if (!BREVO_API_KEY && !RESEND_API_KEY) {
+// ── Gmail SMTP setup (checked first — works for any recipient without domain) ──
+const GMAIL_USER = process.env.GMAIL_USER;
+const GMAIL_PASS = (process.env.GMAIL_PASS || '').replace(/\s+/g, '') || undefined;
+
+if (GMAIL_USER && GMAIL_PASS) {
   const nodemailer = require('nodemailer');
+  smtpTransporter = nodemailer.createTransport({
+    host:              'smtp.gmail.com',
+    port:              587,
+    secure:            false,
+    requireTLS:        true,
+    auth:              { user: GMAIL_USER, pass: GMAIL_PASS },
+    connectionTimeout: 10000,
+    greetingTimeout:   10000,
+    socketTimeout:     15000,
+  });
+  SMTP_FROM = SMTP_FROM || `${SENDER_NAME} <${GMAIL_USER}>`;
+  console.log(`[EMAIL SERVICE] Using Gmail SMTP ✓  FROM="${SMTP_FROM}"`);
+} else if (BREVO_API_KEY) {
+  console.log('[EMAIL SERVICE] Using Brevo HTTP API ✓');
+} else if (RESEND_API_KEY) {
+  console.log(`[EMAIL SERVICE] Using Resend HTTP API ✓  FROM="${RESEND_FROM}"`);
+} else {
+  // check custom SMTP
   const EMAIL_HOST = process.env.EMAIL_HOST;
   const EMAIL_PORT = process.env.EMAIL_PORT;
   const EMAIL_USER = process.env.EMAIL_USER;
-  // Gmail app passwords are shown with spaces for readability — strip them before use
   const EMAIL_PASS = (process.env.EMAIL_PASS || '').replace(/\s+/g, '') || undefined;
-  const GMAIL_USER = process.env.GMAIL_USER;
-  const GMAIL_PASS = (process.env.GMAIL_PASS || '').replace(/\s+/g, '') || undefined;
-
   if (EMAIL_HOST && EMAIL_PORT && EMAIL_USER && EMAIL_PASS) {
+    const nodemailer = require('nodemailer');
     smtpTransporter = nodemailer.createTransport({
       host:              EMAIL_HOST,
       port:              Number(EMAIL_PORT),
@@ -99,31 +119,14 @@ if (!BREVO_API_KEY && !RESEND_API_KEY) {
       socketTimeout:     15000,
     });
     SMTP_FROM = SMTP_FROM || `${SENDER_NAME} <${EMAIL_USER}>`;
-    console.log(`[EMAIL SERVICE] Using custom SMTP (${EMAIL_HOST}:${EMAIL_PORT}) as ${EMAIL_USER}`);
-  } else if (GMAIL_USER && GMAIL_PASS) {
-    smtpTransporter = nodemailer.createTransport({
-      host:              'smtp.gmail.com',
-      port:              587,
-      secure:            false,
-      requireTLS:        true,
-      auth:              { user: GMAIL_USER, pass: GMAIL_PASS },
-      connectionTimeout: 10000,
-      greetingTimeout:   10000,
-      socketTimeout:     15000,
-    });
-    SMTP_FROM = SMTP_FROM || `${SENDER_NAME} <${GMAIL_USER}>`;
-    console.log(`[EMAIL SERVICE] Using Gmail SMTP as ${GMAIL_USER}`);
+    console.log(`[EMAIL SERVICE] Using custom SMTP (${EMAIL_HOST}:${EMAIL_PORT}) ✓  as ${EMAIL_USER}`);
   } else {
     console.warn('[EMAIL SERVICE] ⚠️  No email provider configured! Set one of:\n' +
-      '  • BREVO_API_KEY (free 300/day) — recommended for Railway\n' +
-      '  • RESEND_API_KEY (free 100/day)\n' +
-      '  • EMAIL_HOST + EMAIL_PORT + EMAIL_USER + EMAIL_PASS (SMTP)\n' +
+      '  • GMAIL_USER + GMAIL_PASS  (Gmail App Password — works for any recipient)\n' +
+      '  • BREVO_API_KEY  (free 300/day)\n' +
+      '  • RESEND_API_KEY (free 100/day, requires domain verification)\n' +
       '  Emails will be SKIPPED until one is configured.');
   }
-} else if (BREVO_API_KEY) {
-  console.log('[EMAIL SERVICE] Using Brevo HTTP API with plain-text fallback ✓');
-} else {
-  console.log(`[EMAIL SERVICE] Using Resend HTTP API ✓  FROM="${RESEND_FROM}"`);
 }
 
 // ── Utility: strip HTML tags to produce plain text ────────────────────────────
@@ -140,21 +143,26 @@ const stripHtml = (html) =>
 
 // ── Central send function ─────────────────────────────────────────────────────
 const sendEmail = async (to, subject, html, text) => {
-  if (BREVO_API_KEY) {
-    await sendViaBrevo(to, subject, html, text);
-    return;
-  }
-  if (RESEND_API_KEY) {
-    await sendViaResend(to, subject, html, text);
-    return;
-  }
+  // Priority 1: Gmail SMTP (works for any recipient — no domain needed)
   if (smtpTransporter) {
+    console.log(`[GMAIL] Sending "${subject}" → ${to}`);
     await Promise.race([
       smtpTransporter.sendMail({ from: SMTP_FROM, to, subject, html, text: text || stripHtml(html) }),
       new Promise((_, reject) =>
         setTimeout(() => reject(new Error('SMTP timeout after 20s')), 20000)
       ),
     ]);
+    console.log(`[GMAIL] ✓ Email delivered to ${to}`);
+    return;
+  }
+  // Priority 2: Brevo
+  if (BREVO_API_KEY) {
+    await sendViaBrevo(to, subject, html, text);
+    return;
+  }
+  // Priority 3: Resend (requires verified domain for non-owner recipients)
+  if (RESEND_API_KEY) {
+    await sendViaResend(to, subject, html, text);
     return;
   }
   console.log(`[EMAIL SKIPPED] No provider configured — would have sent to ${to}`);
