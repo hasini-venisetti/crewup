@@ -588,11 +588,15 @@ export default function SignupPage() {
               {/* ── Step 3 — Location ── */}
               {currentStep === 3 && (
                 <div className="form-anim" style={{ animationDelay: '0.16s' }}>
-                  <label className="block text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-2">City</label>
-                  <input type="text" placeholder="e.g. Hyderabad" className="field-input mb-4"
+                  <label className="block text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-2">City / Area</label>
+                  <input type="text" placeholder="e.g. Hyderabad or Kondapur" className="field-input mb-4"
                     value={formData.location.city}
-                    onChange={(e) => setFormData({ ...formData, location: { ...formData.location, city: e.target.value } })} />
-                  <label className="block text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-2">District <span className="normal-case text-[#a3a39e]">(optional)</span></label>
+                    onChange={(e) => {
+                      const city = e.target.value;
+                      // Auto-fill district with city; user can override
+                      setFormData({ ...formData, location: { ...formData.location, city, district: formData.location.district || city } });
+                    }} />
+                  <label className="block text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-2">District <span className="normal-case text-[#a3a39e]">(auto-filled, change if needed)</span></label>
                   <input type="text" placeholder="e.g. Rangareddy" className="field-input mb-4"
                     value={formData.location.district}
                     onChange={(e) => setFormData({ ...formData, location: { ...formData.location, district: e.target.value } })} />

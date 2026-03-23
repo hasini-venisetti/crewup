@@ -385,8 +385,23 @@ export default function EditProfilePage() {
             <div>
               <label className={labelCls}>Location</label>
               <div className="grid grid-cols-2 gap-3 mb-3">
-                <input className={inputCls} placeholder="City" value={form.location.city} onChange={(e) => setLoc('city', e.target.value)} />
-                <input className={inputCls} placeholder="District (optional)" value={form.location.district || ''} onChange={(e) => setLoc('district', e.target.value)} />
+                <input className={inputCls} placeholder="City / Area (e.g. Kondapur)"
+                  value={form.location.city}
+                  onChange={(e) => {
+                    const city = e.target.value;
+                    // Auto-fill district with city if district hasn't been manually set
+                    setForm((prev) => ({
+                      ...prev,
+                      location: {
+                        ...prev.location,
+                        city,
+                        district: prev.location.district || city,
+                      },
+                    }));
+                  }} />
+                <input className={inputCls} placeholder="District (e.g. Rangareddy)"
+                  value={form.location.district || ''}
+                  onChange={(e) => setLoc('district', e.target.value)} />
               </div>
               <div className="mb-3">
                 <input className={inputCls} placeholder="Country" value={form.location.country} onChange={(e) => setLoc('country', e.target.value)} />
