@@ -575,12 +575,28 @@ export default function MentorsPage() {
                     </div>
                   )}
 
-                  {/* Session types */}
-                  {sessionTypes.length > 0 && (
+                  {/* Session types — filter out empty strings */}
+                  {sessionTypes.filter(Boolean).length > 0 && (
                     <div className="flex flex-wrap gap-1.5 mb-3">
-                      {sessionTypes.slice(0, 3).map(s => (
+                      {sessionTypes.filter(Boolean).slice(0, 3).map(s => (
                         <span key={s} className="bg-[#f0f7ff] text-[#1e6bcc] border border-[#c4dcff] rounded-full text-[11px] px-2 py-0.5 font-medium">{s}</span>
                       ))}
+                    </div>
+                  )}
+
+                  {/* Weekly availability chips */}
+                  {(mentor.mentorWeeklySchedule || []).length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-3">
+                      <span className="text-[10px] text-[#a3a39e] self-center mr-0.5">Available:</span>
+                      {['Su','Mo','Tu','We','Th','Fr','Sa'].map((d, i) => {
+                        const hasDay = (mentor.mentorWeeklySchedule || []).some(s => s.day === i);
+                        return hasDay ? (
+                          <span key={d} className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[#f0eeff] text-[#4740CC] border border-[#c9c4ff]">{d}</span>
+                        ) : null;
+                      })}
+                      {mentor.mentorSessionDuration && (
+                        <span className="text-[10px] text-[#a3a39e] self-center ml-1">· {mentor.mentorSessionDuration}min</span>
+                      )}
                     </div>
                   )}
 
@@ -596,46 +612,38 @@ export default function MentorsPage() {
                   </div>
 
                   {/* CTAs */}
-                  {(() => {
-                    const hasSchedule = (mentor.mentorWeeklySchedule || []).length > 0;
-                    return (
-                      <div className="flex items-center gap-2 border-t border-[#efefed] pt-4 mt-auto">
-                        <Link href={`/profile/${userId}`}
-                          className="flex-1 text-center text-xs font-semibold px-3 py-2 rounded-lg border border-[#e0e0dd] text-[#6b6b66] hover:border-[#6C63FF] hover:text-[#6C63FF] transition">
-                          View Profile
-                        </Link>
-                        {user && !isOwnProfile && (
-                          <button onClick={() => setReviewTarget(mentor)}
-                            className="px-2.5 py-2 rounded-lg border border-[#e0e0dd] text-[#6b6b66] hover:border-amber-400 hover:text-amber-500 transition text-xs font-semibold"
-                            title="Leave a review">⭐</button>
-                        )}
-                        {!isOwnProfile && hasSchedule && !isUnavailable && (
-                          <button
-                            onClick={() => { if (!user) { router.push('/login'); return; } setBookTarget(mentor); }}
-                            className="flex-1 text-center text-xs font-semibold px-3 py-2 rounded-lg bg-[#6C63FF] text-white hover:bg-[#5750D4] shadow-sm shadow-[#6C63FF]/20 transition">
-                            📅 Book Session
-                          </button>
-                        )}
-                        {!isOwnProfile && (!hasSchedule || isUnavailable) && (
-                          <button
-                            onClick={() => !hasApplied && !isUnavailable && openApplyModal(mentor)}
-                            disabled={hasApplied || isUnavailable}
-                            className={`flex-1 text-center text-xs font-semibold px-3 py-2 rounded-lg transition ${
-                              hasApplied ? 'bg-green-50 border border-green-200 text-green-600 cursor-default'
-                              : isUnavailable ? 'bg-[#f7f7f6] border border-[#e0e0dd] text-[#a3a39e] cursor-not-allowed'
-                              : 'bg-[#6C63FF] text-white hover:bg-[#5750D4] shadow-sm shadow-[#6C63FF]/20'}`}>
-                            {hasApplied ? '✓ Applied' : mentorStatus === 'paused' ? '⏸ Paused' : mentorStatus === 'closed' ? '🔴 Closed' : 'Apply'}
-                          </button>
-                        )}
-                        {isOwnProfile && (
-                          <Link href="/mentors/dashboard"
-                            className="flex-1 text-center text-xs font-semibold px-3 py-2 rounded-lg bg-[#f0eeff] border border-[#c9c4ff] text-[#4740CC] hover:bg-[#e4e1ff] transition">
-                            ✏️ My Dashboard
-                          </Link>
-                        )}
-                      </div>
-                    );
-                  })()}
+                  <div className="flex items-center gap-2 border-t border-[#efefed] pt-4 mt-auto">
+                    <Link href={`/profile/${userId}`}
+                      className="flex-1 text-center text-xs font-semibold px-3 py-2 rounded-lg border border-[#e0e0dd] text-[#6b6b66] hover:border-[#6C63FF] hover:text-[#6C63FF] transition">
+                      View Profile
+                    </Link>
+                    {user && !isOwnProfile && (
+                      <button onClick={() => setReviewTarget(mentor)}
+                        className="px-2.5 py-2 rounded-lg border border-[#e0e0dd] text-[#6b6b66] hover:border-amber-400 hover:text-amber-500 transition text-xs font-semibold"
+                        title="Leave a review">⭐</button>
+                    )}
+                    {/* Book Session — shown for all open non-own mentors */}
+                    {!isOwnProfile && !isUnavailable && (
+                      <button
+                        onClick={() => { if (!user) { router.push('/login'); return; } setBookTarget(mentor); }}
+                        className="flex-1 text-center text-xs font-semibold px-3 py-2 rounded-lg bg-[#6C63FF] text-white hover:bg-[#5750D4] shadow-sm shadow-[#6C63FF]/20 transition">
+                        📅 Book Session
+                      </button>
+                    )}
+                    {/* Paused / Closed state */}
+                    {!isOwnProfile && isUnavailable && (
+                      <button disabled
+                        className="flex-1 text-center text-xs font-semibold px-3 py-2 rounded-lg bg-[#f7f7f6] border border-[#e0e0dd] text-[#a3a39e] cursor-not-allowed">
+                        {mentorStatus === 'paused' ? '⏸ Paused' : '🔴 Closed'}
+                      </button>
+                    )}
+                    {isOwnProfile && (
+                      <Link href="/mentors/dashboard"
+                        className="flex-1 text-center text-xs font-semibold px-3 py-2 rounded-lg bg-[#f0eeff] border border-[#c9c4ff] text-[#4740CC] hover:bg-[#e4e1ff] transition">
+                        ✏️ My Dashboard
+                      </Link>
+                    )}
+                  </div>
                 </div>
               );
             })}
