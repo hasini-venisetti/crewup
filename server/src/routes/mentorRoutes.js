@@ -137,7 +137,7 @@ router.post('/:mentorUserId/apply', protect, async (req, res) => {
         req.user.name,
         req.user.role,
         message.trim()
-      ).catch(() => {});
+      ).catch((e) => console.error('[EMAIL ERROR]', e.message));
     }
 
     return res.status(201).json({ success: true, message: 'Application sent! The mentor will be notified.' });
@@ -201,7 +201,7 @@ router.patch('/requests/:requestId/accept', protect, async (req, res) => {
         applicantUser.name,
         req.user.name,
         conversation._id
-      ).catch(() => {});
+      ).catch((e) => console.error('[EMAIL ERROR]', e.message));
     }
 
     return res.status(200).json({ success: true, data: populated });
@@ -298,7 +298,7 @@ router.post('/:mentorUserId/bookings', protect, async (req, res) => {
         sessionType: sessionType || '1:1 Session', date, startTime, duration, timezone: tz,
         notes: notes?.trim() || '',
         meetingAddress: meetingAddress?.trim() || '',
-      }).catch(() => {});
+      }).catch((e) => console.error('[EMAIL ERROR]', e.message));
     }
 
     res.status(201).json({ success: true, data: booking });
@@ -372,7 +372,7 @@ router.patch('/bookings/:id/confirm', protect, async (req, res) => {
         duration:     booking.duration || 60,
         timezone:     booking.timezone || 'Asia/Kolkata',
         meetingLink:  booking.meetingLink || '',
-      }).catch(() => {});
+      }).catch((e) => console.error('[EMAIL ERROR]', e.message));
     }
 
     res.json({ success: true, data: booking });
@@ -408,7 +408,7 @@ router.patch('/bookings/:id/cancel', protect, async (req, res) => {
       title: `Booking cancelled by ${isMentor ? 'mentor' : 'mentee'}`,
       message: `${booking.sessionType || 'Session'} on ${booking.date} at ${booking.startTime} was cancelled.`,
       link: `/mentors/dashboard?tab=sessions`,
-    }).catch(() => {});
+    }).catch((e) => console.error('[EMAIL ERROR]', e.message));
 
     res.json({ success: true, data: booking });
   } catch (err) {
@@ -434,7 +434,7 @@ router.patch('/bookings/:id/complete', protect, async (req, res) => {
       title: `How was your session with ${req.user.name}?`,
       message: 'Your session is complete — leave a review on the Mentors page!',
       link: `/mentors`,
-    }).catch(() => {});
+    }).catch((e) => console.error('[EMAIL ERROR]', e.message));
 
     res.json({ success: true, data: booking });
   } catch (err) {
@@ -466,7 +466,7 @@ router.post('/bookings/:id/chat', protect, async (req, res) => {
       title: `${req.user.name} sent a message about your booking`,
       message: text.slice(0, 100),
       link: `/mentors/dashboard?tab=sessions`,
-    }).catch(() => {});
+    }).catch((e) => console.error('[EMAIL ERROR]', e.message));
 
     // Real-time push via socket
     const io = global._io;

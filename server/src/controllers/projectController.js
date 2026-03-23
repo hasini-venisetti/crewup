@@ -257,7 +257,7 @@ const updateProject = async (req, res, next) => {
             title:     'Project updated',
             message:   `"${project.title}" was updated. Changes: ${changeSummary}.`,
             link:      `/projects/${project._id}`,
-          }).catch(() => {});
+          }).catch((e) => console.error('[EMAIL ERROR]', e.message));
           // Email (fire-and-forget)
           if (app.applicant.email) {
             emailService.sendProjectEditedNotice(
@@ -266,7 +266,7 @@ const updateProject = async (req, res, next) => {
               project.title,
               changeSummary,
               project._id
-            ).catch(() => {});
+            ).catch((e) => console.error('[EMAIL ERROR]', e.message));
           }
         }
       } catch (_) {}

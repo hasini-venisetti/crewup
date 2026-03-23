@@ -119,7 +119,7 @@ const submitReport = async (req, res, next) => {
       title:     'Report submitted',
       message:   'Your report has been received. If the content violates our guidelines, it has been temporarily hidden while we review it.',
       link:      '/safety',
-    }).catch(() => {});
+    }).catch((e) => console.error('[EMAIL ERROR]', e.message));
 
     res.status(201).json({
       success: true,
@@ -204,7 +204,7 @@ const getAllReports = async (req, res, next) => {
         Report.findByIdAndUpdate(r._id, {
           reportedUser:   reportedUser?._id || null,
           targetSnapshot,
-        }).catch(() => {});
+        }).catch((e) => console.error('[EMAIL ERROR]', e.message));
       }
     }));
 
@@ -247,7 +247,7 @@ const resolveReport = async (req, res, next) => {
           ? `A report on your content was reviewed by our team. Note: ${note.trim()}`
           : 'A report on your content was reviewed. Please ensure your activity follows our community guidelines.',
         link: '/safety',
-      }).catch(() => {});
+      }).catch((e) => console.error('[EMAIL ERROR]', e.message));
     }
 
     res.status(200).json({ success: true, message: `Report marked as ${action}`, data: report });

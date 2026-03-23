@@ -100,7 +100,7 @@ const register = async (req, res, next) => {
     await Profile.create({ user: user._id });
 
     // Send OTP email (fire-and-forget — don't block signup)
-    sendEmailOTP(email, name, otp).catch(() => {});
+    sendEmailOTP(email, name, otp).catch((e) => console.error('[EMAIL ERROR]', e.message));
 
     if (process.env.NODE_ENV !== 'production') {
       console.log(`[DEV] Email OTP for ${user.email}: ${otp}`);

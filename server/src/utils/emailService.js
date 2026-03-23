@@ -12,6 +12,7 @@ const SENDER_EMAIL   = process.env.SENDER_EMAIL || 'noreply@crewupfilms.com';
 // ── Brevo HTTP sender ─────────────────────────────────────────────────────────
 // Sends both HTML + plain text so Gmail treats it as transactional
 const sendViaBrevo = async (to, subject, html, text) => {
+  console.log(`[BREVO] Sending "${subject}" → ${to} (from: ${SENDER_EMAIL})`);
   const res = await fetch('https://api.brevo.com/v3/smtp/email', {
     method:  'POST',
     headers: {
@@ -33,9 +34,14 @@ const sendViaBrevo = async (to, subject, html, text) => {
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: res.statusText }));
-    throw new Error(`Brevo API error ${res.status}: ${err.message || JSON.stringify(err)}`);
+    const detail = err.message || JSON.stringify(err);
+    console.error(`[BREVO ERROR] ${res.status} sending to ${to}: ${detail}`);
+    if (res.status === 401) console.error('[BREVO] → Check BREVO_API_KEY is correct and has transactional email permissions.');
+    if (res.status === 400) console.error('[BREVO] → Sender email may not be verified. Go to Brevo → Senders & IPs → verify ' + SENDER_EMAIL);
+    throw new Error(`Brevo API error ${res.status}: ${detail}`);
   }
 
+  console.log(`[BREVO] ✓ Email delivered to ${to}`);
   return res.json();
 };
 

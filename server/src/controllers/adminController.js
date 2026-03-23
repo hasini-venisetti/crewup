@@ -279,9 +279,9 @@ const moderateProject = async (req, res, next) => {
     // Email (fire-and-forget)
     if (project.createdBy?.email) {
       if (action === 'approve') {
-        emailService.sendProjectApproved(project.createdBy.email, project.createdBy.name, project.title, project._id).catch(() => {});
+        emailService.sendProjectApproved(project.createdBy.email, project.createdBy.name, project.title, project._id).catch((e) => console.error('[EMAIL ERROR]', e.message));
       } else {
-        emailService.sendProjectRejected(project.createdBy.email, project.createdBy.name, project.title, note).catch(() => {});
+        emailService.sendProjectRejected(project.createdBy.email, project.createdBy.name, project.title, note).catch((e) => console.error('[EMAIL ERROR]', e.message));
       }
     }
 

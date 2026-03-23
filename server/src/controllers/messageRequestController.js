@@ -213,7 +213,7 @@ const declineRequest = async (req, res, next) => {
         request.sender.email,
         request.sender.name,
         req.user.name
-      ).catch(() => {});
+      ).catch((e) => console.error('[EMAIL ERROR]', e.message));
     }
 
     return res.status(200).json({ success: true, message: 'Request declined.' });

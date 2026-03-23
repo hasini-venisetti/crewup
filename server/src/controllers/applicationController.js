@@ -59,7 +59,7 @@ const applyToProject = async (req, res, next) => {
       project.title,
       project._id,
       roleApplyingFor
-    ).catch(() => {});
+    ).catch((e) => console.error('[EMAIL ERROR]', e.message));
 
     res.status(201).json({ success: true, message: 'Application submitted', data: application });
   } catch (error) {
@@ -160,7 +160,7 @@ const updateApplicationStatus = async (req, res, next) => {
         application.applicant.name,
         application.project.title,
         application.project._id
-      ).catch(() => {});
+      ).catch((e) => console.error('[EMAIL ERROR]', e.message));
 
       // Log activity for the applicant joining the project
       logActivity({
@@ -189,7 +189,7 @@ const updateApplicationStatus = async (req, res, next) => {
         application.applicant.email,
         application.applicant.name,
         application.project.title
-      ).catch(() => {});
+      ).catch((e) => console.error('[EMAIL ERROR]', e.message));
     }
 
     res.status(200).json({ success: true, message: `Application ${status}`, data: application });
