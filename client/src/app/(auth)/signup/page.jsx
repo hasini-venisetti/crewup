@@ -261,11 +261,15 @@ export default function SignupPage() {
         idToken: googleIdToken, username: formData.username,
         role: resolvedRoles[0], roles: resolvedRoles,
         location: formData.location, skills: formData.skills,
+        dateOfBirth: formData.dateOfBirth || '',
+        gender: formData.gender || '',
       });
       if (data.success && data.token) {
         loginWithToken(data.token, data.user);
         toast.success(`Account created! Welcome, ${data.user.name} 🎬`);
-        router.push('/dashboard');
+        // Go to phone verification step instead of dashboard
+        setPhoneCountdown(0);
+        setCurrentStep(8);
       } else {
         toast.error(data.message || 'Failed to create account.');
       }
