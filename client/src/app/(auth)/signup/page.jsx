@@ -352,7 +352,15 @@ export default function SignupPage() {
 
   /* ── Step 7: OTP input handlers ── */
   const handleOtpInput = (idx, val) => {
-    const digit = val.replace(/\D/g, '').slice(-1);
+    const digits = val.replace(/\D/g, '');
+    // Handle autofill / paste of full 6-digit code into one box
+    if (digits.length >= 6) {
+      const filled = digits.slice(0, 6).split('');
+      setOtpCode(filled);
+      otpRefs.current[5]?.focus();
+      return;
+    }
+    const digit = digits.slice(-1);
     const next = [...otpCode];
     next[idx] = digit;
     setOtpCode(next);
@@ -361,15 +369,21 @@ export default function SignupPage() {
 
   const handleOtpKeyDown = (idx, e) => {
     if (e.key === 'Backspace' && !otpCode[idx] && idx > 0) {
+      const next = [...otpCode];
+      next[idx - 1] = '';
+      setOtpCode(next);
       otpRefs.current[idx - 1]?.focus();
     }
   };
 
   const handleOtpPaste = (e) => {
+    e.preventDefault();
     const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    if (pasted.length === 6) {
-      setOtpCode(pasted.split(''));
-      otpRefs.current[5]?.focus();
+    if (pasted.length > 0) {
+      const filled = pasted.padEnd(6, '').split('').slice(0, 6);
+      setOtpCode(filled);
+      const focusIdx = Math.min(pasted.length, 5);
+      otpRefs.current[focusIdx]?.focus();
     }
   };
 
@@ -731,6 +745,7 @@ export default function SignupPage() {
                         key={idx}
                         ref={(el) => (otpRefs.current[idx] = el)}
                         type="text" inputMode="numeric" maxLength={1}
+                        autoComplete="one-time-code"
                         value={digit}
                         onChange={(e) => handleOtpInput(idx, e.target.value)}
                         onKeyDown={(e) => handleOtpKeyDown(idx, e)}
@@ -824,6 +839,7 @@ export default function SignupPage() {
                             key={idx}
                             ref={(el) => (phoneOtpRefs.current[idx] = el)}
                             type="text" inputMode="numeric" maxLength={1}
+                            autoComplete="one-time-code"
                             value={digit}
                             onChange={(e) => handlePhoneOtpInput(idx, e.target.value)}
                             onKeyDown={(e) => handlePhoneOtpKeyDown(idx, e)}
