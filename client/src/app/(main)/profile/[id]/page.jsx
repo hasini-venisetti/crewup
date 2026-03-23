@@ -526,11 +526,11 @@ export default function ProfilePage() {
 
               <div className="flex items-center gap-2 flex-wrap mb-2">
                 <span className="text-white/40 text-sm">@{creator?.username}</span>
-                {creator?.role && (
-                  <span className="inline-flex items-center text-xs font-semibold px-2.5 py-0.5 rounded-full bg-white/8 border border-white/10 text-white/60 capitalize">
-                    {creator.role.replace('-', ' ')}
+                {(creator?.roles?.length ? creator.roles : (creator?.role ? [creator.role] : [])).map((r) => (
+                  <span key={r} className="inline-flex items-center text-xs font-semibold px-2.5 py-0.5 rounded-full bg-white/8 border border-white/10 text-white/60 capitalize">
+                    {r.replace(/-/g, ' ')}
                   </span>
-                )}
+                ))}
               </div>
 
               <div className="flex items-center gap-4 mb-3">

@@ -154,6 +154,7 @@ export default function SignupPage() {
   });
   const [skillInput, setSkillInput]     = useState('');
   const [otherRoleText, setOtherRoleText] = useState('');
+  const [otherRoleTags, setOtherRoleTags] = useState([]);
   const [isLoading, setIsLoading]       = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [usernameError, setUsernameError] = useState('');
@@ -254,6 +255,7 @@ export default function SignupPage() {
     try {
       const resolvedRoles = [
         ...formData.roles,
+        ...otherRoleTags,
         ...(otherRoleText.trim() ? [otherRoleText.trim().toLowerCase()] : []),
       ];
       if (!resolvedRoles.length) resolvedRoles.push('other');
@@ -296,7 +298,7 @@ export default function SignupPage() {
         .replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '').slice(0, 20) || 'creator';
       setFormData((prev) => ({ ...prev, username: suggested }));
     }
-    if (currentStep === 2 && formData.roles.length === 0 && !otherRoleText.trim()) { toast.error('Please select at least one role'); return; }
+    if (currentStep === 2 && formData.roles.length === 0 && !otherRoleText.trim() && otherRoleTags.length === 0) { toast.error('Please select at least one role'); return; }
     if (currentStep === 3 && (!formData.location.district.trim() || !formData.location.country.trim())) {
       toast.error('Please enter district and country');  return;
     }
@@ -329,6 +331,7 @@ export default function SignupPage() {
     try {
       const resolvedRoles = [
         ...formData.roles,
+        ...otherRoleTags,
         ...(otherRoleText.trim() ? [otherRoleText.trim().toLowerCase()] : []),
       ];
       if (!resolvedRoles.length) resolvedRoles.push('other');
@@ -577,10 +580,42 @@ export default function SignupPage() {
                     })}
                   </div>
                   <div className="mb-4">
-                    <label className="block text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-2">Other role (optional)</label>
-                    <input type="text" placeholder="e.g. Lighting Technician, Stunt Coordinator…"
-                      className="field-input" value={otherRoleText}
-                      onChange={(e) => setOtherRoleText(e.target.value)} maxLength={50} />
+                    <label className="block text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-2">Other roles <span className="normal-case text-[#a3a39e]">(optional)</span></label>
+                    {/* Tags already added */}
+                    {otherRoleTags.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mb-2">
+                        {otherRoleTags.map(tag => (
+                          <span key={tag} className="inline-flex items-center gap-1 bg-[#f0eeff] text-[#5750D4] text-xs font-medium px-2.5 py-1 rounded-full">
+                            {tag}
+                            <button type="button" onClick={() => setOtherRoleTags(otherRoleTags.filter(t => t !== tag))} className="hover:text-red-500">×</button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <input type="text" placeholder="e.g. Lighting Technician, Stunt Coordinator…"
+                        className="field-input flex-1" value={otherRoleText}
+                        onChange={(e) => setOtherRoleText(e.target.value)} maxLength={50}
+                        onKeyDown={(e) => {
+                          if ((e.key === 'Enter' || e.key === ',') && otherRoleText.trim()) {
+                            e.preventDefault();
+                            const val = otherRoleText.trim().toLowerCase();
+                            if (!otherRoleTags.includes(val)) setOtherRoleTags([...otherRoleTags, val]);
+                            setOtherRoleText('');
+                          }
+                        }} />
+                      <button type="button"
+                        onClick={() => {
+                          if (!otherRoleText.trim()) return;
+                          const val = otherRoleText.trim().toLowerCase();
+                          if (!otherRoleTags.includes(val)) setOtherRoleTags([...otherRoleTags, val]);
+                          setOtherRoleText('');
+                        }}
+                        className="px-3 py-2 bg-[#111110] text-white text-xs font-semibold rounded-lg hover:bg-[#2d2d2b] transition">
+                        Add
+                      </button>
+                    </div>
+                    <p className="text-xs text-[#a3a39e] mt-1">Press Enter or click Add for each role</p>
                   </div>
                 </div>
               )}

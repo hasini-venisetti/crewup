@@ -53,6 +53,7 @@ export default function EditProfilePage() {
     verificationLinks: { imdb: '', instagram: '' },
   });
   const [skillInput, setSkillInput]         = useState('');
+  const [otherRoleInput, setOtherRoleInput] = useState('');
   const [portfolio, setPortfolio]           = useState([]);
   const [picturePreview, setPicturePreview] = useState('');
   const [uploadingPic, setUploadingPic]     = useState(false);
@@ -336,6 +337,52 @@ export default function EditProfilePage() {
                   );
                 })}
               </div>
+
+              {/* Custom roles — shown when Other is selected */}
+              {form.roles.includes('other') && (
+                <div className="mt-3">
+                  {/* existing custom roles as tags */}
+                  {form.roles.filter(r => !ROLE_VALUES.includes(r) && r !== 'other').length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {form.roles.filter(r => !ROLE_VALUES.includes(r) && r !== 'other').map(r => (
+                        <span key={r} className="inline-flex items-center gap-1 bg-[#f0eeff] text-[#5750D4] text-xs font-medium px-2.5 py-1 rounded-full">
+                          {r}
+                          <button type="button" onClick={() => set('roles', form.roles.filter(x => x !== r))} className="hover:text-red-500">×</button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Type a custom role and press Enter…"
+                      className={`${inputCls} flex-1`}
+                      value={otherRoleInput}
+                      onChange={(e) => setOtherRoleInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if ((e.key === 'Enter' || e.key === ',') && otherRoleInput.trim()) {
+                          e.preventDefault();
+                          const val = otherRoleInput.trim().toLowerCase();
+                          if (!form.roles.includes(val)) set('roles', [...form.roles, val]);
+                          setOtherRoleInput('');
+                        }
+                      }}
+                    />
+                    <button type="button"
+                      onClick={() => {
+                        if (!otherRoleInput.trim()) return;
+                        const val = otherRoleInput.trim().toLowerCase();
+                        if (!form.roles.includes(val)) set('roles', [...form.roles, val]);
+                        setOtherRoleInput('');
+                      }}
+                      className="px-3 py-2 rounded-lg bg-[#0e0e0d] text-white text-xs font-semibold hover:bg-[#2d2d2b] transition">
+                      Add
+                    </button>
+                  </div>
+                  <p className="text-xs text-[#a3a39e] mt-1">Press Enter or click Add for each role</p>
+                </div>
+              )}
+
               {form.roles.length > 0 && (
                 <p className="text-xs text-[#6C63FF] mt-2">Primary role: <strong>{form.roles[0]}</strong></p>
               )}
