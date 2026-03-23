@@ -123,7 +123,7 @@ if (!BREVO_API_KEY && !RESEND_API_KEY) {
 } else if (BREVO_API_KEY) {
   console.log('[EMAIL SERVICE] Using Brevo HTTP API with plain-text fallback ✓');
 } else {
-  console.log('[EMAIL SERVICE] Using Resend HTTP API ✓');
+  console.log(`[EMAIL SERVICE] Using Resend HTTP API ✓  FROM="${RESEND_FROM}"`);
 }
 
 // ── Utility: strip HTML tags to produce plain text ────────────────────────────
