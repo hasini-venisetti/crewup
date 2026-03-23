@@ -113,23 +113,26 @@ function ReviewModal({ mentor, myReview, onClose, onSubmit }) {
 
 /* ── Booking Modal ── */
 function BookingModal({ mentor, onClose, onBooked }) {
-  const schedule     = mentor.mentorWeeklySchedule || [];
-  const timezone     = mentor.mentorTimezone || 'Asia/Kolkata';
-  const sessionTypes = mentor.mentorSessionTypes || [];
-  const mentorUserId = mentor.user?._id || mentor.user?.id;
+  const schedule      = mentor.mentorWeeklySchedule || [];
+  const timezone      = mentor.mentorTimezone || 'Asia/Kolkata';
+  const sessionTypes  = mentor.mentorSessionTypes || [];
+  const mentorUserId  = mentor.user?._id || mentor.user?.id;
   // Mentee picks their own duration; mentor's setting is the max cap
-  const maxDuration  = mentor.mentorSessionDuration || 60;
+  const maxDuration   = mentor.mentorSessionDuration || 60;
+  // Is this an in-person or "both" mentor? If so, mentee must share location
+  const isInPerson    = mentor.mentorLocationType === 'offline' || mentor.mentorLocationType === 'both';
 
-  const [step,         setStep]         = useState(0);
-  const [currentMonth, setCurrentMonth] = useState(() => new Date());
-  const [selectedDate, setSelectedDate] = useState(null);
-  const [bookedSlots,  setBookedSlots]  = useState([]);
-  const [loadingSlots, setLoadingSlots] = useState(false);
-  const [selectedSlot, setSelectedSlot] = useState(null);
-  const [duration,     setDuration]     = useState(maxDuration >= 60 ? 60 : 30);
-  const [sessionType,  setSessionType]  = useState(sessionTypes[0] || '');
-  const [notes,        setNotes]        = useState('');
-  const [booking,      setBooking]      = useState(false);
+  const [step,           setStep]           = useState(0);
+  const [currentMonth,   setCurrentMonth]   = useState(() => new Date());
+  const [selectedDate,   setSelectedDate]   = useState(null);
+  const [bookedSlots,    setBookedSlots]    = useState([]);
+  const [loadingSlots,   setLoadingSlots]   = useState(false);
+  const [selectedSlot,   setSelectedSlot]   = useState(null);
+  const [duration,       setDuration]       = useState(maxDuration >= 60 ? 60 : 30);
+  const [sessionType,    setSessionType]    = useState(sessionTypes[0] || '');
+  const [notes,          setNotes]          = useState('');
+  const [meetingAddress, setMeetingAddress] = useState('');
+  const [booking,        setBooking]        = useState(false);
 
   const year  = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
@@ -182,7 +185,7 @@ function BookingModal({ mentor, onClose, onBooked }) {
   const handleBook = async () => {
     setBooking(true);
     try {
-      await mentorAPI.requestBooking(mentorUserId, { date: selectedDate, startTime: selectedSlot.startTime, endTime: selectedSlot.endTime, sessionType, notes, timezone, duration });
+      await mentorAPI.requestBooking(mentorUserId, { date: selectedDate, startTime: selectedSlot.startTime, endTime: selectedSlot.endTime, sessionType, notes, meetingAddress, timezone, duration });
       setStep(3);
       onBooked?.();
     } catch (err) {
@@ -344,6 +347,23 @@ function BookingModal({ mentor, onClose, onBooked }) {
                   </div>
                 </div>
               )}
+              {/* In-person: mentee must share their location */}
+              {isInPerson && (
+                <div>
+                  <label className="block text-xs font-semibold text-[#6b6b66] uppercase tracking-[0.1em] mb-2">
+                    📍 Your Location / Address <span className="normal-case font-normal text-[#e55f5f]">*required for in-person</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={meetingAddress}
+                    onChange={e => setMeetingAddress(e.target.value)}
+                    maxLength={200}
+                    placeholder="e.g. Connaught Place, New Delhi or a full street address"
+                    className="w-full rounded-xl border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm focus:outline-none focus:border-[#6C63FF] transition"
+                  />
+                  <p className="text-[11px] text-[#a3a39e] mt-1">The mentor will come to this location. Be as specific as possible.</p>
+                </div>
+              )}
               <div>
                 <label className="block text-xs font-semibold text-[#6b6b66] uppercase tracking-[0.1em] mb-2">Notes <span className="normal-case font-normal text-[#a3a39e]">(optional)</span></label>
                 <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3} maxLength={500}
@@ -358,7 +378,12 @@ function BookingModal({ mentor, onClose, onBooked }) {
             <div className="py-8 text-center">
               <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center text-3xl mx-auto mb-4">✅</div>
               <h3 className="text-lg font-bold text-[#0e0e0d] mb-2">Booking Requested!</h3>
-              <p className="text-sm text-[#6b6b66] mb-4">Your request was sent to <strong>{mentor.user?.name}</strong>. You'll be notified once they confirm and share the meeting link.</p>
+              <p className="text-sm text-[#6b6b66] mb-4">
+                Your request was sent to <strong>{mentor.user?.name}</strong>.{' '}
+                {isInPerson
+                  ? "They'll come to your location once they confirm. You'll be notified when confirmed."
+                  : "You'll be notified once they confirm and share the meeting link."}
+              </p>
               <p className="text-xs text-[#a3a39e]">
                 {selectedDate && new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                 {selectedSlot && ` · ${fmt12(selectedSlot.startTime)} – ${fmt12(selectedSlot.endTime)}`}
@@ -371,7 +396,7 @@ function BookingModal({ mentor, onClose, onBooked }) {
         {step === 2 && (
           <div className="flex gap-3 px-6 py-4 border-t border-[#efefed] flex-shrink-0">
             <button onClick={() => setStep(1)} className="flex-1 py-2.5 rounded-xl border border-[#e0e0dd] text-sm font-semibold text-[#6b6b66] hover:border-[#0e0e0d] transition">Back</button>
-            <button onClick={handleBook} disabled={booking}
+            <button onClick={handleBook} disabled={booking || (isInPerson && !meetingAddress.trim())}
               className="flex-1 py-2.5 rounded-xl bg-[#6C63FF] hover:bg-[#5750D4] text-white text-sm font-semibold transition disabled:opacity-50 flex items-center justify-center gap-2">
               {booking ? <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Booking…</> : '📅 Confirm Booking'}
             </button>

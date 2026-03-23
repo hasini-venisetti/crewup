@@ -753,6 +753,11 @@ export default function MentorDashboard() {
                         <p className="text-xs text-[#6b6b66] mb-3">
                           📅 {b.date} &nbsp;·&nbsp; {b.startTime}–{b.endTime} &nbsp;·&nbsp; {b.duration || 60} min &nbsp;·&nbsp; {b.timezone}
                         </p>
+                        {b.meetingAddress && (
+                          <p className="text-xs text-[#4740CC] bg-[#f0eeff] border border-[#c9c4ff] rounded-lg px-3 py-2 mb-2 font-medium">
+                            📍 Mentee&apos;s Location: {b.meetingAddress}
+                          </p>
+                        )}
                         {b.notes && <p className="text-xs text-[#6b6b66] bg-[#f7f7f6] rounded-lg px-3 py-2 mb-3">💬 {b.notes}</p>}
 
                         {/* ── Booking Negotiation Chat ── */}
@@ -867,6 +872,11 @@ export default function MentorDashboard() {
                           <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full border flex-shrink-0 ${b.status === 'confirmed' ? 'bg-green-50 border-green-200 text-green-700' : 'bg-amber-50 border-amber-200 text-amber-700'}`}>{b.status}</span>
                         </div>
                         <p className="text-xs text-[#6b6b66] mb-3">📅 {b.date} · {b.startTime}–{b.endTime} ({b.duration || 60} min)</p>
+                        {b.meetingAddress && (
+                          <p className="text-xs text-[#4740CC] bg-[#f0eeff] border border-[#c9c4ff] rounded-lg px-3 py-2 mb-2 font-medium">
+                            📍 Your Location: {b.meetingAddress}
+                          </p>
+                        )}
                         {b.status === 'confirmed' && b.meetingLink && (
                           <a href={b.meetingLink} target="_blank" rel="noopener noreferrer"
                             className="block text-center py-2 rounded-xl bg-green-600 text-white text-xs font-semibold hover:bg-green-700 transition mb-2">
@@ -875,7 +885,7 @@ export default function MentorDashboard() {
                         )}
                         {b.status === 'pending' && (
                           <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-2">
-                            ⏳ Waiting for mentor to confirm and share a meeting link.
+                            ⏳ Waiting for mentor to confirm{b.meetingAddress ? '.' : ' and share a meeting link.'}
                           </p>
                         )}
 

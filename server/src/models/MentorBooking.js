@@ -18,8 +18,9 @@ const mentorBookingSchema = new mongoose.Schema(
       default: 'pending',
     },
 
-    notes:        { type: String, default: '', maxlength: 500 }, // from mentee
-    meetingLink:  { type: String, default: '' },                 // filled by mentor on confirm
+    notes:          { type: String, default: '', maxlength: 500 }, // from mentee
+    meetingAddress: { type: String, default: '' },               // mentee's location for in-person sessions
+    meetingLink:    { type: String, default: '' },               // filled by mentor on confirm (online sessions)
     cancelReason: { type: String, default: '' },
     cancelledBy:  { type: String, enum: ['mentor', 'mentee', ''], default: '' },
 

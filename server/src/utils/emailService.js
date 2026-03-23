@@ -648,7 +648,7 @@ const sendBookingConfirmed = async ({
 // ─── Booking Requested — notify mentor of new booking ────────────────────────
 const sendBookingRequested = async ({
   mentorEmail, mentorName, menteeName,
-  sessionType, date, startTime, duration, timezone, notes,
+  sessionType, date, startTime, duration, timezone, notes, meetingAddress,
 }) => {
   const siteUrl  = process.env.CLIENT_URL || 'https://crewupfilms.com';
   const dashLink = `${siteUrl}/mentors/dashboard?tab=sessions`;
@@ -662,6 +662,7 @@ const sendBookingRequested = async ({
           <p style="margin:2px 0;font-size:14px;color:#111110;"><strong>Date:</strong> ${date}</p>
           <p style="margin:2px 0;font-size:14px;color:#111110;"><strong>Time:</strong> ${startTime} (${duration} min)</p>
           <p style="margin:2px 0;font-size:14px;color:#111110;"><strong>Timezone:</strong> ${timezone}</p>
+          ${meetingAddress ? `<p style="margin:6px 0 0;font-size:14px;color:#111110;"><strong>📍 Mentee's Location:</strong> ${meetingAddress}</p>` : ''}
           ${notes ? `<p style="margin:8px 0 0;font-size:13px;color:#555;"><em>"${notes}"</em></p>` : ''}
         </td></tr>
       </table>

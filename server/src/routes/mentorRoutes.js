@@ -243,7 +243,7 @@ router.get('/:mentorUserId/slots', async (req, res) => {
 // POST /api/mentors/:mentorUserId/bookings — request a session
 router.post('/:mentorUserId/bookings', protect, async (req, res) => {
   try {
-    const { sessionType, date, startTime, endTime, notes } = req.body;
+    const { sessionType, date, startTime, endTime, notes, meetingAddress } = req.body;
     const mentorUserId = req.params.mentorUserId;
     const menteeId     = req.user._id || req.user.id;
 
@@ -277,6 +277,7 @@ router.post('/:mentorUserId/bookings', protect, async (req, res) => {
       sessionType: sessionType || '', date, startTime, endTime,
       duration, timezone: tz,
       notes: notes?.trim() || '',
+      meetingAddress: meetingAddress?.trim() || '',
     });
 
     // Notify mentor (link goes straight to Sessions tab)
@@ -285,7 +286,7 @@ router.post('/:mentorUserId/bookings', protect, async (req, res) => {
       recipient: mentorUserId, sender: menteeId,
       type: 'booking_requested',
       title: `${req.user.name} booked a ${sessionType || 'session'} with you`,
-      message: `Date: ${date} at ${startTime}${notes ? ` — "${notes.slice(0, 60)}"` : ''}`,
+      message: `Date: ${date} at ${startTime}${meetingAddress ? ` — 📍 ${meetingAddress.slice(0, 80)}` : ''}${notes ? ` — "${notes.slice(0, 60)}"` : ''}`,
       link: `/mentors/dashboard?tab=sessions`,
     });
 
@@ -296,6 +297,7 @@ router.post('/:mentorUserId/bookings', protect, async (req, res) => {
         menteeName: req.user.name,
         sessionType: sessionType || '1:1 Session', date, startTime, duration, timezone: tz,
         notes: notes?.trim() || '',
+        meetingAddress: meetingAddress?.trim() || '',
       }).catch(() => {});
     }
 
