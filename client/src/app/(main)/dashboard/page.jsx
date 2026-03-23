@@ -138,7 +138,10 @@ function IncomingAppItem({ app, onDecision }) {
           {app.applicant?.name}
         </Link>
         <p className="text-xs text-[#6b6b66] truncate">
-          {app.roleApplyingFor} · <span className="text-[#a3a39e]">{app.project?.title || ''}</span>
+          {app.roleApplyingFor}
+          {app.project?.title && (
+            <> · <Link href={`/projects/${app.project._id}`} className="text-[#6C63FF] hover:underline font-medium">{app.project.title}</Link></>
+          )}
         </p>
       </div>
       {app.status === 'pending' ? (
@@ -349,7 +352,14 @@ export default function DashboardPage() {
 
       const incoming = {};
       await Promise.all(projRes.data.data.map(async (p) => {
-        try { const r = await applicationAPI.getForProject(p._id); incoming[p._id] = r.data.data; }
+        try {
+          const r = await applicationAPI.getForProject(p._id);
+          // Inject project title/id into each app so the dashboard can show it
+          incoming[p._id] = r.data.data.map((app) => ({
+            ...app,
+            project: { _id: p._id, title: p.title },
+          }));
+        }
         catch { incoming[p._id] = []; }
       }));
       setIncomingApps(incoming);
