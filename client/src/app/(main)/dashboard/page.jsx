@@ -203,101 +203,6 @@ function ProfileCompletenessBanner({ user }) {
   );
 }
 
-/* ── MentorStatusToggle ──────────────────────────────────────────────────── */
-function MentorStatusToggle() {
-  const [status, setStatus] = useState('open');
-  const [loading, setLoading] = useState(false);
-  useEffect(() => {
-    profileAPI.getMe().then(({ data }) => { if (data?.data?.mentorStatus) setStatus(data.data.mentorStatus); }).catch(() => {});
-  }, []);
-  const toggle = async (val) => {
-    if (loading || val === status) return;
-    setLoading(true);
-    const prev = status;
-    setStatus(val);
-    try { await mentorAPI.updateStatus(val); toast.success(`Status: ${val}`); }
-    catch { setStatus(prev); toast.error('Failed'); }
-    finally { setLoading(false); }
-  };
-  const CFG = {
-    open:   { label: '🟢 Open',   cls: 'bg-green-500 text-white border-green-500' },
-    paused: { label: '⏸ Paused', cls: 'bg-yellow-400 text-white border-yellow-400' },
-    closed: { label: '🔴 Closed', cls: 'bg-red-500 text-white border-red-500' },
-  };
-  return (
-    <div className="flex gap-2 flex-wrap">
-      {Object.entries(CFG).map(([key, { label, cls }]) => (
-        <button key={key} onClick={() => toggle(key)} disabled={loading}
-          className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all disabled:opacity-50 ${status === key ? cls : 'border-[#e0e0dd] text-[#6b6b66] hover:border-[#111110] hover:text-[#111110]'}`}>
-          {label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-/* ── MentorApplicationCard ───────────────────────────────────────────────── */
-function MentorApplicationCard({ req, onDecision }) {
-  const router = useRouter();
-  const [loading, setLoading] = useState('');
-  const decide = async (action) => {
-    setLoading(action);
-    try {
-      if (action === 'accept') {
-        const res = await mentorAPI.acceptRequest(req._id);
-        const convId = res.data?.data?._id;
-        toast.success(`Accepted! Opening chat…`);
-        onDecision(req._id, 'accepted');
-        router.push(convId ? `/messages?conv=${convId}` : '/messages');
-      } else {
-        await mentorAPI.declineRequest(req._id);
-        toast.success('Declined.');
-        onDecision(req._id, 'declined');
-      }
-    } catch (err) { toast.error(err?.response?.data?.message || 'Something went wrong.'); }
-    finally { setLoading(''); }
-  };
-  return (
-    <div className="flex flex-col gap-2 py-3 border-b border-[#f5f5f3] last:border-0">
-      <div className="flex items-center gap-3">
-        <Link href={`/profile/${req.sender?._id}`}>
-          <Avatar name={req.sender?.name} image={req.sender?.profileImage} size="sm" />
-        </Link>
-        <div className="flex-1 min-w-0">
-          <Link href={`/profile/${req.sender?._id}`}
-            className="text-sm font-semibold text-[#111110] hover:text-[#6C63FF] hover:underline truncate block transition-colors">
-            {req.sender?.name}
-          </Link>
-          <p className="text-xs text-[#6b6b66] capitalize">
-            {req.sender?.role?.replace('-', ' ') || 'Filmmaker'} · Mentorship request
-          </p>
-        </div>
-        {req.status === 'pending' ? (
-          <div className="flex gap-1.5 flex-shrink-0">
-            <button onClick={() => decide('accept')} disabled={!!loading}
-              className="text-xs font-bold px-2.5 py-1.5 rounded-lg bg-[#6C63FF] text-white hover:bg-[#5750D4] transition-colors disabled:opacity-40">
-              {loading === 'accept' ? '…' : 'Accept'}
-            </button>
-            <button onClick={() => decide('decline')} disabled={!!loading}
-              className="text-xs font-bold px-2.5 py-1.5 rounded-lg bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 transition-colors disabled:opacity-40">
-              {loading === 'decline' ? '…' : 'Decline'}
-            </button>
-          </div>
-        ) : (
-          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${req.status === 'accepted' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
-            {req.status === 'accepted' ? '✅' : '❌'} {req.status}
-          </span>
-        )}
-      </div>
-      {req.message && (
-        <p className="text-xs text-[#6b6b66] italic bg-[#fafaf9] rounded-lg px-3 py-2 border border-[#f0f0ee] line-clamp-2">
-          "{req.message}"
-        </p>
-      )}
-    </div>
-  );
-}
-
 /* ═══════════════════════════════════════════════════════════════════════════
    MAIN DASHBOARD PAGE
 ═══════════════════════════════════════════════════════════════════════════ */
@@ -314,14 +219,7 @@ export default function DashboardPage() {
   const [incomingApps,   setIncomingApps]   = useState({});
   const [followingFeed,  setFollowingFeed]  = useState([]);
   const [myReviews,      setMyReviews]      = useState([]);
-  const [isMentor,           setIsMentor]           = useState(false);
-  const [mentorApps,         setMentorApps]         = useState([]);
-  const [sentMentorRequests, setSentMentorRequests] = useState([]);
   const [savedProjects,      setSavedProjects]      = useState([]);
-  const [myBookings,         setMyBookings]         = useState([]);    // mentee side
-  const [incomingBookings,   setIncomingBookings]   = useState([]);    // mentor side
-  const [bookingAction,      setBookingAction]      = useState({});    // { [id]: 'confirming'|'cancelling' }
-  const [meetingLinkInputs,  setMeetingLinkInputs]  = useState({});    // { [id]: string }
 
   /* ── loading states ── */
   const [dataLoading, setDataLoading] = useState(true);
@@ -398,21 +296,7 @@ export default function DashboardPage() {
       setSavedProjects(data?.data ?? []);
     }).catch(() => {});
 
-    // Mentor
-    profileAPI.getMe().then(({ data }) => {
-      const prof = data?.data;
-      if (prof?.isMentor) {
-        setIsMentor(true);
-        mentorAPI.getApplications().then(({ data: d }) => setMentorApps(d.data || [])).catch(() => {});
-        mentorAPI.getIncomingBookings().then(({ data: d }) => setIncomingBookings(d.data || [])).catch(() => {});
-      }
-    }).catch(() => {});
 
-    // Sent mentorship requests (mentee side)
-    mentorAPI.getSentRequests().then(({ data: d }) => setSentMentorRequests(d.data || [])).catch(() => {});
-
-    // My booked sessions (mentee side)
-    mentorAPI.getMyBookings().then(({ data: d }) => setMyBookings(d.data || [])).catch(() => {});
   }, [user, fetchAll]);
 
   /* ── Real-time: refresh incoming apps when a new application arrives ── */
@@ -450,8 +334,14 @@ export default function DashboardPage() {
     });
   };
 
-  const handleMentorDecision = (requestId) => {
-    setMentorApps((prev) => prev.filter((r) => r._id !== requestId));
+  const handleWithdraw = async (appId) => {
+    try {
+      await applicationAPI.withdraw(appId);
+      setMyApplications((prev) => prev.filter((a) => a._id !== appId));
+      toast.success('Application withdrawn.');
+    } catch {
+      toast.error('Could not withdraw application.');
+    }
   };
 
   const handleWithdraw = async (appId) => {
@@ -464,53 +354,6 @@ export default function DashboardPage() {
     }
   };
 
-  /* ── Booking handlers ── */
-  const handleConfirmBooking = async (bookingId) => {
-    const link = meetingLinkInputs[bookingId] || '';
-    setBookingAction(p => ({ ...p, [bookingId]: 'confirming' }));
-    try {
-      await mentorAPI.confirmBooking(bookingId, { meetingLink: link });
-      setIncomingBookings(p => p.map(b => b._id === bookingId ? { ...b, status: 'confirmed', meetingLink: link } : b));
-      toast.success('Booking confirmed! Meeting link sent to mentee.');
-    } catch { toast.error('Could not confirm booking.'); }
-    finally { setBookingAction(p => ({ ...p, [bookingId]: null })); }
-  };
-
-  const handleCancelBooking = async (bookingId, side) => {
-    if (!confirm('Cancel this booking?')) return;
-    setBookingAction(p => ({ ...p, [bookingId]: 'cancelling' }));
-    try {
-      await mentorAPI.cancelBooking(bookingId, 'Cancelled by ' + side);
-      if (side === 'mentor') setIncomingBookings(p => p.map(b => b._id === bookingId ? { ...b, status: 'cancelled' } : b));
-      else setMyBookings(p => p.map(b => b._id === bookingId ? { ...b, status: 'cancelled' } : b));
-      toast.success('Booking cancelled.');
-    } catch { toast.error('Could not cancel booking.'); }
-    finally { setBookingAction(p => ({ ...p, [bookingId]: null })); }
-  };
-
-  const handleCompleteBooking = async (bookingId) => {
-    setBookingAction(p => ({ ...p, [bookingId]: 'completing' }));
-    try {
-      await mentorAPI.completeBooking(bookingId);
-      setIncomingBookings(p => p.map(b => b._id === bookingId ? { ...b, status: 'completed' } : b));
-      toast.success('Session marked as completed!');
-    } catch { toast.error('Could not mark as completed.'); }
-    finally { setBookingAction(p => ({ ...p, [bookingId]: null })); }
-  };
-
-  /* ── Derived values ── */
-  const allIncoming    = Object.values(incomingApps).flat();
-  const pendingIncoming = allIncoming.filter((a) => a.status === 'pending');
-  const acceptedApps   = myApplications.filter((a) => a.status === 'accepted');
-  const pendingMentors = mentorApps.filter((r) => r.status === 'pending');
-  const upcomingBookings = myBookings.filter(b => b.status === 'pending' || b.status === 'confirmed');
-  const pastBookings     = myBookings.filter(b => b.status === 'completed' || b.status === 'cancelled');
-  const pendingIncomingBookings = incomingBookings.filter(b => b.status === 'pending');
-
-  /* ── Loading skeleton ── */
-  if (authLoading || dataLoading) {
-    return (
-      <div className="min-h-screen bg-[#f5f5f3]">
         <div className="bg-[#0e0e0d] h-40" />
         <div className="max-w-[1200px] mx-auto px-4 sm:px-8 py-6">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
@@ -800,211 +643,12 @@ export default function DashboardPage() {
             </section>
 
             {/* ── MENTORSHIP REQUESTS SENT (mentee side) ── */}
-            {sentMentorRequests.length > 0 && (
-              <section>
-                <SectionHeader
-                  icon="🤝"
-                  title="Mentorship Requests"
-                  count={sentMentorRequests.filter((r) => r.status === 'pending').length || undefined}
-                  collapsed={collapsedSections.sentMentor}
-                  onToggle={() => toggleSection('sentMentor')}
-                />
-                {!collapsedSections.sentMentor && (
-                <div className="bg-white rounded-2xl border border-[#efefed] overflow-hidden">
-                  {sentMentorRequests.map((req) => {
-                    const mentor = req.recipient;
-                    const statusBadge = {
-                      pending:  'bg-amber-50 text-amber-700 border border-amber-200',
-                      accepted: 'bg-green-50 text-green-700 border border-green-200',
-                      declined: 'bg-red-50 text-red-700 border border-red-200',
-                    }[req.status] || 'bg-gray-50 text-gray-600';
-                    const statusIcon = { pending: '⏳', accepted: '✅', declined: '❌' }[req.status] || '🔔';
-                    return (
-                      <div key={req._id}
-                        className="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4 border-b border-[#f5f5f3] last:border-0 hover:bg-[#fafaf9] transition-colors">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-sm text-[#111110]">
-                            {mentor?.name || 'Mentor'}
-                          </p>
-                          <p className="text-xs text-[#6b6b66] mt-0.5">
-                            {req.message ? `"${req.message.slice(0, 80)}${req.message.length > 80 ? '…' : ''}"` : 'Mentorship request'}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full inline-flex items-center gap-1 ${statusBadge}`}>
-                            {statusIcon} {req.status}
-                          </span>
-                          {req.status === 'accepted' && (
-                            <Link href="/messages"
-                              className="text-xs font-semibold bg-[#0e0e0d] text-white px-3 py-1.5 rounded-lg hover:bg-[#2d2d2b] transition-colors whitespace-nowrap">
-                              💬 Chat
-                            </Link>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                )}
-              </section>
-            )}
 
             {/* ── MENTORSHIP (if mentor) ── */}
-            {isMentor && (
-              <section>
-                <SectionHeader icon="🎓" title="Mentorship"
-                  count={pendingMentors.length > 0 ? pendingMentors.length : undefined}
-                  collapsed={collapsedSections.mentorship}
-                  onToggle={() => toggleSection('mentorship')}
-                  action={<MentorStatusToggle />}
-                />
-                {!collapsedSections.mentorship && (mentorApps.length === 0 ? (
-                  <EmptyCard icon="🎓" title="No applications yet"
-                    body="When someone applies for your mentorship, it will appear here."
-                    cta="View Profile" href={`/profile/${user._id || user.id}`} />
-                ) : (
-                  <div className="bg-white rounded-2xl border border-[#efefed] px-5">
-                    {mentorApps.map((req) => (
-                      <MentorApplicationCard key={req._id} req={req} onDecision={handleMentorDecision} />
-                    ))}
-                  </div>
-                ))}
-              </section>
-            )}
 
             {/* ── INCOMING BOOKINGS (mentor side) ── */}
-            {isMentor && (
-              <section>
-                <SectionHeader icon="📅" title="Incoming Sessions"
-                  count={pendingIncomingBookings.length > 0 ? pendingIncomingBookings.length : undefined}
-                  collapsed={collapsedSections.incomingBookings}
-                  onToggle={() => toggleSection('incomingBookings')}
-                />
-                {!collapsedSections.incomingBookings && (incomingBookings.length === 0 ? (
-                  <EmptyCard icon="📅" title="No session bookings yet"
-                    body="When mentees book a session with you, they'll appear here."
-                    cta="Edit Schedule" href="/profile/edit?tab=mentor" />
-                ) : (
-                  <div className="flex flex-col gap-3">
-                    {incomingBookings.map(b => {
-                      const statusColors = { pending: 'bg-amber-50 border-amber-200 text-amber-700', confirmed: 'bg-green-50 border-green-200 text-green-700', cancelled: 'bg-red-50 border-red-200 text-red-500', completed: 'bg-[#f7f7f6] border-[#e0e0dd] text-[#6b6b66]' };
-                      const act = bookingAction[b._id];
-                      return (
-                        <div key={b._id} className="bg-white border border-[#efefed] rounded-2xl p-5">
-                          <div className="flex items-start justify-between gap-3 mb-3">
-                            <div>
-                              <p className="text-sm font-semibold text-[#0e0e0d]">{b.mentee?.name || 'Mentee'}</p>
-                              <p className="text-xs text-[#6b6b66] mt-0.5">{b.sessionType || '1:1 Session'}</p>
-                            </div>
-                            <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full border ${statusColors[b.status] || statusColors.pending}`}>{b.status}</span>
-                          </div>
-                          <p className="text-xs text-[#6b6b66] mb-3">
-                            📅 {b.date} · {b.startTime}–{b.endTime} ({b.duration || 60} min) · {b.timezone}
-                          </p>
-                          {b.notes && <p className="text-xs text-[#6b6b66] bg-[#f7f7f6] rounded-lg px-3 py-2 mb-3">💬 {b.notes}</p>}
-                          {b.status === 'pending' && (
-                            <div className="flex flex-col gap-2">
-                              <input
-                                type="text"
-                                placeholder="Meeting link (Google Meet, Zoom…)"
-                                value={meetingLinkInputs[b._id] || ''}
-                                onChange={e => setMeetingLinkInputs(p => ({ ...p, [b._id]: e.target.value }))}
-                                className="w-full rounded-lg border border-[#e0e0dd] px-3 py-2 text-sm focus:outline-none focus:border-[#6C63FF] transition"
-                              />
-                              <div className="flex gap-2">
-                                <button onClick={() => handleConfirmBooking(b._id)} disabled={!!act}
-                                  className="flex-1 py-2 rounded-xl bg-[#6C63FF] text-white text-xs font-semibold hover:bg-[#5750D4] disabled:opacity-50 transition">
-                                  {act === 'confirming' ? 'Confirming…' : '✅ Confirm'}
-                                </button>
-                                <button onClick={() => handleCancelBooking(b._id, 'mentor')} disabled={!!act}
-                                  className="flex-1 py-2 rounded-xl border border-[#e0e0dd] text-xs font-semibold text-[#6b6b66] hover:border-red-300 hover:text-red-500 disabled:opacity-50 transition">
-                                  {act === 'cancelling' ? 'Cancelling…' : '✕ Decline'}
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                          {b.status === 'confirmed' && (
-                            <div className="flex gap-2">
-                              {b.meetingLink && <a href={b.meetingLink} target="_blank" rel="noopener noreferrer" className="flex-1 text-center py-2 rounded-xl bg-green-600 text-white text-xs font-semibold hover:bg-green-700 transition">🔗 Open Meeting Link</a>}
-                              <button onClick={() => handleCompleteBooking(b._id)} disabled={!!act}
-                                className="flex-1 py-2 rounded-xl border border-[#e0e0dd] text-xs font-semibold text-[#6b6b66] hover:border-[#6C63FF] hover:text-[#6C63FF] disabled:opacity-50 transition">
-                                {act === 'completing' ? 'Marking…' : '✓ Mark Done'}
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
-              </section>
-            )}
 
             {/* ── MY SESSIONS (mentee side) ── */}
-            {myBookings.length > 0 && (
-              <section>
-                <SectionHeader icon="🗓" title="My Sessions"
-                  collapsed={collapsedSections.mySessions}
-                  onToggle={() => toggleSection('mySessions')}
-                />
-                {!collapsedSections.mySessions && (
-                  <div className="flex flex-col gap-3">
-                    {upcomingBookings.length > 0 && (
-                      <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#6b6b66] mb-1">Upcoming</p>
-                    )}
-                    {upcomingBookings.map(b => {
-                      const statusColors = { pending: 'bg-amber-50 border-amber-200 text-amber-700', confirmed: 'bg-green-50 border-green-200 text-green-700' };
-                      const act = bookingAction[b._id];
-                      return (
-                        <div key={b._id} className="bg-white border border-[#efefed] rounded-2xl p-5">
-                          <div className="flex items-start justify-between gap-3 mb-2">
-                            <div className="flex items-center gap-2.5">
-                              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#e4e1ff] to-[#f0eeff] flex items-center justify-center text-[#3730A3] font-bold text-sm overflow-hidden flex-shrink-0">
-                                {b.mentor?.profileImage ? <img src={b.mentor.profileImage} alt="" className="w-9 h-9 object-cover" /> : b.mentor?.name?.charAt(0).toUpperCase() || '?'}
-                              </div>
-                              <div>
-                                <p className="text-sm font-semibold text-[#0e0e0d]">{b.mentor?.name || 'Mentor'}</p>
-                                <p className="text-xs text-[#6b6b66]">{b.sessionType || '1:1 Session'}</p>
-                              </div>
-                            </div>
-                            <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full border ${statusColors[b.status] || 'bg-[#f7f7f6] border-[#e0e0dd] text-[#6b6b66]'}`}>{b.status}</span>
-                          </div>
-                          <p className="text-xs text-[#6b6b66] mb-3">📅 {b.date} · {b.startTime}–{b.endTime} ({b.duration || 60} min)</p>
-                          {b.status === 'confirmed' && b.meetingLink && (
-                            <a href={b.meetingLink} target="_blank" rel="noopener noreferrer" className="block text-center py-2 rounded-xl bg-green-600 text-white text-xs font-semibold hover:bg-green-700 transition mb-2">🔗 Join Meeting</a>
-                          )}
-                          {b.status === 'pending' && (
-                            <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-2">⏳ Waiting for mentor to confirm and share meeting link.</p>
-                          )}
-                          {(b.status === 'pending' || b.status === 'confirmed') && (
-                            <button onClick={() => handleCancelBooking(b._id, 'mentee')} disabled={!!act}
-                              className="text-xs text-[#a3a39e] hover:text-red-500 font-medium transition disabled:opacity-50">
-                              {act === 'cancelling' ? 'Cancelling…' : '✕ Cancel booking'}
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
-                    {pastBookings.length > 0 && (
-                      <>
-                        <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#6b6b66] mt-2 mb-1">Past Sessions</p>
-                        {pastBookings.map(b => (
-                          <div key={b._id} className="bg-white border border-[#efefed] rounded-2xl p-4 opacity-70">
-                            <div className="flex items-center justify-between gap-2">
-                              <div>
-                                <p className="text-sm font-medium text-[#0e0e0d]">{b.mentor?.name || 'Mentor'}</p>
-                                <p className="text-xs text-[#a3a39e]">{b.date} · {b.startTime}–{b.endTime}</p>
-                              </div>
-                              <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full border bg-[#f7f7f6] border-[#e0e0dd] text-[#a3a39e]">{b.status}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </>
-                    )}
-                  </div>
-                )}
-              </section>
-            )}
 
             {/* ── RECOMMENDED ── */}
             <section>

@@ -26,27 +26,6 @@ const PORTFOLIO_TYPES = [
   { value: 'other',       label: '📁  Other',       desc: 'Anything else' },
 ];
 const COMMON_SKILLS = ['Premiere Pro','After Effects','DaVinci Resolve','Final Cut Pro','Lightroom','Photoshop','Illustrator','Blender','Cinema 4D','Audacity','Logic Pro','Ableton','Avid','CapCut','Canva','Photography','Videography','Color Grading','Sound Mixing','Motion Graphics','3D Modeling','Scriptwriting','Storyboarding','Directing','Acting','Voice Acting','Narration'];
-const MENTOR_FIELDS = [
-  'Directing', 'Screenwriting', 'Cinematography', 'Editing', 'Color Grading',
-  'Sound Design', 'VFX', 'Animation', 'Acting', 'Production Design',
-  'Film', 'Photography', 'Music', 'Writing', 'Design',
-  'Casting', 'Producing', 'Makeup & Styling', 'Storyboarding', 'Motion Graphics',
-];
-const SESSION_TYPES = ['1:1 Video Call', 'Portfolio Review', 'Project Guidance', 'Career Mentorship', 'Script Review', 'Reel Feedback'];
-const LANGUAGES = ['Telugu', 'Hindi', 'English', 'Tamil', 'Kannada', 'Malayalam', 'Bengali', 'Marathi', 'Gujarati', 'Punjabi'];
-const TIMEZONES = [
-  { value: 'Asia/Kolkata',    label: 'IST — India (UTC+5:30)' },
-  { value: 'Asia/Dubai',      label: 'GST — Dubai (UTC+4)' },
-  { value: 'Asia/Singapore',  label: 'SGT — Singapore (UTC+8)' },
-  { value: 'Asia/Tokyo',      label: 'JST — Tokyo (UTC+9)' },
-  { value: 'Europe/London',   label: 'GMT/BST — London' },
-  { value: 'Europe/Paris',    label: 'CET — Paris (UTC+1/2)' },
-  { value: 'America/New_York',label: 'ET — New York (UTC-5/4)' },
-  { value: 'America/Los_Angeles','label': 'PT — Los Angeles (UTC-8/7)' },
-  { value: 'America/Chicago', label: 'CT — Chicago (UTC-6/5)' },
-  { value: 'Australia/Sydney',label: 'AEST — Sydney (UTC+10/11)' },
-];
-const DAYS_OF_WEEK = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
 const inputCls = 'w-full rounded-lg border border-[#e0e0dd] bg-white px-4 py-2.5 text-sm text-[#111110] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] transition';
 const labelCls = 'block text-xs font-semibold text-[#6b6b66] uppercase tracking-[0.12em] mb-2';
@@ -67,9 +46,6 @@ export default function EditProfilePage() {
     skills: [],
     socialLinks: { instagram: '', youtube: '', vimeo: '', linkedin: '', website: '' },
     portfolioLinks: [{ label: '', url: '' }],
-    isMentor: false, mentorBio: '', mentorFields: [], mentorRate: '', mentorCurrency: 'INR',
-    mentorStatus: 'open', mentorExperience: '', mentorSessionTypes: [], mentorLocationType: 'online', mentorLanguages: [],
-    mentorTimezone: 'Asia/Kolkata', mentorSessionDuration: 60, mentorWeeklySchedule: [],
     locationVisible: true,
     // Phase 5: Emergency contact & verification links
     emergencyContact: { name: '', phone: '', relationship: '' },
@@ -114,19 +90,6 @@ export default function EditProfilePage() {
           skills:          p.skills           || [],
           socialLinks:     p.socialLinks      || { instagram: '', youtube: '', vimeo: '', linkedin: '', website: '' },
           portfolioLinks:  p.portfolioLinks?.length ? p.portfolioLinks : [{ label: '', url: '' }],
-          isMentor:           p.isMentor            || false,
-          mentorBio:          p.mentorBio           || '',
-          mentorFields:       p.mentorFields        || [],
-          mentorRate:         p.mentorRate != null ? String(p.mentorRate) : '',
-          mentorCurrency:     p.mentorCurrency      || 'INR',
-          mentorStatus:           p.mentorStatus        || 'open',
-          mentorExperience:       p.mentorExperience != null ? String(p.mentorExperience) : '',
-          mentorSessionTypes:     p.mentorSessionTypes  || [],
-          mentorLocationType:     p.mentorLocationType  || 'online',
-          mentorLanguages:        p.mentorLanguages     || [],
-          mentorTimezone:         p.mentorTimezone      || 'Asia/Kolkata',
-          mentorSessionDuration:  p.mentorSessionDuration != null ? p.mentorSessionDuration : 60,
-          mentorWeeklySchedule:   p.mentorWeeklySchedule || [],
           emergencyContact:   p.emergencyContact   || { name: '', phone: '', relationship: '' },
           verificationLinks:  p.verificationLinks  || { imdb: '', instagram: '' },
         });
@@ -147,29 +110,13 @@ export default function EditProfilePage() {
   const removeSkill = (s) => set('skills', form.skills.filter((x) => x !== s));
 
   const handleSave = async () => {
-    if (form.isMentor && (form.mentorRate === '' || form.mentorRate === null || form.mentorRate === undefined || Number(form.mentorRate) < 0)) {
-      toast.error('Please set your hourly rate (enter 0 for free mentorship).');
-      setTab('mentor'); return;
-    }
     setSaving(true);
     try {
       await profileAPI.update({
         ...form, name: form.name, roles: form.roles, role: form.roles[0] || 'other',
         portfolioLinks: form.portfolioLinks.filter((l) => l.url),
         availabilitySlots: availSlots.filter((s) => s.startDate && s.endDate),
-        isMentor: form.isMentor, mentorBio: form.mentorBio, mentorFields: form.mentorFields,
-        mentorRate: form.mentorRate !== '' ? Number(form.mentorRate) : null,
-        mentorCurrency: form.mentorCurrency,
-        mentorStatus: form.mentorStatus,
-        mentorExperience: form.mentorExperience !== '' ? Number(form.mentorExperience) : null,
-        mentorSessionTypes: form.mentorSessionTypes,
-        mentorLocationType: form.mentorLocationType,
-        mentorLanguages: form.mentorLanguages,
-        mentorTimezone: form.mentorTimezone,
-        mentorSessionDuration: form.mentorSessionDuration,
-        mentorWeeklySchedule: form.mentorWeeklySchedule,
         locationVisible: form.locationVisible,
-        // Phase 5: Emergency contact & verification links
         emergencyContact:  form.emergencyContact,
         verificationLinks: form.verificationLinks,
       });
@@ -250,7 +197,6 @@ export default function EditProfilePage() {
     { key: 'availability', label: '📅 Availability' },
     { key: 'portfolio',    label: 'Portfolio' },
     { key: 'links',        label: 'Links' },
-    { key: 'mentor',       label: '🎓 Mentor' },
     { key: 'safety',       label: '🛡 Safety' },
   ];
 
@@ -838,260 +784,19 @@ export default function EditProfilePage() {
           </div>
         )}
 
+
         {/* ── MENTOR ── */}
         {tab === 'mentor' && (
-          <div className="bg-white rounded-2xl border border-[#efefed] p-8 flex flex-col gap-6">
-            <div>
-              <h2 className="text-lg font-semibold text-[#111110] mb-1">Mentor Settings</h2>
-              <p className="text-sm text-[#6b6b66]">Become a mentor to help creators in your field. Your profile will appear in the Mentor Directory.</p>
-            </div>
-
-            {/* Earnings banner */}
-            <div className="bg-[#0e0e0d] rounded-xl p-5 flex gap-3">
-              <span className="text-xl flex-shrink-0">💡</span>
-              <div>
-                <p className="text-sm font-semibold text-white mb-1">How earnings work</p>
-                <p className="text-xs leading-relaxed text-white/60">You set your own rate — free or paid. Every rupee goes directly to you. CREWUPFILMS takes no commission.</p>
-              </div>
-            </div>
-
-            {/* Enable mentoring toggle */}
-            <div className="flex items-center justify-between p-4 border border-[#efefed] rounded-xl">
-              <div>
-                <p className="font-medium text-[#111110]">Open to Mentoring</p>
-                <p className="text-sm text-[#6b6b66]">Show up in the Mentor Directory</p>
-              </div>
-              <button onClick={() => setForm(f => ({ ...f, isMentor: !f.isMentor }))}
-                className={`w-12 h-6 rounded-full transition-colors relative ${form.isMentor ? 'bg-[#6C63FF]' : 'bg-[#efefed]'}`}>
-                <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${form.isMentor ? 'translate-x-6' : 'translate-x-0.5'}`} />
-              </button>
-            </div>
-
-            {form.isMentor && (<>
-
-              {/* Mentor Status */}
-              <div>
-                <label className={labelCls}>Listing Status</label>
-                <p className="text-xs text-[#6b6b66] mb-3">Control whether new mentees can apply to you right now.</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { key: 'open',   label: '🟢 Open',   desc: 'Accepting requests' },
-                    { key: 'paused', label: '⏸ Paused',  desc: 'Temporarily closed' },
-                    { key: 'closed', label: '🔴 Closed',  desc: 'Not accepting' },
-                  ].map(({ key, label, desc }) => (
-                    <button key={key} type="button"
-                      onClick={() => setForm(f => ({ ...f, mentorStatus: key }))}
-                      className={`p-3 rounded-xl border text-left transition-colors ${form.mentorStatus === key ? 'border-[#6C63FF] bg-[#f0eeff]' : 'border-[#efefed] hover:border-[#6C63FF]/40'}`}>
-                      <p className={`text-xs font-semibold ${form.mentorStatus === key ? 'text-[#4740CC]' : 'text-[#111110]'}`}>{label}</p>
-                      <p className="text-[10px] text-[#6b6b66] mt-0.5">{desc}</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Mentor Bio */}
-              <div>
-                <label className={labelCls}>Mentor Bio</label>
-                <textarea value={form.mentorBio || ''} onChange={e => setForm(f => ({ ...f, mentorBio: e.target.value }))}
-                  rows={3} maxLength={500} placeholder="Briefly describe your experience and what you can help mentees with…"
-                  className={`${inputCls} resize-none`} />
-                <p className="text-[11px] text-[#a3a39e] text-right mt-1">{(form.mentorBio || '').length}/500</p>
-              </div>
-
-              {/* Experience */}
-              <div>
-                <label className={labelCls}>Years of Experience</label>
-                <input type="number" min="0" max="50" step="1" placeholder="e.g. 5"
-                  value={form.mentorExperience}
-                  onChange={e => setForm(f => ({ ...f, mentorExperience: e.target.value }))}
-                  className={`${inputCls} w-40`} />
-              </div>
-
-              {/* Session Types */}
-              <div>
-                <label className={labelCls}>Session Types</label>
-                <p className="text-xs text-[#6b6b66] mb-3">What kind of sessions do you offer?</p>
-                <div className="flex flex-wrap gap-2">
-                  {SESSION_TYPES.map(s => {
-                    const active = (form.mentorSessionTypes || []).includes(s);
-                    return (
-                      <button key={s} type="button"
-                        onClick={() => setForm(prev => ({
-                          ...prev,
-                          mentorSessionTypes: active
-                            ? (prev.mentorSessionTypes || []).filter(x => x !== s)
-                            : [...(prev.mentorSessionTypes || []), s],
-                        }))}
-                        className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${active ? 'bg-[#6C63FF] text-white border-[#6C63FF]' : 'border-[#efefed] text-[#6b6b66] hover:border-[#6C63FF]/40'}`}>
-                        {s}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Location Type */}
-              <div>
-                <label className={labelCls}>Session Mode</label>
-                <div className="flex gap-2">
-                  {[
-                    { key: 'online',  label: '🌐 Online Only' },
-                    { key: 'offline', label: '📍 In-Person Only' },
-                    { key: 'both',    label: '✅ Both' },
-                  ].map(({ key, label }) => (
-                    <button key={key} type="button"
-                      onClick={() => setForm(f => ({ ...f, mentorLocationType: key }))}
-                      className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition-colors ${form.mentorLocationType === key ? 'border-[#6C63FF] bg-[#f0eeff] text-[#4740CC]' : 'border-[#efefed] text-[#6b6b66] hover:border-[#6C63FF]/40'}`}>
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Languages */}
-              <div>
-                <label className={labelCls}>Languages You Mentor In</label>
-                <div className="flex flex-wrap gap-2">
-                  {LANGUAGES.map(lang => {
-                    const active = (form.mentorLanguages || []).includes(lang);
-                    return (
-                      <button key={lang} type="button"
-                        onClick={() => setForm(prev => ({
-                          ...prev,
-                          mentorLanguages: active
-                            ? (prev.mentorLanguages || []).filter(x => x !== lang)
-                            : [...(prev.mentorLanguages || []), lang],
-                        }))}
-                        className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${active ? 'bg-[#0e0e0d] text-white border-[#0e0e0d]' : 'border-[#efefed] text-[#6b6b66] hover:border-[#0e0e0d]'}`}>
-                        {lang}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Mentorship Fields */}
-              <div>
-                <label className={labelCls}>Mentorship Fields</label>
-                <div className="flex flex-wrap gap-2">
-                  {MENTOR_FIELDS.map(f => {
-                    const active = (form.mentorFields || []).includes(f);
-                    return (
-                      <button key={f} type="button"
-                        onClick={() => setForm(prev => ({
-                          ...prev,
-                          mentorFields: active ? (prev.mentorFields || []).filter(x => x !== f) : [...(prev.mentorFields || []), f],
-                        }))}
-                        className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${active ? 'bg-[#0e0e0d] text-white border-[#0e0e0d]' : 'border-[#efefed] text-[#6b6b66] hover:border-[#0e0e0d]'}`}>
-                        {f}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Hourly Rate */}
-              <div>
-                <div className="flex items-center gap-2 mb-1.5">
-                  <label className={`${labelCls} mb-0`}>Hourly Rate</label>
-                  <span className="text-xs bg-[#f0f0ee] text-[#6b6b66] border border-[#e0e0dd] px-2 py-0.5 rounded-full font-medium">Enter 0 for free</span>
-                </div>
-                <p className="text-xs text-[#6b6b66] mb-3">Set your rate per 1-hour session.</p>
-                <div className="flex gap-2">
-                  <select value={form.mentorCurrency} onChange={e => setForm(f => ({ ...f, mentorCurrency: e.target.value }))}
-                    className="rounded-lg border border-[#e0e0dd] text-sm text-[#111110] px-3 py-2.5 focus:outline-none focus:border-[#6C63FF] bg-white w-24">
-                    {['INR','USD','EUR','GBP','AED','SGD','AUD','CAD'].map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                  <input type="number" min="0" step="1" placeholder="e.g. 500 or 0 for free" value={form.mentorRate}
-                    onChange={e => setForm(f => ({ ...f, mentorRate: e.target.value }))}
-                    className={`${inputCls} flex-1`} />
-                </div>
-                {form.mentorRate !== '' && form.mentorRate !== undefined && form.mentorRate !== null ? (
-                  Number(form.mentorRate) === 0 ? (
-                    <p className="text-xs text-[#6b6b66] mt-2">Mentees will see: <strong className="text-green-700">Free</strong> <span className="text-green-600">— you keep 100%</span></p>
-                  ) : Number(form.mentorRate) > 0 ? (
-                    <p className="text-xs text-[#6b6b66] mt-2">Mentees will see: <strong className="text-[#111110]">{form.mentorCurrency} {Number(form.mentorRate).toLocaleString()} / hr</strong> <span className="text-green-600">— you keep 100%</span></p>
-                  ) : null
-                ) : null}
-              </div>
-
-              {/* ── Booking Settings ── */}
-              <div className="border-t border-[#efefed] pt-6">
-                <h3 className="text-sm font-bold text-[#111110] mb-1">📅 Booking & Availability</h3>
-                <p className="text-xs text-[#6b6b66] mb-5">Set your timezone, session length, and weekly hours so mentees can book exact time slots.</p>
-
-                {/* Timezone */}
-                <div className="mb-5">
-                  <label className={labelCls}>Your Timezone</label>
-                  <select value={form.mentorTimezone}
-                    onChange={e => setForm(f => ({ ...f, mentorTimezone: e.target.value }))}
-                    className={inputCls}>
-                    {TIMEZONES.map(tz => (
-                      <option key={tz.value} value={tz.value}>{tz.label}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Session Duration */}
-                <div className="mb-5">
-                  <label className={labelCls}>Default Session Duration</label>
-                  <div className="flex gap-2">
-                    {[30, 60, 90].map(d => (
-                      <button key={d} type="button"
-                        onClick={() => setForm(f => ({ ...f, mentorSessionDuration: d }))}
-                        className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold transition-colors ${form.mentorSessionDuration === d ? 'border-[#6C63FF] bg-[#f0eeff] text-[#4740CC]' : 'border-[#efefed] text-[#6b6b66] hover:border-[#6C63FF]/40'}`}>
-                        {d} min
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Weekly Schedule */}
-                <div>
-                  <label className={labelCls}>Weekly Availability</label>
-                  <p className="text-xs text-[#6b6b66] mb-3">Check each day you're available and set your hours. Mentees will only see these slots.</p>
-                  <div className="flex flex-col gap-2">
-                    {DAYS_OF_WEEK.map((day, idx) => {
-                      const slot = (form.mentorWeeklySchedule || []).find(s => s.day === idx);
-                      const enabled = !!slot;
-                      return (
-                        <div key={day} className={`rounded-xl border transition-colors ${enabled ? 'border-[#6C63FF]/40 bg-[#f8f7ff]' : 'border-[#efefed] bg-white'}`}>
-                          <div className="flex items-center gap-3 px-4 py-3">
-                            <button type="button"
-                              onClick={() => {
-                                const sched = form.mentorWeeklySchedule || [];
-                                if (enabled) {
-                                  setForm(f => ({ ...f, mentorWeeklySchedule: sched.filter(s => s.day !== idx) }));
-                                } else {
-                                  setForm(f => ({ ...f, mentorWeeklySchedule: [...sched, { day: idx, startTime: '09:00', endTime: '17:00' }] }));
-                                }
-                              }}
-                              className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${enabled ? 'bg-[#6C63FF] border-[#6C63FF]' : 'border-[#d0d0cc] hover:border-[#6C63FF]'}`}>
-                              {enabled && <span className="text-white text-xs font-bold">✓</span>}
-                            </button>
-                            <span className={`text-sm font-semibold w-8 ${enabled ? 'text-[#4740CC]' : 'text-[#6b6b66]'}`}>{day}</span>
-                            {enabled && (
-                              <div className="flex items-center gap-2 ml-auto">
-                                <input type="time" value={slot.startTime}
-                                  onChange={e => setForm(f => ({ ...f, mentorWeeklySchedule: (f.mentorWeeklySchedule || []).map(s => s.day === idx ? { ...s, startTime: e.target.value } : s) }))}
-                                  className="rounded-lg border border-[#e0e0dd] text-sm px-2 py-1.5 focus:outline-none focus:border-[#6C63FF] bg-white" />
-                                <span className="text-xs text-[#6b6b66]">to</span>
-                                <input type="time" value={slot.endTime}
-                                  onChange={e => setForm(f => ({ ...f, mentorWeeklySchedule: (f.mentorWeeklySchedule || []).map(s => s.day === idx ? { ...s, endTime: e.target.value } : s) }))}
-                                  className="rounded-lg border border-[#e0e0dd] text-sm px-2 py-1.5 focus:outline-none focus:border-[#6C63FF] bg-white" />
-                              </div>
-                            )}
-                            {!enabled && <span className="text-xs text-[#a3a39e] ml-auto">Not available</span>}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <p className="text-xs text-[#a3a39e] mt-3">Times are in your selected timezone ({form.mentorTimezone}).</p>
-                </div>
-              </div>
-
-            </>)}
+          <div className="bg-white rounded-2xl border border-[#efefed] p-10 text-center">
+            <p className="text-4xl mb-4">🎓</p>
+            <h2 className="text-lg font-semibold text-[#111110] mb-2">Mentor settings have moved</h2>
+            <p className="text-sm text-[#6b6b66] mb-6">
+              Manage your mentor profile, listing status, schedule, incoming applications and session bookings — all in one dedicated place.
+            </p>
+            <a href="/mentors/dashboard"
+              className="inline-block bg-[#6C63FF] hover:bg-[#5750D4] text-white font-semibold px-8 py-3 rounded-xl transition-all shadow-lg shadow-[#6C63FF]/20">
+              Go to Mentor Dashboard →
+            </a>
           </div>
         )}
 

@@ -443,8 +443,8 @@ export default function MentorsPage() {
           <h1 className="font-[Playfair_Display] text-5xl font-bold text-white mb-3">Find a Mentor</h1>
           <p className="text-white/50 text-lg max-w-2xl mb-6">Connect with industry experts to elevate your craft</p>
           {user ? (
-            <Link href="/profile/edit?tab=mentor" className="bg-white/10 border border-white/20 text-white rounded-xl px-5 py-2.5 text-sm font-semibold hover:bg-white/20 transition">
-              🎓 Manage Mentor Profile
+            <Link href="/mentors/dashboard" className="bg-white/10 border border-white/20 text-white rounded-xl px-5 py-2.5 text-sm font-semibold hover:bg-white/20 transition">
+              🎓 Mentor Dashboard
             </Link>
           ) : (
             <Link href="/signup" className="bg-[#6C63FF] text-white rounded-xl px-6 py-3 font-semibold hover:bg-[#5750D4] transition">
@@ -628,9 +628,9 @@ export default function MentorsPage() {
                           </button>
                         )}
                         {isOwnProfile && (
-                          <Link href="/profile/edit?tab=mentor"
+                          <Link href="/mentors/dashboard"
                             className="flex-1 text-center text-xs font-semibold px-3 py-2 rounded-lg bg-[#f0eeff] border border-[#c9c4ff] text-[#4740CC] hover:bg-[#e4e1ff] transition">
-                            ✏️ Edit Profile
+                            ✏️ My Dashboard
                           </Link>
                         )}
                       </div>
@@ -648,7 +648,7 @@ export default function MentorsPage() {
             {hasFilters ? (
               <button onClick={clearFilters} className="bg-[#6C63FF] text-white rounded-xl px-6 py-2.5 font-semibold hover:bg-[#5750D4] transition text-sm">Clear Filters</button>
             ) : user && (
-              <Link href="/profile/edit?tab=mentor" className="bg-[#6C63FF] text-white rounded-xl px-6 py-2.5 font-semibold hover:bg-[#5750D4] transition text-sm">Become a Mentor</Link>
+              <Link href="/mentors/dashboard" className="bg-[#6C63FF] text-white rounded-xl px-6 py-2.5 font-semibold hover:bg-[#5750D4] transition text-sm">Become a Mentor</Link>
             )}
           </div>
         )}
