@@ -478,9 +478,9 @@ export default function MapPage() {
         </div>
 
         {/* No location message */}
-        {!loading && creators.filter((c) => !getCoordsForCreator(c)).length > 0 && (
+        {!loading && creators.filter((c) => !getCoordsFromCache(c.location?.city?.toLowerCase().trim())).length > 0 && (
           <p className="text-xs text-[#a3a39e] text-center mt-3 pb-4">
-            {creators.filter((c) => !getCoordsForCreator(c)).length} creators haven't set a city yet and aren't shown on the map.
+            {creators.filter((c) => !getCoordsFromCache(c.location?.city?.toLowerCase().trim())).length} creators haven't set a city yet and aren't shown on the map.
           </p>
         )}
       </div>
