@@ -148,7 +148,7 @@ export default function SignupPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     name: '', roles: [],
-    location: { city: '', district: '', country: '' },
+    location: { city: '', district: '', state: '', country: '' },
     skills: [], username: '', email: '', password: '',
     dateOfBirth: '', gender: '',
   });
@@ -297,8 +297,8 @@ export default function SignupPage() {
       setFormData((prev) => ({ ...prev, username: suggested }));
     }
     if (currentStep === 2 && formData.roles.length === 0 && !otherRoleText.trim()) { toast.error('Please select at least one role'); return; }
-    if (currentStep === 3 && (!formData.location.city.trim() || !formData.location.country.trim())) {
-      toast.error('Please enter city and country'); return;
+    if (currentStep === 3 && (!formData.location.district.trim() || !formData.location.country.trim())) {
+      toast.error('Please enter district and country');  return;
     }
     if (currentStep === 5) {
       const uErr = validateUsername(formData.username);
@@ -588,18 +588,14 @@ export default function SignupPage() {
               {/* ── Step 3 — Location ── */}
               {currentStep === 3 && (
                 <div className="form-anim" style={{ animationDelay: '0.16s' }}>
-                  <label className="block text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-2">City / Area</label>
-                  <input type="text" placeholder="e.g. Hyderabad or Kondapur" className="field-input mb-4"
-                    value={formData.location.city}
-                    onChange={(e) => {
-                      const city = e.target.value;
-                      // Auto-fill district with city; user can override
-                      setFormData({ ...formData, location: { ...formData.location, city, district: formData.location.district || city } });
-                    }} />
-                  <label className="block text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-2">District <span className="normal-case text-[#a3a39e]">(auto-filled, change if needed)</span></label>
-                  <input type="text" placeholder="e.g. Rangareddy" className="field-input mb-4"
+                  <label className="block text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-2">District</label>
+                  <input type="text" placeholder="e.g. Hyderabad, Rangareddy, Karimnagar" className="field-input mb-4"
                     value={formData.location.district}
-                    onChange={(e) => setFormData({ ...formData, location: { ...formData.location, district: e.target.value } })} />
+                    onChange={(e) => setFormData({ ...formData, location: { ...formData.location, district: e.target.value, city: e.target.value } })} />
+                  <label className="block text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-2">State</label>
+                  <input type="text" placeholder="e.g. Telangana, Andhra Pradesh" className="field-input mb-4"
+                    value={formData.location.state}
+                    onChange={(e) => setFormData({ ...formData, location: { ...formData.location, state: e.target.value } })} />
                   <label className="block text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-2">Country</label>
                   <input type="text" placeholder="e.g. India" className="field-input mb-8"
                     value={formData.location.country}

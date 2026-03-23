@@ -42,7 +42,7 @@ export default function EditProfilePage() {
   const [form, setForm]         = useState({
     name: '', roles: [], bio: '', gender: '',
     experienceLevel: 'beginner', availability: 'available',
-    location: { city: '', district: '', country: '' },
+    location: { city: '', district: '', state: '', country: '' },
     skills: [],
     socialLinks: { instagram: '', youtube: '', vimeo: '', linkedin: '', website: '' },
     portfolioLinks: [{ label: '', url: '' }],
@@ -385,26 +385,15 @@ export default function EditProfilePage() {
             <div>
               <label className={labelCls}>Location</label>
               <div className="grid grid-cols-2 gap-3 mb-3">
-                <input className={inputCls} placeholder="City / Area (e.g. Kondapur)"
-                  value={form.location.city}
-                  onChange={(e) => {
-                    const city = e.target.value;
-                    // Auto-fill district with city if district hasn't been manually set
-                    setForm((prev) => ({
-                      ...prev,
-                      location: {
-                        ...prev.location,
-                        city,
-                        district: prev.location.district || city,
-                      },
-                    }));
-                  }} />
-                <input className={inputCls} placeholder="District (e.g. Rangareddy)"
+                <input className={inputCls} placeholder="District (e.g. Hyderabad, Rangareddy)"
                   value={form.location.district || ''}
                   onChange={(e) => setLoc('district', e.target.value)} />
+                <input className={inputCls} placeholder="State (e.g. Telangana)"
+                  value={form.location.state || ''}
+                  onChange={(e) => setLoc('state', e.target.value)} />
               </div>
               <div className="mb-3">
-                <input className={inputCls} placeholder="Country" value={form.location.country} onChange={(e) => setLoc('country', e.target.value)} />
+                <input className={inputCls} placeholder="Country (e.g. India)" value={form.location.country} onChange={(e) => setLoc('country', e.target.value)} />
               </div>
               {/* Map visibility toggle */}
               <button

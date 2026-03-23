@@ -213,7 +213,8 @@ const ROLE_EMOJI = {
 function groupByCity(creators) {
   const groups = {};
   for (const c of creators) {
-    const city = c.location?.city?.toLowerCase().trim();
+    // Prefer district, fall back to city for older profiles
+    const city = (c.location?.district || c.location?.city)?.toLowerCase().trim();
     if (!city) continue;
     const coords = getCoordsFromCache(city);
     if (!coords) continue; // null = not found, undefined = pending geocode
@@ -252,7 +253,7 @@ export default function MapPage() {
   useEffect(() => {
     const unknownCities = [...new Set(
       filtered
-        .map((c) => c.location?.city?.toLowerCase().trim())
+        .map((c) => (c.location?.district || c.location?.city)?.toLowerCase().trim())
         .filter((city) => city && getCoordsFromCache(city) === undefined)
     )];
 
@@ -433,7 +434,7 @@ export default function MapPage() {
               <>
                 <div className="p-4 border-b border-[#efefed] flex items-center justify-between sticky top-0 bg-white z-10">
                   <div>
-                    <p className="font-bold text-[#111110] text-sm">{selected[0].location?.city}</p>
+                    <p className="font-bold text-[#111110] text-sm">{selected[0].location?.district || selected[0].location?.city}</p>
                     <p className="text-xs text-[#a3a39e]">{selected.length} creator{selected.length !== 1 ? 's' : ''}</p>
                   </div>
                   <button onClick={() => setSelected(null)} className="text-[#a3a39e] hover:text-[#111110] text-lg">✕</button>
@@ -478,9 +479,9 @@ export default function MapPage() {
         </div>
 
         {/* No location message */}
-        {!loading && creators.filter((c) => !getCoordsFromCache(c.location?.city?.toLowerCase().trim())).length > 0 && (
+        {!loading && creators.filter((c) => !getCoordsFromCache((c.location?.district || c.location?.city)?.toLowerCase().trim())).length > 0 && (
           <p className="text-xs text-[#a3a39e] text-center mt-3 pb-4">
-            {creators.filter((c) => !getCoordsFromCache(c.location?.city?.toLowerCase().trim())).length} creators haven't set a city yet and aren't shown on the map.
+            {creators.filter((c) => !getCoordsFromCache((c.location?.district || c.location?.city)?.toLowerCase().trim())).length} creators haven't set their location yet and aren't shown on the map.
           </p>
         )}
       </div>
