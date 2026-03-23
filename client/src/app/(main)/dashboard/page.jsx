@@ -344,16 +344,10 @@ export default function DashboardPage() {
     }
   };
 
-  const handleWithdraw = async (appId) => {
-    try {
-      await applicationAPI.withdraw(appId);
-      setMyApplications((prev) => prev.filter((a) => a._id !== appId));
-      toast.success('Application withdrawn.');
-    } catch {
-      toast.error('Could not withdraw application.');
-    }
-  };
-
+  /* ── Loading skeleton ── */
+  if (authLoading || dataLoading) {
+    return (
+      <div className="min-h-screen bg-[#f5f5f3]">
         <div className="bg-[#0e0e0d] h-40" />
         <div className="max-w-[1200px] mx-auto px-4 sm:px-8 py-6">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
