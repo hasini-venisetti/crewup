@@ -3,12 +3,14 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { notificationAPI, messageRequestAPI } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
+import { useSocket } from '@/hooks/useSocket';
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState([]);
   const [isLoading, setIsLoading]         = useState(true);
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const socket = useSocket();
 
   useEffect(() => {
     if (authLoading) return;
@@ -18,6 +20,22 @@ export default function NotificationsPage() {
     }
     fetchNotifications();
   }, [user, authLoading]);
+
+  /* Real-time: prepend incoming notifications instantly */
+  useEffect(() => {
+    if (!socket) return;
+    const handler = (notif) => {
+      setNotifications((prev) => {
+        // Avoid duplicates
+        if (prev.some((n) => (n._id || n.id) === (notif._id || notif.id))) return prev;
+        return [notif, ...prev];
+      });
+      // Fire browser custom event so Navbar can clear its badge on next mark-all-read
+      window.dispatchEvent(new CustomEvent('notification-received'));
+    };
+    socket.on('newNotification', handler);
+    return () => socket.off('newNotification', handler);
+  }, [socket]);
 
   const fetchNotifications = async () => {
     try {

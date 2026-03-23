@@ -83,6 +83,9 @@ const io = new Server(server, {
 // Attach all socket event handlers
 socketHandler(io);
 
+// Make io accessible globally so Notification model hook can emit events
+global._io = io;
+
 // ── Rate limiters ────────────────────────────────────────────────────────
 // Strict: auth endpoints (login / register / password reset)
 const authLimiter = rateLimit({

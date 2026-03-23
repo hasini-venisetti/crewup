@@ -36,4 +36,12 @@ const notificationSchema = new mongoose.Schema(
 notificationSchema.index({ recipient: 1, createdAt: -1 });
 notificationSchema.index({ recipient: 1, read: 1 });
 
+// Push new notifications to the recipient's socket room in real-time
+notificationSchema.post('save', function (doc) {
+  try {
+    const io = global._io;
+    if (io) io.to(`user:${doc.recipient}`).emit('newNotification', doc.toObject());
+  } catch (_) {}
+});
+
 module.exports = mongoose.model('Notification', notificationSchema);

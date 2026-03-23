@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
+import { useSocket } from '@/hooks/useSocket';
 import { notificationAPI } from '@/lib/api';
 import Logo from '@/components/ui/Logo';
 
@@ -38,6 +39,7 @@ function timeAgo(date) {
 
 export default function Navbar() {
   const { user, loading, logout } = useAuth();
+  const socket = useSocket();
   const [unreadCount, setUnreadCount]       = useState(0);
   const [showMenu, setShowMenu]             = useState(false);
   const [showDropdown, setShowDropdown]     = useState(false);
@@ -77,6 +79,22 @@ export default function Navbar() {
       window.removeEventListener('notifications-cleared', onClear);
     };
   }, [user]);
+
+  /* Real-time: listen for new notifications via socket */
+  useEffect(() => {
+    if (!socket || !user) return;
+    const handler = (notif) => {
+      // Increment bell badge immediately
+      setUnreadCount((prev) => prev + 1);
+      // Prepend to dropdown list if it's open / already loaded
+      setRecentNotifs((prev) => {
+        if (!prev.length && !showBellMenu) return prev; // dropdown never opened yet — skip
+        return [notif, ...prev].slice(0, 5);
+      });
+    };
+    socket.on('newNotification', handler);
+    return () => socket.off('newNotification', handler);
+  }, [socket, user]);
 
   /* Close dropdowns on outside click */
   useEffect(() => {

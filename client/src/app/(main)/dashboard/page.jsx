@@ -8,6 +8,7 @@ import ProjectCard from '@/components/ui/ProjectCard';
 import { SkeletonGrid } from '@/components/ui/SkeletonCard';
 import { projectAPI, applicationAPI, followAPI, reviewAPI, mentorAPI, profileAPI, filmAPI } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
+import { useSocket } from '@/hooks/useSocket';
 import { computeCompletenessScore, getCompletenessColor } from '@/lib/profileCompleteness';
 
 /* ── Status badge config ─────────────────────────────────────────────────── */
@@ -302,6 +303,7 @@ function MentorApplicationCard({ req, onDecision }) {
 ═══════════════════════════════════════════════════════════════════════════ */
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
+  const socket = useSocket();
   const router = useRouter();
 
   /* ── data state ── */
@@ -404,6 +406,32 @@ export default function DashboardPage() {
     // Sent mentorship requests (mentee side)
     mentorAPI.getSentRequests().then(({ data: d }) => setSentMentorRequests(d.data || [])).catch(() => {});
   }, [user, fetchAll]);
+
+  /* ── Real-time: refresh incoming apps when a new application arrives ── */
+  useEffect(() => {
+    if (!socket || !user) return;
+    const handler = (notif) => {
+      // Only refresh the incoming applications section
+      if (notif?.type === 'application_received') {
+        // Re-fetch applications for all owned projects
+        projectAPI.getMine().then(({ data }) => {
+          const projects = data.data || [];
+          const incoming = {};
+          Promise.all(projects.map(async (p) => {
+            try {
+              const r = await applicationAPI.getForProject(p._id);
+              incoming[p._id] = r.data.data.map((app) => ({
+                ...app,
+                project: { _id: p._id, title: p.title },
+              }));
+            } catch { incoming[p._id] = []; }
+          })).then(() => setIncomingApps(incoming));
+        }).catch(() => {});
+      }
+    };
+    socket.on('newNotification', handler);
+    return () => socket.off('newNotification', handler);
+  }, [socket, user]);
 
   /* ── Decision handlers ── */
   const handleDecision = (applicationId, status) => {
