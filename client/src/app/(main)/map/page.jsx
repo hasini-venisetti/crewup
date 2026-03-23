@@ -4,19 +4,110 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { mapAPI } from '@/lib/api';
 
-// City → approximate coords mapping (common Indian + global cities)
+// City → approximate coords mapping (Indian cities + global)
 const CITY_COORDS = {
-  'mumbai': [19.076, 72.877], 'delhi': [28.6139, 77.209], 'bangalore': [12.9716, 77.5946],
-  'bengaluru': [12.9716, 77.5946], 'hyderabad': [17.385, 78.4867], 'chennai': [13.0827, 80.2707],
-  'kolkata': [22.5726, 88.3639], 'pune': [18.5204, 73.8567], 'ahmedabad': [23.0225, 72.5714],
-  'jaipur': [26.9124, 75.7873], 'surat': [21.1702, 72.8311], 'lucknow': [26.8467, 80.9462],
-  'new york': [40.7128, -74.006], 'london': [51.5074, -0.1278], 'los angeles': [34.0522, -118.2437],
-  'paris': [48.8566, 2.3522], 'tokyo': [35.6762, 139.6503], 'sydney': [-33.8688, 151.2093],
-  'toronto': [43.6532, -79.3832], 'berlin': [52.52, 13.405], 'dubai': [25.2048, 55.2708],
-  'singapore': [1.3521, 103.8198], 'amsterdam': [52.3676, 4.9041], 'barcelona': [41.3851, 2.1734],
-  'bhopal': [23.2599, 77.4126], 'indore': [22.7196, 75.8577], 'nagpur': [21.1458, 79.0882],
-  'chandigarh': [30.7333, 76.7794], 'kochi': [9.9312, 76.2673], 'goa': [15.2993, 74.124],
+  // Major metros
+  'mumbai': [19.076, 72.877], 'delhi': [28.6139, 77.209], 'new delhi': [28.6139, 77.209],
+  'bangalore': [12.9716, 77.5946], 'bengaluru': [12.9716, 77.5946],
+  'hyderabad': [17.385, 78.4867], 'secunderabad': [17.4399, 78.4983],
+  'chennai': [13.0827, 80.2707], 'madras': [13.0827, 80.2707],
+  'kolkata': [22.5726, 88.3639], 'calcutta': [22.5726, 88.3639],
+  'pune': [18.5204, 73.8567], 'ahmedabad': [23.0225, 72.5714],
+  // Tier 2 India
+  'jaipur': [26.9124, 75.7873], 'surat': [21.1702, 72.8311],
+  'lucknow': [26.8467, 80.9462], 'kanpur': [26.4499, 80.3319],
+  'nagpur': [21.1458, 79.0882], 'indore': [22.7196, 75.8577],
+  'bhopal': [23.2599, 77.4126], 'visakhapatnam': [17.6868, 83.2185],
+  'vizag': [17.6868, 83.2185], 'patna': [25.5941, 85.1376],
+  'vadodara': [22.3072, 73.1812], 'ghaziabad': [28.6692, 77.4538],
+  'ludhiana': [30.9010, 75.8573], 'agra': [27.1767, 78.0081],
+  'nashik': [19.9975, 73.7898], 'faridabad': [28.4089, 77.3178],
+  'meerut': [28.9845, 77.7064], 'rajkot': [22.3039, 70.8022],
+  'kalyan': [19.2437, 73.1355], 'vasai-virar': [19.4207, 72.8472],
+  'varanasi': [25.3176, 82.9739], 'benares': [25.3176, 82.9739],
+  'srinagar': [34.0837, 74.7973], 'aurangabad': [19.8762, 75.3433],
+  'dhanbad': [23.7957, 86.4304], 'amritsar': [31.634, 74.8723],
+  'allahabad': [25.4358, 81.8463], 'prayagraj': [25.4358, 81.8463],
+  'ranchi': [23.3441, 85.3096], 'coimbatore': [11.0168, 76.9558],
+  'jabalpur': [23.1815, 79.9864], 'gwalior': [26.2183, 78.1828],
+  'vijayawada': [16.5062, 80.648], 'jodhpur': [26.2389, 73.0243],
+  'madurai': [9.9252, 78.1198], 'raipur': [21.2514, 81.6296],
+  'kota': [25.2138, 75.8648], 'chandigarh': [30.7333, 76.7794],
+  'guwahati': [26.1445, 91.7362], 'solapur': [17.6805, 75.9064],
+  'hubli': [15.3647, 75.124], 'dharwad': [15.3647, 75.124],
+  'bareilly': [28.347, 79.4304], 'moradabad': [28.8386, 78.7733],
+  'mysore': [12.2958, 76.6394], 'mysuru': [12.2958, 76.6394],
+  'gurgaon': [28.4595, 77.0266], 'gurugram': [28.4595, 77.0266],
+  'noida': [28.5355, 77.391], 'kochi': [9.9312, 76.2673],
+  'cochin': [9.9312, 76.2673], 'thiruvananthapuram': [8.5241, 76.9366],
+  'trivandrum': [8.5241, 76.9366], 'kozhikode': [11.2588, 75.7804],
+  'calicut': [11.2588, 75.7804], 'thrissur': [10.5276, 76.2144],
+  'mangalore': [12.9141, 74.856], 'mangaluru': [12.9141, 74.856],
+  'goa': [15.2993, 74.124], 'panaji': [15.4909, 73.8278],
+  'bhubaneswar': [20.2961, 85.8245], 'cuttack': [20.4625, 85.8828],
+  'dehradun': [30.3165, 78.0322], 'shimla': [31.1048, 77.1734],
+  'jammu': [32.7266, 74.857], 'imphal': [24.817, 93.9368],
+  'shillong': [25.5788, 91.8933], 'aizawl': [23.7307, 92.7173],
+  'agartala': [23.8315, 91.2868], 'itanagar': [27.0844, 93.6053],
+  'kohima': [25.6701, 94.1077], 'gangtok': [27.3314, 88.6138],
+  'port blair': [11.6234, 92.7265], 'puducherry': [11.9416, 79.8083],
+  'pondicherry': [11.9416, 79.8083], 'tirupati': [13.6288, 79.4192],
+  'warangal': [17.9784, 79.6], 'tirunelveli': [8.7139, 77.7567],
+  'salem': [11.6643, 78.146], 'tiruchirappalli': [10.7905, 78.7047],
+  'trichy': [10.7905, 78.7047], 'erode': [11.341, 77.7172],
+  'guntur': [16.3008, 80.4428], 'nellore': [14.4426, 79.9865],
+  'kurnool': [15.8281, 78.0373], 'belgaum': [15.8497, 74.4977],
+  'belagavi': [15.8497, 74.4977], 'gulbarga': [17.3297, 76.8343],
+  'kalaburagi': [17.3297, 76.8343], 'bellary': [15.1394, 76.9214],
+  'hospet': [15.2689, 76.3909], 'udupi': [13.3409, 74.7421],
+  'shimoga': [13.9299, 75.568], 'shivamogga': [13.9299, 75.568],
+  'tumkur': [13.3379, 77.1], 'bijapur': [16.8302, 75.7100],
+  'vijayapura': [16.8302, 75.7100],
+  // Global
+  'new york': [40.7128, -74.006], 'london': [51.5074, -0.1278],
+  'los angeles': [34.0522, -118.2437], 'paris': [48.8566, 2.3522],
+  'tokyo': [35.6762, 139.6503], 'sydney': [-33.8688, 151.2093],
+  'toronto': [43.6532, -79.3832], 'berlin': [52.52, 13.405],
+  'dubai': [25.2048, 55.2708], 'singapore': [1.3521, 103.8198],
+  'amsterdam': [52.3676, 4.9041], 'barcelona': [41.3851, 2.1734],
+  'san francisco': [37.7749, -122.4194], 'chicago': [41.8781, -87.6298],
+  'miami': [25.7617, -80.1918], 'seattle': [47.6062, -122.3321],
+  'melbourne': [-37.8136, 144.9631], 'cape town': [-33.9249, 18.4241],
+  'nairobi': [-1.2921, 36.8219], 'lagos': [6.5244, 3.3792],
+  'karachi': [24.8607, 67.0011], 'dhaka': [23.8103, 90.4125],
+  'colombo': [6.9271, 79.8612], 'kathmandu': [27.7172, 85.3240],
 };
+
+// Nominatim geocoding cache to avoid repeated API calls
+const geocodeCache = {};
+
+async function geocodeCity(city) {
+  if (geocodeCache[city] !== undefined) return geocodeCache[city];
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city)}&format=json&limit=1&addressdetails=0`,
+      { headers: { 'Accept-Language': 'en', 'User-Agent': 'CrewUpFilms/1.0' } }
+    );
+    const data = await res.json();
+    if (data?.[0]) {
+      const coords = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+      geocodeCache[city] = coords;
+      return coords;
+    }
+  } catch (_) {}
+  geocodeCache[city] = null;
+  return null;
+}
+
+function getCoordsFromCache(city) {
+  if (!city) return null;
+  const key = city.toLowerCase().trim();
+  if (CITY_COORDS[key]) return CITY_COORDS[key];
+  for (const [k, v] of Object.entries(CITY_COORDS)) {
+    if (key.includes(k) || k.includes(key)) return v;
+  }
+  return geocodeCache[key] ?? undefined; // undefined = not yet fetched, null = not found
+}
 
 const AVAIL_COLOR = { 'available': '#22c55e', 'open-to-offers': '#7C75FF', 'busy': '#ef4444' };
 
@@ -25,23 +116,13 @@ const ROLE_EMOJI = {
   'actor': '🎭', 'photographer': '📸', 'writer': '✍️', 'producer': '🎙',
 };
 
-function getCoordsForCreator(profile) {
-  const city = profile.location?.city?.toLowerCase().trim();
-  if (!city) return null;
-  // exact match
-  if (CITY_COORDS[city]) return CITY_COORDS[city];
-  // partial match
-  for (const [key, val] of Object.entries(CITY_COORDS)) {
-    if (city.includes(key) || key.includes(city)) return val;
-  }
-  return null;
-}
-
 function groupByCity(creators) {
   const groups = {};
   for (const c of creators) {
-    const coords = getCoordsForCreator(c);
-    if (!coords) continue;
+    const city = c.location?.city?.toLowerCase().trim();
+    if (!city) continue;
+    const coords = getCoordsFromCache(city);
+    if (!coords) continue; // null = not found, undefined = pending geocode
     const key = `${coords[0]},${coords[1]}`;
     if (!groups[key]) groups[key] = { coords, creators: [] };
     groups[key].creators.push(c);
@@ -73,8 +154,31 @@ export default function MapPage() {
     ? creators.filter((c) => c.user?.role?.toLowerCase().includes(filterRole.toLowerCase()))
     : creators;
 
+  // Geocode unknown cities via Nominatim, then refresh groups
   useEffect(() => {
-    setGroups(groupByCity(filtered));
+    const unknownCities = [...new Set(
+      filtered
+        .map((c) => c.location?.city?.toLowerCase().trim())
+        .filter((city) => city && getCoordsFromCache(city) === undefined)
+    )];
+
+    if (unknownCities.length === 0) {
+      setGroups(groupByCity(filtered));
+      return;
+    }
+
+    // Geocode unknown cities with a small delay between requests (Nominatim rate limit)
+    let cancelled = false;
+    (async () => {
+      for (let i = 0; i < unknownCities.length; i++) {
+        if (cancelled) break;
+        await geocodeCity(unknownCities[i]);
+        if (i < unknownCities.length - 1) await new Promise(r => setTimeout(r, 300));
+      }
+      if (!cancelled) setGroups(groupByCity(filtered));
+    })();
+
+    return () => { cancelled = true; };
   }, [filtered]);
 
   // Initialize Leaflet map

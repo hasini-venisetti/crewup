@@ -372,6 +372,19 @@ function NotificationRow({ notif, timeAgo, onMarkRead, onDelete, onAccept, onDec
             </div>
           )}
 
+          {/* View Project button for project_invite */}
+          {notif.type === 'project_invite' && notif.link && (
+            <div className="mt-3">
+              <a
+                href={notif.link}
+                onClick={() => !isRead && onMarkRead(nid)}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#f0eeff] px-4 py-1.5 text-xs font-semibold text-[#5750D4] transition-colors hover:bg-[#e4e1ff]"
+              >
+                🎬 Open Project →
+              </a>
+            </div>
+          )}
+
           {/* Prize claim button for contest_announcement with prize-claim link */}
           {notif.type === 'contest_announcement' && notif.link?.startsWith('/prize-claim') && (
             <div className="mt-3">
