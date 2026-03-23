@@ -46,8 +46,10 @@ const sendViaBrevo = async (to, subject, html, text) => {
 };
 
 // ── Resend HTTP sender ────────────────────────────────────────────────────────
-const RESEND_FROM = process.env.RESEND_FROM || `${SENDER_NAME} <${SENDER_EMAIL}>`;
+// Safe default: onboarding@resend.dev works without domain verification on free plan
+const RESEND_FROM = process.env.RESEND_FROM || `${SENDER_NAME} <onboarding@resend.dev>`;
 const sendViaResend = async (to, subject, html, text) => {
+  console.log(`[RESEND] Sending "${subject}" → ${to} (from: ${RESEND_FROM})`);
   const res = await fetch('https://api.resend.com/emails', {
     method:  'POST',
     headers: {
@@ -60,8 +62,14 @@ const sendViaResend = async (to, subject, html, text) => {
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: res.statusText }));
-    throw new Error(`Resend API error ${res.status}: ${err.message || JSON.stringify(err)}`);
+    const detail = err.message || JSON.stringify(err);
+    console.error(`[RESEND ERROR] ${res.status} sending to ${to}: ${detail}`);
+    if (res.status === 403) console.error('[RESEND] → Domain not verified. Use RESEND_FROM=CREWUPFILMS <onboarding@resend.dev> in Railway.');
+    if (res.status === 401) console.error('[RESEND] → Invalid API key. Check RESEND_API_KEY in Railway.');
+    throw new Error(`Resend API error ${res.status}: ${detail}`);
   }
+
+  console.log(`[RESEND] ✓ Email delivered to ${to}`);
 
   return res.json();
 };
