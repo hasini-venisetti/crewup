@@ -200,7 +200,7 @@ const login = async (req, res, next) => {
 // Body: { idToken, username? }  — username only required for new accounts
 const googleAuth = async (req, res, next) => {
   try {
-    const { idToken, username, role, location, skills } = req.body;
+    const { idToken, username, role, roles, location, skills, dateOfBirth, gender } = req.body;
     if (!idToken) return res.status(400).json({ success: false, message: 'idToken is required' });
 
     // Verify with Google
@@ -237,6 +237,10 @@ const googleAuth = async (req, res, next) => {
       const taken = await User.findOne({ username: username.toLowerCase() });
       if (taken) return res.status(409).json({ success: false, message: 'Username already taken' });
 
+      const rolesArr    = Array.isArray(roles) && roles.length ? roles : (role ? [role] : ['other']);
+      const primaryRole = rolesArr[0] || 'other';
+      const validGenders = ['male', 'female', 'non-binary', 'prefer-not-to-say', ''];
+
       user = await User.create({
         name:            name || email.split('@')[0],
         username:        username.toLowerCase(),
@@ -244,9 +248,13 @@ const googleAuth = async (req, res, next) => {
         googleId,
         authProvider:    'google',
         profileImage:    picture || '',
-        role:            role || 'other',
+        role:            primaryRole,
+        roles:           rolesArr,
         location:        location || {},
         skills:          skills || [],
+        dateOfBirth:     dateOfBirth || null,
+        isMinor:         computeIsMinor(dateOfBirth),
+        gender:          validGenders.includes(gender) ? gender : '',
         isEmailVerified: true, // Google already verified the email
       });
       await Profile.create({ user: user._id });
