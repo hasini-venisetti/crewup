@@ -512,7 +512,20 @@ router.post('/:mentorUserId/reviews', protect, async (req, res) => {
     );
     await review.populate('reviewer', 'name username profileImage role');
 
-    res.status(201).json({ success: true, data: review });
+    // Recalculate and persist the mentor's rating average BEFORE responding
+    // so the next GET /mentors fetch sees the updated values immediately
+    const agg = await MentorReview.aggregate([
+      { $match: { mentor: review.mentor } },
+      { $group: { _id: null, avg: { $avg: '$rating' }, count: { $sum: 1 } } },
+    ]);
+    const newAvg   = agg[0] ? Math.round(agg[0].avg * 10) / 10 : 0;
+    const newCount = agg[0] ? agg[0].count : 0;
+    await Profile.findOneAndUpdate(
+      { user: mentorUserId },
+      { mentorRatingAvg: newAvg, mentorRatingCount: newCount }
+    );
+
+    res.status(201).json({ success: true, data: review, mentorRatingAvg: newAvg, mentorRatingCount: newCount });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

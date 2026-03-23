@@ -61,9 +61,11 @@ function ReviewModal({ mentor, myReview, onClose, onSubmit }) {
     if (!mentorUserId) { toast.error('Could not identify mentor. Please refresh and try again.'); return; }
     setSaving(true);
     try {
-      await mentorAPI.submitReview(mentorUserId, { rating, comment: comment.trim() });
+      const res = await mentorAPI.submitReview(mentorUserId, { rating, comment: comment.trim() });
+      // Pass updated rating stats back so the card can update immediately
+      const { mentorRatingAvg, mentorRatingCount } = res.data || {};
       setSubmitted(true);
-      onSubmit?.();
+      onSubmit?.({ mentorRatingAvg, mentorRatingCount });
       setTimeout(onClose, 1500); // auto-close after success animation
     } catch (err) {
       const msg = err?.response?.data?.message || 'Failed to submit review. Please try again.';
@@ -630,8 +632,8 @@ export default function MentorsPage() {
                     ))}
                   </div>
 
-                  {/* Bio */}
-                  {bio && <p className="text-xs text-[#6b6b66] mb-3 line-clamp-2 leading-relaxed">{bio}</p>}
+                  {/* Bio — only show if meaningful (more than just punctuation) */}
+                  {bio && bio.trim().length > 2 && <p className="text-xs text-[#6b6b66] mb-3 line-clamp-2 leading-relaxed">{bio}</p>}
 
                   {/* Fields */}
                   {fields.length > 0 && (
@@ -786,7 +788,18 @@ export default function MentorsPage() {
           mentor={reviewTarget}
           myReview={null}
           onClose={() => setReviewTarget(null)}
-          onSubmit={fetchMentors}
+          onSubmit={({ mentorRatingAvg, mentorRatingCount } = {}) => {
+            // Instantly update the card's stars without waiting for a full re-fetch
+            if (mentorRatingAvg != null) {
+              setMentors(prev => prev.map(m =>
+                m._id === reviewTarget._id
+                  ? { ...m, mentorRatingAvg, mentorRatingCount }
+                  : m
+              ));
+            } else {
+              fetchMentors(); // fallback if stats not returned
+            }
+          }}
         />
       )}
 
