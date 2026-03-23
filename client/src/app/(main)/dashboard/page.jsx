@@ -365,8 +365,9 @@ export default function DashboardPage() {
   if (!user) return null;
 
   /* ── Derived values ── */
-  const acceptedApps   = myApplications.filter((a) => a.status === 'accepted');
-  const pendingIncoming = Object.values(incomingApps).flat().filter((a) => a.status === 'pending');
+  const acceptedApps    = myApplications.filter((a) => a.status === 'accepted');
+  const allIncoming     = Object.values(incomingApps).flat();
+  const pendingIncoming = allIncoming.filter((a) => a.status === 'pending');
 
   /* ── Layout ─────────────────────────────────────────────────────────── */
   return (
