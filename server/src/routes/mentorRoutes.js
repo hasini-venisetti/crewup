@@ -7,6 +7,7 @@ const MessageRequest = require('../models/MessageRequest');
 const Conversation   = require('../models/Conversation');
 const User           = require('../models/User');
 const MentorReview   = require('../models/MentorReview');
+const MentorBooking  = require('../models/MentorBooking');
 const emailService   = require('../utils/emailService');
 
 // GET /api/mentors — list all mentors
@@ -48,18 +49,22 @@ router.patch('/settings', protect, async (req, res) => {
     const {
       isMentor, mentorStatus, mentorFields, mentorBio, mentorRate, mentorCurrency,
       mentorExperience, mentorSessionTypes, mentorLocationType, mentorLanguages,
+      mentorTimezone, mentorSessionDuration, mentorWeeklySchedule,
     } = req.body;
     const updateFields = {
-      isMentor:            typeof isMentor === 'boolean' ? isMentor : undefined,
-      mentorStatus:        mentorStatus        !== undefined ? mentorStatus        : undefined,
-      mentorFields:        mentorFields        !== undefined ? mentorFields        : undefined,
-      mentorBio:           mentorBio           !== undefined ? mentorBio           : undefined,
-      mentorRate:          mentorRate          !== undefined ? (mentorRate !== null && mentorRate !== '' ? Number(mentorRate) : null) : undefined,
-      mentorCurrency:      mentorCurrency      !== undefined ? (mentorCurrency || 'INR') : undefined,
-      mentorExperience:    mentorExperience    !== undefined ? (mentorExperience !== '' ? Number(mentorExperience) : null) : undefined,
-      mentorSessionTypes:  mentorSessionTypes  !== undefined ? mentorSessionTypes  : undefined,
-      mentorLocationType:  mentorLocationType  !== undefined ? mentorLocationType  : undefined,
-      mentorLanguages:     mentorLanguages     !== undefined ? mentorLanguages     : undefined,
+      isMentor:              typeof isMentor === 'boolean' ? isMentor : undefined,
+      mentorStatus:          mentorStatus          !== undefined ? mentorStatus          : undefined,
+      mentorFields:          mentorFields          !== undefined ? mentorFields          : undefined,
+      mentorBio:             mentorBio             !== undefined ? mentorBio             : undefined,
+      mentorRate:            mentorRate            !== undefined ? (mentorRate !== null && mentorRate !== '' ? Number(mentorRate) : null) : undefined,
+      mentorCurrency:        mentorCurrency        !== undefined ? (mentorCurrency || 'INR') : undefined,
+      mentorExperience:      mentorExperience      !== undefined ? (mentorExperience !== '' ? Number(mentorExperience) : null) : undefined,
+      mentorSessionTypes:    mentorSessionTypes    !== undefined ? mentorSessionTypes    : undefined,
+      mentorLocationType:    mentorLocationType    !== undefined ? mentorLocationType    : undefined,
+      mentorLanguages:       mentorLanguages       !== undefined ? mentorLanguages       : undefined,
+      mentorTimezone:        mentorTimezone        !== undefined ? mentorTimezone        : undefined,
+      mentorSessionDuration: mentorSessionDuration !== undefined ? Number(mentorSessionDuration) : undefined,
+      mentorWeeklySchedule:  mentorWeeklySchedule  !== undefined ? mentorWeeklySchedule  : undefined,
     };
     Object.keys(updateFields).forEach((k) => updateFields[k] === undefined && delete updateFields[k]);
 
@@ -200,6 +205,215 @@ router.patch('/requests/:requestId/accept', protect, async (req, res) => {
     }
 
     return res.status(200).json({ success: true, data: populated });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   BOOKING SYSTEM
+═══════════════════════════════════════════════════════════════ */
+
+// PATCH /api/mentors/settings — also saves weekly schedule + timezone + duration
+// (already handled above — just keeping the comment for clarity)
+
+// GET /api/mentors/:mentorUserId/slots?month=YYYY-MM
+// Returns booked slots for a month so the calendar can grey them out
+router.get('/:mentorUserId/slots', async (req, res) => {
+  try {
+    const { month } = req.query; // "2025-06"
+    if (!month) return res.status(400).json({ success: false, message: 'month query required (YYYY-MM)' });
+
+    const [year, mon] = month.split('-').map(Number);
+    const startDate = `${year}-${String(mon).padStart(2, '0')}-01`;
+    const endDate   = `${year}-${String(mon).padStart(2, '0')}-31`;
+
+    const bookings = await MentorBooking.find({
+      mentor: req.params.mentorUserId,
+      date:   { $gte: startDate, $lte: endDate },
+      status: { $in: ['pending', 'confirmed'] },
+    }).select('date startTime endTime status');
+
+    res.json({ success: true, data: bookings });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// POST /api/mentors/:mentorUserId/bookings — request a session
+router.post('/:mentorUserId/bookings', protect, async (req, res) => {
+  try {
+    const { sessionType, date, startTime, endTime, notes } = req.body;
+    const mentorUserId = req.params.mentorUserId;
+    const menteeId     = req.user._id || req.user.id;
+
+    if (String(menteeId) === String(mentorUserId)) {
+      return res.status(400).json({ success: false, message: 'You cannot book yourself.' });
+    }
+    if (!date || !startTime || !endTime) {
+      return res.status(400).json({ success: false, message: 'date, startTime and endTime are required.' });
+    }
+
+    // Check mentor exists
+    const mentorProfile = await Profile.findOne({ user: mentorUserId, isMentor: true }).lean();
+    if (!mentorProfile) {
+      return res.status(404).json({ success: false, message: 'Mentor not found.' });
+    }
+
+    // Check slot not already taken
+    const conflict = await MentorBooking.findOne({
+      mentor: mentorUserId, date, startTime, status: { $in: ['pending', 'confirmed'] },
+    });
+    if (conflict) {
+      return res.status(409).json({ success: false, message: 'That time slot is already booked. Please choose another.' });
+    }
+
+    const duration = mentorProfile.mentorSessionDuration || 60;
+
+    const booking = await MentorBooking.create({
+      mentor: mentorUserId, mentee: menteeId,
+      sessionType: sessionType || '', date, startTime, endTime,
+      duration, timezone: mentorProfile.mentorTimezone || 'Asia/Kolkata',
+      notes: notes?.trim() || '',
+    });
+
+    // Notify mentor
+    const mentorUser = await User.findById(mentorUserId).select('email name').lean();
+    await Notification.create({
+      recipient: mentorUserId, sender: menteeId,
+      type: 'general',
+      title: `${req.user.name} booked a ${sessionType || 'session'} with you`,
+      message: `Date: ${date} at ${startTime}${notes ? ` — "${notes.slice(0, 60)}"` : ''}`,
+      link: `/dashboard#bookings`,
+    });
+
+    // Email notification (fire-and-forget)
+    if (mentorUser?.email) {
+      emailService.sendGenericNotification?.(
+        mentorUser.email, mentorUser.name,
+        `New session booking from ${req.user.name}`,
+        `${req.user.name} booked a ${sessionType || 'session'} on ${date} at ${startTime}.`
+      ).catch(() => {});
+    }
+
+    res.status(201).json({ success: true, data: booking });
+  } catch (err) {
+    if (err.code === 11000) return res.status(409).json({ success: false, message: 'That slot is already taken.' });
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// GET /api/mentors/my-bookings — mentee's bookings
+router.get('/my-bookings', protect, async (req, res) => {
+  try {
+    const bookings = await MentorBooking.find({ mentee: req.user._id || req.user.id })
+      .populate('mentor', 'name username profileImage role')
+      .sort({ date: 1, startTime: 1 });
+    res.json({ success: true, data: bookings });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// GET /api/mentors/incoming-bookings — mentor's incoming bookings
+router.get('/incoming-bookings', protect, async (req, res) => {
+  try {
+    const bookings = await MentorBooking.find({ mentor: req.user._id || req.user.id })
+      .populate('mentee', 'name username profileImage role')
+      .sort({ date: 1, startTime: 1 });
+    res.json({ success: true, data: bookings });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// PATCH /api/mentors/bookings/:id/confirm — mentor confirms + optionally sets meeting link
+router.patch('/bookings/:id/confirm', protect, async (req, res) => {
+  try {
+    const booking = await MentorBooking.findById(req.params.id);
+    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found.' });
+    if (String(booking.mentor) !== String(req.user._id || req.user.id)) {
+      return res.status(403).json({ success: false, message: 'Only the mentor can confirm.' });
+    }
+    if (booking.status !== 'pending') {
+      return res.status(400).json({ success: false, message: `Booking is already ${booking.status}.` });
+    }
+
+    booking.status      = 'confirmed';
+    booking.meetingLink = req.body.meetingLink?.trim() || '';
+    await booking.save();
+
+    // Notify mentee
+    await Notification.create({
+      recipient: booking.mentee, sender: req.user._id || req.user.id,
+      type: 'general',
+      title: `${req.user.name} confirmed your booking!`,
+      message: `${booking.sessionType || 'Session'} on ${booking.date} at ${booking.startTime}${booking.meetingLink ? ` — ${booking.meetingLink}` : ''}`,
+      link: `/dashboard#bookings`,
+    });
+
+    res.json({ success: true, data: booking });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// PATCH /api/mentors/bookings/:id/cancel — mentor or mentee cancels
+router.patch('/bookings/:id/cancel', protect, async (req, res) => {
+  try {
+    const booking = await MentorBooking.findById(req.params.id);
+    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found.' });
+
+    const myId   = String(req.user._id || req.user.id);
+    const isMentor = String(booking.mentor) === myId;
+    const isMentee = String(booking.mentee) === myId;
+    if (!isMentor && !isMentee) return res.status(403).json({ success: false, message: 'Not authorized.' });
+    if (['cancelled', 'completed'].includes(booking.status)) {
+      return res.status(400).json({ success: false, message: `Booking is already ${booking.status}.` });
+    }
+
+    booking.status       = 'cancelled';
+    booking.cancelReason = req.body.reason?.trim() || '';
+    booking.cancelledBy  = isMentor ? 'mentor' : 'mentee';
+    await booking.save();
+
+    // Notify the other party
+    const recipient = isMentor ? booking.mentee : booking.mentor;
+    await Notification.create({
+      recipient, sender: req.user._id || req.user.id,
+      type: 'general',
+      title: `Booking cancelled by ${isMentor ? 'mentor' : 'you'}`,
+      message: `${booking.sessionType || 'Session'} on ${booking.date} at ${booking.startTime} was cancelled.`,
+      link: `/dashboard#bookings`,
+    }).catch(() => {});
+
+    res.json({ success: true, data: booking });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// PATCH /api/mentors/bookings/:id/complete — mentor marks session as done
+router.patch('/bookings/:id/complete', protect, async (req, res) => {
+  try {
+    const booking = await MentorBooking.findById(req.params.id);
+    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found.' });
+    if (String(booking.mentor) !== String(req.user._id || req.user.id)) {
+      return res.status(403).json({ success: false, message: 'Only the mentor can mark complete.' });
+    }
+    booking.status = 'completed';
+    await booking.save();
+
+    // Prompt mentee to leave a review
+    await Notification.create({
+      recipient: booking.mentee, sender: req.user._id || req.user.id,
+      type: 'general',
+      title: `How was your session with ${req.user.name}?`,
+      message: 'Your session is complete — leave a review on the Mentors page!',
+      link: `/mentors`,
+    }).catch(() => {});
+
+    res.json({ success: true, data: booking });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

@@ -57,6 +57,14 @@ const profileSchema = new mongoose.Schema(
     // Ratings (auto-updated when reviews are submitted)
     mentorRatingAvg:    { type: Number, default: 0 },
     mentorRatingCount:  { type: Number, default: 0 },
+    // Booking system
+    mentorTimezone:        { type: String, default: 'Asia/Kolkata' },
+    mentorSessionDuration: { type: Number, default: 60 },  // minutes: 30, 60, 90
+    mentorWeeklySchedule:  [{
+      day:       { type: Number, min: 0, max: 6 }, // 0=Sun … 6=Sat
+      startTime: { type: String, default: '09:00' },
+      endTime:   { type: String, default: '17:00' },
+    }],
     socialLinks: {
       instagram: { type: String, default: '' },
       youtube: { type: String, default: '' },

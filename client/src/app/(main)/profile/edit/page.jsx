@@ -34,6 +34,19 @@ const MENTOR_FIELDS = [
 ];
 const SESSION_TYPES = ['1:1 Video Call', 'Portfolio Review', 'Project Guidance', 'Career Mentorship', 'Script Review', 'Reel Feedback'];
 const LANGUAGES = ['Telugu', 'Hindi', 'English', 'Tamil', 'Kannada', 'Malayalam', 'Bengali', 'Marathi', 'Gujarati', 'Punjabi'];
+const TIMEZONES = [
+  { value: 'Asia/Kolkata',    label: 'IST — India (UTC+5:30)' },
+  { value: 'Asia/Dubai',      label: 'GST — Dubai (UTC+4)' },
+  { value: 'Asia/Singapore',  label: 'SGT — Singapore (UTC+8)' },
+  { value: 'Asia/Tokyo',      label: 'JST — Tokyo (UTC+9)' },
+  { value: 'Europe/London',   label: 'GMT/BST — London' },
+  { value: 'Europe/Paris',    label: 'CET — Paris (UTC+1/2)' },
+  { value: 'America/New_York',label: 'ET — New York (UTC-5/4)' },
+  { value: 'America/Los_Angeles','label': 'PT — Los Angeles (UTC-8/7)' },
+  { value: 'America/Chicago', label: 'CT — Chicago (UTC-6/5)' },
+  { value: 'Australia/Sydney',label: 'AEST — Sydney (UTC+10/11)' },
+];
+const DAYS_OF_WEEK = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
 const inputCls = 'w-full rounded-lg border border-[#e0e0dd] bg-white px-4 py-2.5 text-sm text-[#111110] focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] transition';
 const labelCls = 'block text-xs font-semibold text-[#6b6b66] uppercase tracking-[0.12em] mb-2';
@@ -56,6 +69,7 @@ export default function EditProfilePage() {
     portfolioLinks: [{ label: '', url: '' }],
     isMentor: false, mentorBio: '', mentorFields: [], mentorRate: '', mentorCurrency: 'INR',
     mentorStatus: 'open', mentorExperience: '', mentorSessionTypes: [], mentorLocationType: 'online', mentorLanguages: [],
+    mentorTimezone: 'Asia/Kolkata', mentorSessionDuration: 60, mentorWeeklySchedule: [],
     locationVisible: true,
     // Phase 5: Emergency contact & verification links
     emergencyContact: { name: '', phone: '', relationship: '' },
@@ -105,11 +119,14 @@ export default function EditProfilePage() {
           mentorFields:       p.mentorFields        || [],
           mentorRate:         p.mentorRate != null ? String(p.mentorRate) : '',
           mentorCurrency:     p.mentorCurrency      || 'INR',
-          mentorStatus:       p.mentorStatus        || 'open',
-          mentorExperience:   p.mentorExperience != null ? String(p.mentorExperience) : '',
-          mentorSessionTypes: p.mentorSessionTypes  || [],
-          mentorLocationType: p.mentorLocationType  || 'online',
-          mentorLanguages:    p.mentorLanguages     || [],
+          mentorStatus:           p.mentorStatus        || 'open',
+          mentorExperience:       p.mentorExperience != null ? String(p.mentorExperience) : '',
+          mentorSessionTypes:     p.mentorSessionTypes  || [],
+          mentorLocationType:     p.mentorLocationType  || 'online',
+          mentorLanguages:        p.mentorLanguages     || [],
+          mentorTimezone:         p.mentorTimezone      || 'Asia/Kolkata',
+          mentorSessionDuration:  p.mentorSessionDuration != null ? p.mentorSessionDuration : 60,
+          mentorWeeklySchedule:   p.mentorWeeklySchedule || [],
           emergencyContact:   p.emergencyContact   || { name: '', phone: '', relationship: '' },
           verificationLinks:  p.verificationLinks  || { imdb: '', instagram: '' },
         });
@@ -148,6 +165,9 @@ export default function EditProfilePage() {
         mentorSessionTypes: form.mentorSessionTypes,
         mentorLocationType: form.mentorLocationType,
         mentorLanguages: form.mentorLanguages,
+        mentorTimezone: form.mentorTimezone,
+        mentorSessionDuration: form.mentorSessionDuration,
+        mentorWeeklySchedule: form.mentorWeeklySchedule,
         locationVisible: form.locationVisible,
         // Phase 5: Emergency contact & verification links
         emergencyContact:  form.emergencyContact,
@@ -993,6 +1013,82 @@ export default function EditProfilePage() {
                     <p className="text-xs text-[#6b6b66] mt-2">Mentees will see: <strong className="text-[#111110]">{form.mentorCurrency} {Number(form.mentorRate).toLocaleString()} / hr</strong> <span className="text-green-600">— you keep 100%</span></p>
                   ) : null
                 ) : null}
+              </div>
+
+              {/* ── Booking Settings ── */}
+              <div className="border-t border-[#efefed] pt-6">
+                <h3 className="text-sm font-bold text-[#111110] mb-1">📅 Booking & Availability</h3>
+                <p className="text-xs text-[#6b6b66] mb-5">Set your timezone, session length, and weekly hours so mentees can book exact time slots.</p>
+
+                {/* Timezone */}
+                <div className="mb-5">
+                  <label className={labelCls}>Your Timezone</label>
+                  <select value={form.mentorTimezone}
+                    onChange={e => setForm(f => ({ ...f, mentorTimezone: e.target.value }))}
+                    className={inputCls}>
+                    {TIMEZONES.map(tz => (
+                      <option key={tz.value} value={tz.value}>{tz.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Session Duration */}
+                <div className="mb-5">
+                  <label className={labelCls}>Default Session Duration</label>
+                  <div className="flex gap-2">
+                    {[30, 60, 90].map(d => (
+                      <button key={d} type="button"
+                        onClick={() => setForm(f => ({ ...f, mentorSessionDuration: d }))}
+                        className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold transition-colors ${form.mentorSessionDuration === d ? 'border-[#6C63FF] bg-[#f0eeff] text-[#4740CC]' : 'border-[#efefed] text-[#6b6b66] hover:border-[#6C63FF]/40'}`}>
+                        {d} min
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Weekly Schedule */}
+                <div>
+                  <label className={labelCls}>Weekly Availability</label>
+                  <p className="text-xs text-[#6b6b66] mb-3">Check each day you're available and set your hours. Mentees will only see these slots.</p>
+                  <div className="flex flex-col gap-2">
+                    {DAYS_OF_WEEK.map((day, idx) => {
+                      const slot = (form.mentorWeeklySchedule || []).find(s => s.day === idx);
+                      const enabled = !!slot;
+                      return (
+                        <div key={day} className={`rounded-xl border transition-colors ${enabled ? 'border-[#6C63FF]/40 bg-[#f8f7ff]' : 'border-[#efefed] bg-white'}`}>
+                          <div className="flex items-center gap-3 px-4 py-3">
+                            <button type="button"
+                              onClick={() => {
+                                const sched = form.mentorWeeklySchedule || [];
+                                if (enabled) {
+                                  setForm(f => ({ ...f, mentorWeeklySchedule: sched.filter(s => s.day !== idx) }));
+                                } else {
+                                  setForm(f => ({ ...f, mentorWeeklySchedule: [...sched, { day: idx, startTime: '09:00', endTime: '17:00' }] }));
+                                }
+                              }}
+                              className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${enabled ? 'bg-[#6C63FF] border-[#6C63FF]' : 'border-[#d0d0cc] hover:border-[#6C63FF]'}`}>
+                              {enabled && <span className="text-white text-xs font-bold">✓</span>}
+                            </button>
+                            <span className={`text-sm font-semibold w-8 ${enabled ? 'text-[#4740CC]' : 'text-[#6b6b66]'}`}>{day}</span>
+                            {enabled && (
+                              <div className="flex items-center gap-2 ml-auto">
+                                <input type="time" value={slot.startTime}
+                                  onChange={e => setForm(f => ({ ...f, mentorWeeklySchedule: (f.mentorWeeklySchedule || []).map(s => s.day === idx ? { ...s, startTime: e.target.value } : s) }))}
+                                  className="rounded-lg border border-[#e0e0dd] text-sm px-2 py-1.5 focus:outline-none focus:border-[#6C63FF] bg-white" />
+                                <span className="text-xs text-[#6b6b66]">to</span>
+                                <input type="time" value={slot.endTime}
+                                  onChange={e => setForm(f => ({ ...f, mentorWeeklySchedule: (f.mentorWeeklySchedule || []).map(s => s.day === idx ? { ...s, endTime: e.target.value } : s) }))}
+                                  className="rounded-lg border border-[#e0e0dd] text-sm px-2 py-1.5 focus:outline-none focus:border-[#6C63FF] bg-white" />
+                              </div>
+                            )}
+                            {!enabled && <span className="text-xs text-[#a3a39e] ml-auto">Not available</span>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-[#a3a39e] mt-3">Times are in your selected timezone ({form.mentorTimezone}).</p>
+                </div>
               </div>
 
             </>)}

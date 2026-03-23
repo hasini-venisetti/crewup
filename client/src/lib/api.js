@@ -223,6 +223,14 @@ export const mentorAPI = {
   getReviews:          (mentorUserId)                => api.get(`/mentors/${mentorUserId}/reviews`),
   submitReview:        (mentorUserId, data)          => api.post(`/mentors/${mentorUserId}/reviews`, data),
   deleteReview:        (mentorUserId)                => api.delete(`/mentors/${mentorUserId}/reviews`),
+  // Booking
+  getSlots:            (mentorUserId, month)         => api.get(`/mentors/${mentorUserId}/slots`, { params: { month } }),
+  requestBooking:      (mentorUserId, data)          => api.post(`/mentors/${mentorUserId}/bookings`, data),
+  getMyBookings:       ()                            => api.get('/mentors/my-bookings'),
+  getIncomingBookings: ()                            => api.get('/mentors/incoming-bookings'),
+  confirmBooking:      (id, data)                    => api.patch(`/mentors/bookings/${id}/confirm`, data),
+  cancelBooking:       (id, reason)                  => api.patch(`/mentors/bookings/${id}/cancel`, { reason }),
+  completeBooking:     (id)                          => api.patch(`/mentors/bookings/${id}/complete`),
 };
 
 /* ── Launch Waitlist ── */

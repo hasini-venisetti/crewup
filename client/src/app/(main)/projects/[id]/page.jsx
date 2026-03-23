@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
-import { projectAPI, applicationAPI, timelineAPI, waitlistAPI, reviewAPI, fillRoleAPI, profileAPI } from '@/lib/api';
+import { projectAPI, applicationAPI, timelineAPI, waitlistAPI, reviewAPI, fillRoleAPI, profileAPI, mentorAPI } from '@/lib/api';
 import { useRef } from 'react';
 import { AuthProvider, useAuth } from '@/hooks/useAuth';
 import CrewSuggestions from '@/components/ui/CrewSuggestions';
@@ -406,6 +406,160 @@ const SHOOT_LOC_LABELS = {
   'remote': '🌐 Remote', 'flexible': '🔄 Mix / Flexible',
 };
 
+/* ── Mini Booking Modal (used on Project page) ── */
+function MiniBookModal({ mentor, onClose }) {
+  const schedule     = mentor.mentorWeeklySchedule || [];
+  const duration     = mentor.mentorSessionDuration || 60;
+  const timezone     = mentor.mentorTimezone || 'Asia/Kolkata';
+  const sessionTypes = mentor.mentorSessionTypes || [];
+  const mentorUserId = mentor.user?._id || mentor.user?.id;
+
+  const [step,         setStep]         = useState(0);
+  const [currentMonth, setCurrentMonth] = useState(() => new Date());
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [bookedSlots,  setBookedSlots]  = useState([]);
+  const [selectedSlot, setSelectedSlot] = useState(null);
+  const [sessionType,  setSessionType]  = useState(sessionTypes[0] || '');
+  const [notes,        setNotes]        = useState('');
+  const [booking,      setBooking]      = useState(false);
+
+  const year  = currentMonth.getFullYear();
+  const month = currentMonth.getMonth();
+
+  useEffect(() => {
+    const m = `${year}-${String(month + 1).padStart(2, '0')}`;
+    mentorAPI.getSlots(mentorUserId, m).then(r => setBookedSlots(r.data?.data || [])).catch(() => {});
+  }, [mentorUserId, year, month]);
+
+  const availableDays = new Set(schedule.map(s => s.day));
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const firstDay    = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const calDays = [];
+  for (let i = 0; i < firstDay; i++) calDays.push(null);
+  for (let d = 1; d <= daysInMonth; d++) calDays.push(d);
+
+  const generateSlots = (dateStr) => {
+    const sch = schedule.find(s => s.day === new Date(dateStr + 'T12:00:00').getDay());
+    if (!sch) return [];
+    const slots = [];
+    const [sh, sm] = sch.startTime.split(':').map(Number);
+    const [eh, em] = sch.endTime.split(':').map(Number);
+    let cur = sh * 60 + sm;
+    const end = eh * 60 + em;
+    while (cur + duration <= end) {
+      const s = `${String(Math.floor(cur / 60)).padStart(2,'0')}:${String(cur % 60).padStart(2,'0')}`;
+      const e = `${String(Math.floor((cur + duration) / 60)).padStart(2,'0')}:${String((cur + duration) % 60).padStart(2,'0')}`;
+      slots.push({ startTime: s, endTime: e, isBooked: bookedSlots.some(b => b.date === dateStr && b.startTime === s) });
+      cur += duration;
+    }
+    return slots;
+  };
+
+  const fmt12 = (t) => { if (!t) return ''; const [h, m] = t.split(':').map(Number); return `${h % 12 || 12}:${String(m).padStart(2,'0')} ${h >= 12 ? 'PM' : 'AM'}`; };
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+  const handleBook = async () => {
+    setBooking(true);
+    try {
+      await mentorAPI.requestBooking(mentorUserId, { date: selectedDate, startTime: selectedSlot.startTime, endTime: selectedSlot.endTime, sessionType, notes, timezone, duration });
+      setStep(3);
+    } catch (err) { toast.error(err?.response?.data?.message || 'Booking failed.'); }
+    finally { setBooking(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#efefed] flex-shrink-0">
+          <div>
+            <h3 className="font-bold text-[#0e0e0d] text-sm">Book a Session</h3>
+            <p className="text-xs text-[#6b6b66]">with {mentor.user?.name}</p>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-[#f7f7f6] hover:bg-[#efefed] flex items-center justify-center text-[#6b6b66] text-lg">×</button>
+        </div>
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          {step === 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <button onClick={() => setCurrentMonth(new Date(year, month - 1, 1))} className="w-8 h-8 rounded-full bg-[#f7f7f6] flex items-center justify-center text-base">‹</button>
+                <p className="text-sm font-semibold">{MONTHS[month]} {year}</p>
+                <button onClick={() => setCurrentMonth(new Date(year, month + 1, 1))} className="w-8 h-8 rounded-full bg-[#f7f7f6] flex items-center justify-center text-base">›</button>
+              </div>
+              <div className="grid grid-cols-7 gap-1 mb-1">{['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => <div key={d} className="text-center text-[10px] font-semibold text-[#a3a39e] py-1">{d}</div>)}</div>
+              <div className="grid grid-cols-7 gap-1">
+                {calDays.map((d, i) => {
+                  if (!d) return <div key={i} />;
+                  const date = new Date(year, month, d);
+                  const isAvail = availableDays.has(date.getDay()) && date >= today;
+                  return (
+                    <button key={i} onClick={() => { if (!isAvail) return; const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; setSelectedDate(ds); setStep(1); }} disabled={!isAvail}
+                      className={`aspect-square rounded-lg text-xs font-medium flex items-center justify-center transition-all ${isAvail ? 'bg-[#f0eeff] border border-[#c9c4ff] text-[#4740CC] hover:bg-[#6C63FF] hover:text-white cursor-pointer' : 'text-[#d0d0cc]'}`}>{d}</button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-[#a3a39e] mt-3 text-center">🌐 {timezone}</p>
+            </div>
+          )}
+          {step === 1 && selectedDate && (
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <button onClick={() => setStep(0)} className="text-xs text-[#6C63FF] hover:underline">← Back</button>
+                <p className="text-sm font-semibold">{new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {generateSlots(selectedDate).map(slot => (
+                  <button key={slot.startTime} disabled={slot.isBooked} onClick={() => { setSelectedSlot(slot); setStep(2); }}
+                    className={`py-2.5 rounded-xl border text-xs font-semibold transition-all ${slot.isBooked ? 'border-[#efefed] text-[#d0d0cc] line-through cursor-not-allowed' : 'border-[#e0e0dd] text-[#111110] hover:border-[#6C63FF] hover:bg-[#f0eeff] hover:text-[#4740CC]'}`}>
+                    {fmt12(slot.startTime)}
+                  </button>
+                ))}
+                {generateSlots(selectedDate).length === 0 && <p className="col-span-3 text-sm text-center text-[#6b6b66] py-4">No slots for this day.</p>}
+              </div>
+              <p className="text-xs text-[#a3a39e] mt-3">{duration}-min sessions · {timezone}</p>
+            </div>
+          )}
+          {step === 2 && selectedSlot && (
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-2"><button onClick={() => setStep(1)} className="text-xs text-[#6C63FF] hover:underline">← Back</button></div>
+              <div className="bg-[#f0eeff] border border-[#c9c4ff] rounded-xl p-4">
+                <p className="text-xs font-semibold text-[#4740CC] mb-1">Booking Summary</p>
+                <p className="text-sm font-medium text-[#0e0e0d]">{mentor.user?.name}</p>
+                <p className="text-xs text-[#6b6b66] mt-0.5">{new Date(selectedDate+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})} · {fmt12(selectedSlot.startTime)}–{fmt12(selectedSlot.endTime)}</p>
+              </div>
+              {sessionTypes.length > 0 && (
+                <div>
+                  <label className="block text-xs font-semibold text-[#6b6b66] uppercase tracking-[0.1em] mb-2">Session Type</label>
+                  <div className="flex flex-wrap gap-2">
+                    {sessionTypes.map(t => <button key={t} type="button" onClick={() => setSessionType(t)} className={`px-3 py-1.5 rounded-full border text-xs font-medium transition-colors ${sessionType === t ? 'bg-[#6C63FF] text-white border-[#6C63FF]' : 'border-[#e0e0dd] text-[#6b6b66] hover:border-[#6C63FF]/40'}`}>{t}</button>)}
+                  </div>
+                </div>
+              )}
+              <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3} maxLength={500} placeholder="What would you like to focus on?" className="w-full rounded-xl border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm resize-none focus:outline-none focus:border-[#6C63FF] transition" />
+            </div>
+          )}
+          {step === 3 && (
+            <div className="py-8 text-center">
+              <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center text-2xl mx-auto mb-3">✅</div>
+              <h3 className="font-bold text-[#0e0e0d] mb-2">Booking Requested!</h3>
+              <p className="text-sm text-[#6b6b66]">Your request was sent to <strong>{mentor.user?.name}</strong>. They'll confirm and share a meeting link.</p>
+            </div>
+          )}
+        </div>
+        {step === 2 && (
+          <div className="flex gap-3 px-6 py-4 border-t border-[#efefed] flex-shrink-0">
+            <button onClick={() => setStep(1)} className="flex-1 py-2.5 rounded-xl border border-[#e0e0dd] text-sm font-semibold text-[#6b6b66]">Back</button>
+            <button onClick={handleBook} disabled={booking} className="flex-1 py-2.5 rounded-xl bg-[#6C63FF] hover:bg-[#5750D4] text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2">
+              {booking ? <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Booking…</> : '📅 Confirm Booking'}
+            </button>
+          </div>
+        )}
+        {step === 3 && <div className="px-6 py-4 border-t border-[#efefed] flex-shrink-0"><button onClick={onClose} className="w-full py-2.5 rounded-xl bg-[#0e0e0d] text-white text-sm font-semibold">Done</button></div>}
+      </div>
+    </div>
+  );
+}
+
 function ProjectDetailContent() {
   const { id }   = useParams();
   const { user } = useAuth();
@@ -426,6 +580,9 @@ function ProjectDetailContent() {
   const [postingUpdate, setPostingUpdate]           = useState(false);
   // Similar projects
   const [similarProjects, setSimilarProjects]       = useState([]);
+  // Mentor suggestions
+  const [suggestedMentors, setSuggestedMentors]     = useState([]);
+  const [bookTargetProj,   setBookTargetProj]       = useState(null);
 
   useEffect(() => {
     projectAPI.getById(id)
@@ -467,6 +624,29 @@ function ProjectDetailContent() {
       .then(({ data }) => setCreatorIsVerified(!!data?.data?.isVerified))
       .catch(() => {/* silent — badge just won't show */});
   }, [project?.createdBy?._id]);
+
+  // Fetch mentor suggestions based on required roles
+  const ROLE_TO_MENTOR_FIELD = {
+    'director': 'Directing', 'cinematographer': 'Cinematography', 'editor': 'Editing',
+    'musician': 'Music', 'actor': 'Acting', 'photographer': 'Photography',
+    'writer': 'Screenwriting', 'producer': 'Producing', 'sound-designer': 'Sound Design',
+    'colorist': 'Color Grading', 'vfx-artist': 'VFX', 'animator': 'Animation',
+    'scriptwriter': 'Screenwriting', 'production-designer': 'Production Design',
+    'costume-designer': 'Makeup & Styling', 'makeup-artist': 'Makeup & Styling',
+  };
+  useEffect(() => {
+    if (!project?.requiredRoles?.length) return;
+    const fields = [...new Set(
+      project.requiredRoles.map(r => ROLE_TO_MENTOR_FIELD[r.toLowerCase().replace(/\s+/g, '-')] || null).filter(Boolean)
+    )];
+    if (!fields.length) return;
+    mentorAPI.getAll({ field: fields[0], availability: 'available' })
+      .then(res => {
+        const data = res.data?.data || [];
+        setSuggestedMentors(data.slice(0, 3));
+      })
+      .catch(() => {});
+  }, [project?._id]);
 
   const handleDelete = async () => {
     if (!confirm('Delete this project? This cannot be undone.')) return;
@@ -907,6 +1087,78 @@ function ProjectDetailContent() {
             projectId={id}
             projectTitle={project.title}
           />
+        )}
+
+        {/* ── Mentor for Your Project ── */}
+        {suggestedMentors.length > 0 && (
+          <div className="bg-white rounded-2xl border border-[#efefed] p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#a3a39e] mb-1">🎓 Mentor for Your Project</h2>
+                <p className="text-sm text-[#6b6b66]">
+                  Need guidance on{' '}
+                  <span className="font-semibold text-[#0e0e0d]">{(project.requiredRoles || []).slice(0, 2).join(', ')}</span>?
+                  Book a session with an expert mentor.
+                </p>
+              </div>
+              <Link href="/mentors" className="text-xs font-semibold text-[#6C63FF] hover:underline flex-shrink-0">See all →</Link>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {suggestedMentors.map(mentor => {
+                const creator   = mentor.user;
+                const userId    = creator?._id || creator?.id;
+                const rate      = mentor.mentorRate;
+                const currency  = mentor.mentorCurrency || 'INR';
+                const ratingAvg = mentor.mentorRatingAvg || 0;
+                const hasSchedule = (mentor.mentorWeeklySchedule || []).length > 0;
+                return (
+                  <div key={mentor._id} className="rounded-xl border border-[#efefed] p-4 flex flex-col gap-3 hover:shadow-md hover:border-[#c9c4ff] transition">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#e4e1ff] to-[#f0eeff] flex items-center justify-center text-[#3730A3] font-bold text-sm overflow-hidden flex-shrink-0">
+                        {creator?.profileImage ? <img src={creator.profileImage} alt={creator?.name} className="w-10 h-10 object-cover" /> : creator?.name?.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-[#0e0e0d] truncate">{creator?.name}</p>
+                        <p className="text-[11px] text-[#6b6b66] truncate">{(mentor.mentorFields || []).slice(0, 2).join(' · ')}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {ratingAvg > 0 && (
+                        <>
+                          <span className="text-amber-400 text-xs">{'★'.repeat(Math.round(ratingAvg))}</span>
+                          <span className="text-[10px] text-[#6b6b66]">{ratingAvg.toFixed(1)}</span>
+                        </>
+                      )}
+                    </div>
+                    <div className="text-xs font-semibold text-[#0e0e0d]">
+                      {rate != null ? (Number(rate) === 0 ? <span className="text-green-600">Free</span> : <span>{currency} {Number(rate).toLocaleString()}/hr</span>) : null}
+                    </div>
+                    <div className="flex gap-2 mt-auto pt-1 border-t border-[#efefed]">
+                      <Link href={`/profile/${userId}`} className="flex-1 text-center text-xs font-semibold px-2 py-2 rounded-lg border border-[#e0e0dd] text-[#6b6b66] hover:border-[#6C63FF] hover:text-[#6C63FF] transition">
+                        Profile
+                      </Link>
+                      {hasSchedule && user && String(user._id || user.id) !== String(userId) && (
+                        <button onClick={() => setBookTargetProj(mentor)}
+                          className="flex-1 text-center text-xs font-semibold px-2 py-2 rounded-lg bg-[#6C63FF] text-white hover:bg-[#5750D4] transition">
+                          📅 Book
+                        </button>
+                      )}
+                      {!hasSchedule && user && String(user._id || user.id) !== String(userId) && (
+                        <Link href="/mentors" className="flex-1 text-center text-xs font-semibold px-2 py-2 rounded-lg bg-[#6C63FF] text-white hover:bg-[#5750D4] transition">
+                          View
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Booking modal from project page */}
+        {bookTargetProj && (
+          <MiniBookModal mentor={bookTargetProj} onClose={() => setBookTargetProj(null)} />
         )}
 
         {/* Team */}

@@ -111,6 +111,267 @@ function ReviewModal({ mentor, myReview, onClose, onSubmit }) {
   );
 }
 
+/* ── Booking Modal ── */
+function BookingModal({ mentor, onClose, onBooked }) {
+  const schedule     = mentor.mentorWeeklySchedule || [];
+  const duration     = mentor.mentorSessionDuration || 60;
+  const timezone     = mentor.mentorTimezone || 'Asia/Kolkata';
+  const sessionTypes = mentor.mentorSessionTypes || [];
+  const mentorUserId = mentor.user?._id || mentor.user?.id;
+
+  const [step,         setStep]         = useState(0);
+  const [currentMonth, setCurrentMonth] = useState(() => new Date());
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [bookedSlots,  setBookedSlots]  = useState([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState(null);
+  const [sessionType,  setSessionType]  = useState(sessionTypes[0] || '');
+  const [notes,        setNotes]        = useState('');
+  const [booking,      setBooking]      = useState(false);
+
+  const year  = currentMonth.getFullYear();
+  const month = currentMonth.getMonth();
+
+  useEffect(() => {
+    const m = `${year}-${String(month + 1).padStart(2, '0')}`;
+    setLoadingSlots(true);
+    mentorAPI.getSlots(mentorUserId, m)
+      .then(res => setBookedSlots(res.data?.data || []))
+      .catch(() => setBookedSlots([]))
+      .finally(() => setLoadingSlots(false));
+  }, [mentorUserId, year, month]);
+
+  const availableDays = new Set(schedule.map(s => s.day));
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const firstDay    = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const calDays     = [];
+  for (let i = 0; i < firstDay; i++) calDays.push(null);
+  for (let d = 1; d <= daysInMonth; d++) calDays.push(d);
+
+  const generateSlots = (dateStr) => {
+    const dayOfWeek = new Date(dateStr + 'T12:00:00').getDay();
+    const sch = schedule.find(s => s.day === dayOfWeek);
+    if (!sch) return [];
+    const slots = [];
+    const [sh, sm] = sch.startTime.split(':').map(Number);
+    const [eh, em] = sch.endTime.split(':').map(Number);
+    let cur = sh * 60 + sm;
+    const end = eh * 60 + em;
+    while (cur + duration <= end) {
+      const s = `${String(Math.floor(cur / 60)).padStart(2,'0')}:${String(cur % 60).padStart(2,'0')}`;
+      const e = `${String(Math.floor((cur + duration) / 60)).padStart(2,'0')}:${String((cur + duration) % 60).padStart(2,'0')}`;
+      const isBooked = bookedSlots.some(b => b.date === dateStr && b.startTime === s);
+      slots.push({ startTime: s, endTime: e, isBooked });
+      cur += duration;
+    }
+    return slots;
+  };
+
+  const fmt12 = (t) => {
+    if (!t) return '';
+    const [h, m] = t.split(':').map(Number);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    return `${h % 12 || 12}:${String(m).padStart(2,'0')} ${ampm}`;
+  };
+
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+  const handleBook = async () => {
+    setBooking(true);
+    try {
+      await mentorAPI.requestBooking(mentorUserId, { date: selectedDate, startTime: selectedSlot.startTime, endTime: selectedSlot.endTime, sessionType, notes, timezone, duration });
+      setStep(3);
+      onBooked?.();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Booking failed. Please try again.');
+    } finally { setBooking(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#efefed] flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#e4e1ff] to-[#f0eeff] flex items-center justify-center text-[#3730A3] font-bold text-sm overflow-hidden flex-shrink-0">
+              {mentor.user?.profileImage ? <img src={mentor.user.profileImage} alt="" className="w-9 h-9 object-cover" /> : mentor.user?.name?.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <h3 className="font-bold text-[#0e0e0d] text-sm">Book a Session</h3>
+              <p className="text-xs text-[#6b6b66]">with {mentor.user?.name}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-[#f7f7f6] hover:bg-[#efefed] flex items-center justify-center text-[#6b6b66] text-lg">×</button>
+        </div>
+
+        {/* Step indicator */}
+        {step < 3 && (
+          <div className="flex items-center gap-1 px-6 pt-3 pb-1 flex-shrink-0">
+            {['Date','Time','Details'].map((s, i) => (
+              <div key={s} className="flex items-center gap-1">
+                <div className={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center transition-colors ${step >= i ? 'bg-[#6C63FF] text-white' : 'bg-[#f0f0ee] text-[#a3a39e]'}`}>
+                  {step > i ? '✓' : i + 1}
+                </div>
+                <span className={`text-xs font-medium ${step === i ? 'text-[#4740CC]' : 'text-[#a3a39e]'}`}>{s}</span>
+                {i < 2 && <div className="w-5 h-px bg-[#efefed] mx-0.5" />}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+
+          {/* Step 0: Calendar */}
+          {step === 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <button onClick={() => setCurrentMonth(new Date(year, month - 1, 1))} className="w-8 h-8 rounded-full bg-[#f7f7f6] hover:bg-[#efefed] flex items-center justify-center text-base leading-none">‹</button>
+                <p className="text-sm font-semibold text-[#0e0e0d]">{MONTHS[month]} {year}</p>
+                <button onClick={() => setCurrentMonth(new Date(year, month + 1, 1))} className="w-8 h-8 rounded-full bg-[#f7f7f6] hover:bg-[#efefed] flex items-center justify-center text-base leading-none">›</button>
+              </div>
+              <div className="grid grid-cols-7 gap-1 mb-1">
+                {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => (
+                  <div key={d} className="text-center text-[10px] font-semibold text-[#a3a39e] py-1">{d}</div>
+                ))}
+              </div>
+              <div className="grid grid-cols-7 gap-1">
+                {calDays.map((d, i) => {
+                  if (!d) return <div key={i} />;
+                  const date = new Date(year, month, d);
+                  const isPast = date < today;
+                  const isAvail = availableDays.has(date.getDay()) && !isPast;
+                  return (
+                    <button key={i} onClick={() => {
+                      if (!isAvail) return;
+                      const ds = `${year}-${String(month + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                      setSelectedDate(ds); setSelectedSlot(null); setStep(1);
+                    }} disabled={!isAvail}
+                    className={`aspect-square rounded-lg text-xs font-medium transition-all flex items-center justify-center ${isAvail ? 'bg-[#f0eeff] border border-[#c9c4ff] text-[#4740CC] hover:bg-[#6C63FF] hover:text-white hover:border-[#6C63FF] cursor-pointer' : 'text-[#d0d0cc] cursor-not-allowed'}`}>
+                      {d}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-[#a3a39e] mt-4 text-center">🌐 All times in {timezone}</p>
+              {availableDays.size === 0 && (
+                <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-center">
+                  <p className="text-xs text-amber-700">This mentor hasn't set their weekly schedule yet.</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step 1: Time slots */}
+          {step === 1 && selectedDate && (
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <button onClick={() => setStep(0)} className="text-xs text-[#6C63FF] hover:underline font-medium">← Back</button>
+                <p className="text-sm font-semibold text-[#0e0e0d]">
+                  {new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                </p>
+              </div>
+              {loadingSlots ? (
+                <div className="grid grid-cols-3 gap-2">{[...Array(9)].map((_, i) => <div key={i} className="h-10 rounded-lg bg-[#f0f0ee] animate-pulse" />)}</div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-3 gap-2">
+                    {generateSlots(selectedDate).map(slot => (
+                      <button key={slot.startTime} disabled={slot.isBooked}
+                        onClick={() => { setSelectedSlot(slot); setStep(2); }}
+                        className={`py-2.5 rounded-xl border text-xs font-semibold transition-all ${slot.isBooked ? 'border-[#efefed] text-[#d0d0cc] bg-[#f7f7f6] cursor-not-allowed line-through' : 'border-[#e0e0dd] text-[#111110] hover:border-[#6C63FF] hover:bg-[#f0eeff] hover:text-[#4740CC] cursor-pointer'}`}>
+                        {fmt12(slot.startTime)}
+                      </button>
+                    ))}
+                    {generateSlots(selectedDate).length === 0 && (
+                      <p className="col-span-3 text-sm text-center text-[#6b6b66] py-4">No slots available for this day.</p>
+                    )}
+                  </div>
+                  <p className="text-xs text-[#a3a39e] mt-3">{duration}-min sessions · Times in {timezone}</p>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Step 2: Details */}
+          {step === 2 && selectedSlot && (
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-2">
+                <button onClick={() => setStep(1)} className="text-xs text-[#6C63FF] hover:underline font-medium">← Back</button>
+                <p className="text-xs text-[#6b6b66]">
+                  {new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} · {fmt12(selectedSlot.startTime)} – {fmt12(selectedSlot.endTime)}
+                </p>
+              </div>
+              <div className="bg-[#f0eeff] border border-[#c9c4ff] rounded-xl p-4">
+                <p className="text-xs font-semibold text-[#4740CC] mb-1">Booking Summary</p>
+                <p className="text-sm text-[#0e0e0d] font-medium">{mentor.user?.name}</p>
+                <p className="text-xs text-[#6b6b66] mt-0.5">
+                  {new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} · {fmt12(selectedSlot.startTime)} – {fmt12(selectedSlot.endTime)} ({duration} min)
+                </p>
+                <p className="text-xs text-[#a3a39e] mt-0.5">{timezone}</p>
+                {mentor.mentorRate != null && (
+                  <p className="text-xs font-semibold text-[#4740CC] mt-1.5">
+                    {Number(mentor.mentorRate) === 0 ? '✅ Free session' : `${mentor.mentorCurrency || 'INR'} ${Number(mentor.mentorRate).toLocaleString()} / session`}
+                  </p>
+                )}
+              </div>
+              {sessionTypes.length > 0 && (
+                <div>
+                  <label className="block text-xs font-semibold text-[#6b6b66] uppercase tracking-[0.1em] mb-2">Session Type</label>
+                  <div className="flex flex-wrap gap-2">
+                    {sessionTypes.map(t => (
+                      <button key={t} type="button" onClick={() => setSessionType(t)}
+                        className={`px-3 py-1.5 rounded-full border text-xs font-medium transition-colors ${sessionType === t ? 'bg-[#6C63FF] text-white border-[#6C63FF]' : 'border-[#e0e0dd] text-[#6b6b66] hover:border-[#6C63FF]/40'}`}>
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div>
+                <label className="block text-xs font-semibold text-[#6b6b66] uppercase tracking-[0.1em] mb-2">Notes <span className="normal-case font-normal text-[#a3a39e]">(optional)</span></label>
+                <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3} maxLength={500}
+                  placeholder="What would you like to focus on in this session?"
+                  className="w-full rounded-xl border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm resize-none focus:outline-none focus:border-[#6C63FF] transition" />
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Success */}
+          {step === 3 && (
+            <div className="py-8 text-center">
+              <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center text-3xl mx-auto mb-4">✅</div>
+              <h3 className="text-lg font-bold text-[#0e0e0d] mb-2">Booking Requested!</h3>
+              <p className="text-sm text-[#6b6b66] mb-4">Your request was sent to <strong>{mentor.user?.name}</strong>. You'll be notified once they confirm and share the meeting link.</p>
+              <p className="text-xs text-[#a3a39e]">
+                {selectedDate && new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                {selectedSlot && ` · ${fmt12(selectedSlot.startTime)} – ${fmt12(selectedSlot.endTime)}`}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        {step === 2 && (
+          <div className="flex gap-3 px-6 py-4 border-t border-[#efefed] flex-shrink-0">
+            <button onClick={() => setStep(1)} className="flex-1 py-2.5 rounded-xl border border-[#e0e0dd] text-sm font-semibold text-[#6b6b66] hover:border-[#0e0e0d] transition">Back</button>
+            <button onClick={handleBook} disabled={booking}
+              className="flex-1 py-2.5 rounded-xl bg-[#6C63FF] hover:bg-[#5750D4] text-white text-sm font-semibold transition disabled:opacity-50 flex items-center justify-center gap-2">
+              {booking ? <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Booking…</> : '📅 Confirm Booking'}
+            </button>
+          </div>
+        )}
+        {step === 3 && (
+          <div className="px-6 py-4 border-t border-[#efefed] flex-shrink-0">
+            <button onClick={onClose} className="w-full py-2.5 rounded-xl bg-[#0e0e0d] text-white text-sm font-semibold hover:bg-[#2a2a28] transition">Done</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function MentorsPage() {
   const { user } = useAuth();
   const router   = useRouter();
@@ -129,6 +390,7 @@ export default function MentorsPage() {
   const [appliedIds,   setAppliedIds]   = useState(new Set());
 
   const [reviewTarget, setReviewTarget] = useState(null);
+  const [bookTarget,   setBookTarget]   = useState(null);
 
   const fetchMentors = useCallback(async () => {
     try {
@@ -334,34 +596,46 @@ export default function MentorsPage() {
                   </div>
 
                   {/* CTAs */}
-                  <div className="flex items-center gap-2 border-t border-[#efefed] pt-4 mt-auto">
-                    <Link href={`/profile/${userId}`}
-                      className="flex-1 text-center text-xs font-semibold px-3 py-2 rounded-lg border border-[#e0e0dd] text-[#6b6b66] hover:border-[#6C63FF] hover:text-[#6C63FF] transition">
-                      View Profile
-                    </Link>
-                    {user && !isOwnProfile && (
-                      <button onClick={() => setReviewTarget(mentor)}
-                        className="px-2.5 py-2 rounded-lg border border-[#e0e0dd] text-[#6b6b66] hover:border-amber-400 hover:text-amber-500 transition text-xs font-semibold"
-                        title="Leave a review">⭐</button>
-                    )}
-                    {!isOwnProfile && (
-                      <button
-                        onClick={() => !hasApplied && !isUnavailable && openApplyModal(mentor)}
-                        disabled={hasApplied || isUnavailable}
-                        className={`flex-1 text-center text-xs font-semibold px-3 py-2 rounded-lg transition ${
-                          hasApplied ? 'bg-green-50 border border-green-200 text-green-600 cursor-default'
-                          : isUnavailable ? 'bg-[#f7f7f6] border border-[#e0e0dd] text-[#a3a39e] cursor-not-allowed'
-                          : 'bg-[#6C63FF] text-white hover:bg-[#5750D4] shadow-sm shadow-[#6C63FF]/20'}`}>
-                        {hasApplied ? '✓ Applied' : mentorStatus === 'paused' ? '⏸ Paused' : mentorStatus === 'closed' ? '🔴 Closed' : 'Apply'}
-                      </button>
-                    )}
-                    {isOwnProfile && (
-                      <Link href="/profile/edit?tab=mentor"
-                        className="flex-1 text-center text-xs font-semibold px-3 py-2 rounded-lg bg-[#f0eeff] border border-[#c9c4ff] text-[#4740CC] hover:bg-[#e4e1ff] transition">
-                        ✏️ Edit Profile
-                      </Link>
-                    )}
-                  </div>
+                  {(() => {
+                    const hasSchedule = (mentor.mentorWeeklySchedule || []).length > 0;
+                    return (
+                      <div className="flex items-center gap-2 border-t border-[#efefed] pt-4 mt-auto">
+                        <Link href={`/profile/${userId}`}
+                          className="flex-1 text-center text-xs font-semibold px-3 py-2 rounded-lg border border-[#e0e0dd] text-[#6b6b66] hover:border-[#6C63FF] hover:text-[#6C63FF] transition">
+                          View Profile
+                        </Link>
+                        {user && !isOwnProfile && (
+                          <button onClick={() => setReviewTarget(mentor)}
+                            className="px-2.5 py-2 rounded-lg border border-[#e0e0dd] text-[#6b6b66] hover:border-amber-400 hover:text-amber-500 transition text-xs font-semibold"
+                            title="Leave a review">⭐</button>
+                        )}
+                        {!isOwnProfile && hasSchedule && !isUnavailable && (
+                          <button
+                            onClick={() => { if (!user) { router.push('/login'); return; } setBookTarget(mentor); }}
+                            className="flex-1 text-center text-xs font-semibold px-3 py-2 rounded-lg bg-[#6C63FF] text-white hover:bg-[#5750D4] shadow-sm shadow-[#6C63FF]/20 transition">
+                            📅 Book Session
+                          </button>
+                        )}
+                        {!isOwnProfile && (!hasSchedule || isUnavailable) && (
+                          <button
+                            onClick={() => !hasApplied && !isUnavailable && openApplyModal(mentor)}
+                            disabled={hasApplied || isUnavailable}
+                            className={`flex-1 text-center text-xs font-semibold px-3 py-2 rounded-lg transition ${
+                              hasApplied ? 'bg-green-50 border border-green-200 text-green-600 cursor-default'
+                              : isUnavailable ? 'bg-[#f7f7f6] border border-[#e0e0dd] text-[#a3a39e] cursor-not-allowed'
+                              : 'bg-[#6C63FF] text-white hover:bg-[#5750D4] shadow-sm shadow-[#6C63FF]/20'}`}>
+                            {hasApplied ? '✓ Applied' : mentorStatus === 'paused' ? '⏸ Paused' : mentorStatus === 'closed' ? '🔴 Closed' : 'Apply'}
+                          </button>
+                        )}
+                        {isOwnProfile && (
+                          <Link href="/profile/edit?tab=mentor"
+                            className="flex-1 text-center text-xs font-semibold px-3 py-2 rounded-lg bg-[#f0eeff] border border-[#c9c4ff] text-[#4740CC] hover:bg-[#e4e1ff] transition">
+                            ✏️ Edit Profile
+                          </Link>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               );
             })}
@@ -437,6 +711,15 @@ export default function MentorsPage() {
           myReview={null}
           onClose={() => setReviewTarget(null)}
           onSubmit={fetchMentors}
+        />
+      )}
+
+      {/* Booking Modal */}
+      {bookTarget && (
+        <BookingModal
+          mentor={bookTarget}
+          onClose={() => setBookTarget(null)}
+          onBooked={() => {}}
         />
       )}
     </div>
