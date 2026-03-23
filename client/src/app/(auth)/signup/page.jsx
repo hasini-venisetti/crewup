@@ -148,7 +148,7 @@ export default function SignupPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     name: '', roles: [],
-    location: { city: '', country: '' },
+    location: { city: '', district: '', country: '' },
     skills: [], username: '', email: '', password: '',
     dateOfBirth: '', gender: '',
   });
@@ -589,9 +589,13 @@ export default function SignupPage() {
               {currentStep === 3 && (
                 <div className="form-anim" style={{ animationDelay: '0.16s' }}>
                   <label className="block text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-2">City</label>
-                  <input type="text" placeholder="e.g. Mumbai" className="field-input mb-4"
+                  <input type="text" placeholder="e.g. Hyderabad" className="field-input mb-4"
                     value={formData.location.city}
                     onChange={(e) => setFormData({ ...formData, location: { ...formData.location, city: e.target.value } })} />
+                  <label className="block text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-2">District <span className="normal-case text-[#a3a39e]">(optional)</span></label>
+                  <input type="text" placeholder="e.g. Rangareddy" className="field-input mb-4"
+                    value={formData.location.district}
+                    onChange={(e) => setFormData({ ...formData, location: { ...formData.location, district: e.target.value } })} />
                   <label className="block text-xs uppercase tracking-widest text-[#6b6b66] font-medium mb-2">Country</label>
                   <input type="text" placeholder="e.g. India" className="field-input mb-8"
                     value={formData.location.country}

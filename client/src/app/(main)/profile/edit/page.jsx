@@ -42,7 +42,7 @@ export default function EditProfilePage() {
   const [form, setForm]         = useState({
     name: '', roles: [], bio: '', gender: '',
     experienceLevel: 'beginner', availability: 'available',
-    location: { city: '', country: '' },
+    location: { city: '', district: '', country: '' },
     skills: [],
     socialLinks: { instagram: '', youtube: '', vimeo: '', linkedin: '', website: '' },
     portfolioLinks: [{ label: '', url: '' }],
@@ -85,7 +85,7 @@ export default function EditProfilePage() {
           gender:          p.user?.gender     || '',
           experienceLevel: p.experienceLevel  || 'beginner',
           availability:    p.availability     || 'available',
-          location:        p.location         || { city: '', country: '' },
+          location:        p.location         || { city: '', district: '', country: '' },
           locationVisible: p.locationVisible  !== false, // default true if not set
           skills:          p.skills           || [],
           socialLinks:     p.socialLinks      || { instagram: '', youtube: '', vimeo: '', linkedin: '', website: '' },
@@ -385,7 +385,10 @@ export default function EditProfilePage() {
             <div>
               <label className={labelCls}>Location</label>
               <div className="grid grid-cols-2 gap-3 mb-3">
-                <input className={inputCls} placeholder="City"    value={form.location.city}    onChange={(e) => setLoc('city', e.target.value)} />
+                <input className={inputCls} placeholder="City" value={form.location.city} onChange={(e) => setLoc('city', e.target.value)} />
+                <input className={inputCls} placeholder="District (optional)" value={form.location.district || ''} onChange={(e) => setLoc('district', e.target.value)} />
+              </div>
+              <div className="mb-3">
                 <input className={inputCls} placeholder="Country" value={form.location.country} onChange={(e) => setLoc('country', e.target.value)} />
               </div>
               {/* Map visibility toggle */}
