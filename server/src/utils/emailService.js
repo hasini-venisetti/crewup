@@ -595,6 +595,83 @@ const sendContestTeamWin = async (recipientEmail, recipientName, projectTitle, c
   }
 };
 
+// ─── Booking Confirmed — sent to BOTH mentor and mentee ──────────────────────
+const sendBookingConfirmed = async ({
+  menteeEmail, menteeName,
+  mentorEmail, mentorName,
+  sessionType, date, startTime, endTime, duration, timezone, meetingLink,
+}) => {
+  const siteUrl   = process.env.CLIENT_URL || 'https://crewupfilms.com';
+  const dashLink  = `${siteUrl}/mentors/dashboard?tab=sessions`;
+  const meetBtn   = meetingLink
+    ? `<a href="${meetingLink}" style="display:inline-block;margin-top:12px;padding:10px 22px;background:#6C63FF;color:#fff;border-radius:8px;font-weight:700;text-decoration:none;font-size:14px;">Join Meeting →</a>`
+    : `<p style="margin:8px 0 0;font-size:13px;color:#666;">The mentor will share a meeting link shortly.</p>`;
+
+  const sessionBlock = `
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0eeff;border-radius:8px;padding:16px 20px;margin:16px 0;">
+      <tr><td>
+        <p style="margin:0 0 6px;font-size:13px;color:#4740CC;font-weight:700;">📅 Session Details</p>
+        <p style="margin:2px 0;font-size:14px;color:#111110;"><strong>Type:</strong> ${sessionType || '1:1 Session'}</p>
+        <p style="margin:2px 0;font-size:14px;color:#111110;"><strong>Date:</strong> ${date}</p>
+        <p style="margin:2px 0;font-size:14px;color:#111110;"><strong>Time:</strong> ${startTime} – ${endTime} (${duration} min)</p>
+        <p style="margin:2px 0;font-size:14px;color:#111110;"><strong>Timezone:</strong> ${timezone}</p>
+        ${meetBtn}
+      </td></tr>
+    </table>`;
+
+  // Email to mentee
+  try {
+    const html = transactionalHtml(`
+      <h2 style="margin:0 0 8px;font-size:20px;color:#111110;">Your session is confirmed! 🎉</h2>
+      <p style="margin:0 0 16px;color:#555;font-size:14px;">Hi ${menteeName}, <strong>${mentorName}</strong> has confirmed your booking.</p>
+      ${sessionBlock}
+      <p style="margin:16px 0 0;font-size:13px;color:#888;">Use the Negotiation Chat on your booking card to discuss anything before the session.</p>
+      <a href="${dashLink}" style="display:inline-block;margin-top:12px;padding:9px 20px;background:#111110;color:#fff;border-radius:8px;font-weight:600;text-decoration:none;font-size:13px;">View My Sessions →</a>
+    `);
+    await sendEmail(menteeEmail, `Session confirmed with ${mentorName} on ${date}`, html);
+    console.log(`[EMAIL SENT] sendBookingConfirmed (mentee) to ${menteeEmail}`);
+  } catch (e) { console.error('[EMAIL ERROR] sendBookingConfirmed mentee:', e.message); }
+
+  // Email to mentor
+  try {
+    const html = transactionalHtml(`
+      <h2 style="margin:0 0 8px;font-size:20px;color:#111110;">Booking confirmed ✅</h2>
+      <p style="margin:0 0 16px;color:#555;font-size:14px;">Hi ${mentorName}, your session with <strong>${menteeName}</strong> is set.</p>
+      ${sessionBlock}
+      <a href="${dashLink}" style="display:inline-block;margin-top:12px;padding:9px 20px;background:#111110;color:#fff;border-radius:8px;font-weight:600;text-decoration:none;font-size:13px;">View Incoming Sessions →</a>
+    `);
+    await sendEmail(mentorEmail, `Session confirmed with ${menteeName} on ${date}`, html);
+    console.log(`[EMAIL SENT] sendBookingConfirmed (mentor) to ${mentorEmail}`);
+  } catch (e) { console.error('[EMAIL ERROR] sendBookingConfirmed mentor:', e.message); }
+};
+
+// ─── Booking Requested — notify mentor of new booking ────────────────────────
+const sendBookingRequested = async ({
+  mentorEmail, mentorName, menteeName,
+  sessionType, date, startTime, duration, timezone, notes,
+}) => {
+  const siteUrl  = process.env.CLIENT_URL || 'https://crewupfilms.com';
+  const dashLink = `${siteUrl}/mentors/dashboard?tab=sessions`;
+  try {
+    const html = transactionalHtml(`
+      <h2 style="margin:0 0 8px;font-size:20px;color:#111110;">New session request 📅</h2>
+      <p style="margin:0 0 16px;color:#555;font-size:14px;">Hi ${mentorName}, <strong>${menteeName}</strong> wants to book a session with you.</p>
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0eeff;border-radius:8px;padding:16px 20px;margin:16px 0;">
+        <tr><td>
+          <p style="margin:2px 0;font-size:14px;color:#111110;"><strong>Type:</strong> ${sessionType || '1:1 Session'}</p>
+          <p style="margin:2px 0;font-size:14px;color:#111110;"><strong>Date:</strong> ${date}</p>
+          <p style="margin:2px 0;font-size:14px;color:#111110;"><strong>Time:</strong> ${startTime} (${duration} min)</p>
+          <p style="margin:2px 0;font-size:14px;color:#111110;"><strong>Timezone:</strong> ${timezone}</p>
+          ${notes ? `<p style="margin:8px 0 0;font-size:13px;color:#555;"><em>"${notes}"</em></p>` : ''}
+        </td></tr>
+      </table>
+      <a href="${dashLink}" style="display:inline-block;margin-top:4px;padding:10px 22px;background:#6C63FF;color:#fff;border-radius:8px;font-weight:700;text-decoration:none;font-size:14px;">Confirm or Decline →</a>
+    `);
+    await sendEmail(mentorEmail, `New session request from ${menteeName} on ${date}`, html);
+    console.log(`[EMAIL SENT] sendBookingRequested to ${mentorEmail}`);
+  } catch (e) { console.error('[EMAIL ERROR] sendBookingRequested:', e.message); }
+};
+
 module.exports = {
   sendEmail,
   sendApplicationReceived,
@@ -614,4 +691,6 @@ module.exports = {
   sendSubmissionRejected,
   sendContestWinner,
   sendContestTeamWin,
+  sendBookingConfirmed,
+  sendBookingRequested,
 };

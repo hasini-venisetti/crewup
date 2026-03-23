@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
@@ -61,12 +62,20 @@ function Stars({ rating }) {
 ═══════════════════════════════════════════════════════════════════════════ */
 export default function MentorDashboard() {
   const { user, loading: authLoading } = useAuth();
-  const router = useRouter();
+  const router       = useRouter();
+  const searchParams = useSearchParams();
 
   const [profile,  setProfile]  = useState(null);
   const [loading,  setLoading]  = useState(true);
   const [saving,   setSaving]   = useState(false);
-  const [tab,      setTab]      = useState('overview');
+  // Read ?tab= from URL (e.g. from notification click) — default 'overview'
+  const [tab,      setTab]      = useState(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search).get('tab');
+      return ['overview','settings','applications','sessions'].includes(p) ? p : 'overview';
+    }
+    return 'overview';
+  });
 
   /* settings form */
   const [form, setForm] = useState({

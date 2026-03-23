@@ -268,32 +268,35 @@ router.post('/:mentorUserId/bookings', protect, async (req, res) => {
       return res.status(409).json({ success: false, message: 'That time slot is already booked. Please choose another.' });
     }
 
-    const duration = mentorProfile.mentorSessionDuration || 60;
+    const { duration: clientDuration } = req.body;
+    const duration = clientDuration || mentorProfile.mentorSessionDuration || 60;
+    const tz       = mentorProfile.mentorTimezone || 'Asia/Kolkata';
 
     const booking = await MentorBooking.create({
       mentor: mentorUserId, mentee: menteeId,
       sessionType: sessionType || '', date, startTime, endTime,
-      duration, timezone: mentorProfile.mentorTimezone || 'Asia/Kolkata',
+      duration, timezone: tz,
       notes: notes?.trim() || '',
     });
 
-    // Notify mentor
+    // Notify mentor (link goes straight to Sessions tab)
     const mentorUser = await User.findById(mentorUserId).select('email name').lean();
     await Notification.create({
       recipient: mentorUserId, sender: menteeId,
       type: 'booking_requested',
       title: `${req.user.name} booked a ${sessionType || 'session'} with you`,
       message: `Date: ${date} at ${startTime}${notes ? ` — "${notes.slice(0, 60)}"` : ''}`,
-      link: `/mentors/dashboard`,
+      link: `/mentors/dashboard?tab=sessions`,
     });
 
-    // Email notification (fire-and-forget)
+    // Email mentor about new request (fire-and-forget)
     if (mentorUser?.email) {
-      emailService.sendGenericNotification?.(
-        mentorUser.email, mentorUser.name,
-        `New session booking from ${req.user.name}`,
-        `${req.user.name} booked a ${sessionType || 'session'} on ${date} at ${startTime}.`
-      ).catch(() => {});
+      emailService.sendBookingRequested({
+        mentorEmail: mentorUser.email, mentorName: mentorUser.name,
+        menteeName: req.user.name,
+        sessionType: sessionType || '1:1 Session', date, startTime, duration, timezone: tz,
+        notes: notes?.trim() || '',
+      }).catch(() => {});
     }
 
     res.status(201).json({ success: true, data: booking });
@@ -343,14 +346,32 @@ router.patch('/bookings/:id/confirm', protect, async (req, res) => {
     booking.meetingLink = req.body.meetingLink?.trim() || '';
     await booking.save();
 
-    // Notify mentee
+    // Notify mentee — link goes to their Sessions tab
     await Notification.create({
       recipient: booking.mentee, sender: req.user._id || req.user.id,
       type: 'booking_confirmed',
       title: `${req.user.name} confirmed your booking!`,
-      message: `${booking.sessionType || 'Session'} on ${booking.date} at ${booking.startTime}${booking.meetingLink ? ` — ${booking.meetingLink}` : ''}`,
-      link: `/dashboard`,
+      message: `${booking.sessionType || 'Session'} on ${booking.date} at ${booking.startTime}${booking.meetingLink ? ` — Join: ${booking.meetingLink}` : ''}`,
+      link: `/mentors/dashboard?tab=sessions`,
     });
+
+    // Send confirmation emails to both mentor and mentee (fire-and-forget)
+    const menteeUser = await User.findById(booking.mentee).select('email name').lean();
+    if (menteeUser?.email || req.user?.email) {
+      emailService.sendBookingConfirmed({
+        menteeEmail:  menteeUser?.email,
+        menteeName:   menteeUser?.name || 'Mentee',
+        mentorEmail:  req.user.email,
+        mentorName:   req.user.name,
+        sessionType:  booking.sessionType || '1:1 Session',
+        date:         booking.date,
+        startTime:    booking.startTime,
+        endTime:      booking.endTime,
+        duration:     booking.duration || 60,
+        timezone:     booking.timezone || 'Asia/Kolkata',
+        meetingLink:  booking.meetingLink || '',
+      }).catch(() => {});
+    }
 
     res.json({ success: true, data: booking });
   } catch (err) {
@@ -384,7 +405,7 @@ router.patch('/bookings/:id/cancel', protect, async (req, res) => {
       type: 'booking_cancelled',
       title: `Booking cancelled by ${isMentor ? 'mentor' : 'mentee'}`,
       message: `${booking.sessionType || 'Session'} on ${booking.date} at ${booking.startTime} was cancelled.`,
-      link: `/dashboard`,
+      link: `/mentors/dashboard?tab=sessions`,
     }).catch(() => {});
 
     res.json({ success: true, data: booking });
@@ -442,7 +463,7 @@ router.post('/bookings/:id/chat', protect, async (req, res) => {
       type: 'booking_message',
       title: `${req.user.name} sent a message about your booking`,
       message: text.slice(0, 100),
-      link: `/mentors/dashboard`,
+      link: `/mentors/dashboard?tab=sessions`,
     }).catch(() => {});
 
     // Real-time push via socket
