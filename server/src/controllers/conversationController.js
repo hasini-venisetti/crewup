@@ -229,6 +229,15 @@ const sendMessage = async (req, res, next) => {
       warning = '💡 Heads up: you shared contact info. Only exchange personal details with people you fully trust.';
     }
 
+    // ── Emit real-time socket event to all conversation members ────────────
+    const io = global._io;
+    if (io) {
+      const messageObj = { ...message.toObject(), conversationId };
+      conversation.members.forEach((memberId) => {
+        io.to(`user:${memberId.toString()}`).emit('newMessage', messageObj);
+      });
+    }
+
     res.status(201).json({
       success:             true,
       data:                message,

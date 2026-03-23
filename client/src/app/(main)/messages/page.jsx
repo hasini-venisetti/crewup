@@ -239,23 +239,33 @@ export default function MessagesPage() {
   }, [selectedConvId]);
 
   useEffect(() => {
-    if (!socket || !selectedConvId) return;
+    if (!socket) return;
     const handleNewMessage = (msg) => {
-      if (msg.conversationId === selectedConvId) {
-        setMessages((prev) => {
-          const exists = prev.some((m) => (m._id || m.id) === (msg._id || msg.id));
-          return exists ? prev : [...prev, msg];
-        });
-        scrollToBottom();
-      }
-      // Update sidebar preview in-place — no full refetch needed
-      setConversations((prev) =>
-        prev.map((c) =>
-          (c._id || c.id) === msg.conversationId
-            ? { ...c, lastMessage: msg.text, lastMessageAt: msg.createdAt }
-            : c
-        )
-      );
+      const incomingConvId = msg.conversationId?.toString?.() || msg.conversationId;
+
+      // ── If this message belongs to the open chat, append it ──
+      setMessages((prev) => {
+        if (incomingConvId !== selectedConvId) return prev;
+        const exists = prev.some((m) => (m._id || m.id)?.toString() === (msg._id || msg.id)?.toString());
+        if (exists) return prev;
+        return [...prev, msg];
+      });
+
+      // ── Auto-scroll only if the chat is currently open ──
+      if (incomingConvId === selectedConvId) scrollToBottom();
+
+      // ── Bubble conversation to top + update preview ──
+      setConversations((prev) => {
+        const idx = prev.findIndex((c) => (c._id || c.id)?.toString() === incomingConvId);
+        if (idx === -1) {
+          // Unknown conversation — re-fetch the list so it appears
+          loadConversations();
+          return prev;
+        }
+        const updated = { ...prev[idx], lastMessage: msg.text, lastMessageAt: msg.createdAt };
+        const rest = prev.filter((_, i) => i !== idx);
+        return [updated, ...rest];
+      });
     };
     socket.on('newMessage', handleNewMessage);
     return () => {
