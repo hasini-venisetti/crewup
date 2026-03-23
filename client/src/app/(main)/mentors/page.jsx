@@ -48,64 +48,83 @@ function Stars({ rating, count }) {
 
 /* ── Review modal ── */
 function ReviewModal({ mentor, myReview, onClose, onSubmit }) {
-  const [rating,  setRating]  = useState(myReview?.rating  || 0);
-  const [hover,   setHover]   = useState(0);
-  const [comment, setComment] = useState(myReview?.comment || '');
-  const [saving,  setSaving]  = useState(false);
+  const [rating,    setRating]  = useState(myReview?.rating  || 0);
+  const [hover,     setHover]   = useState(0);
+  const [comment,   setComment] = useState(myReview?.comment || '');
+  const [saving,    setSaving]  = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  const mentorUserId = mentor.user?._id || mentor.user?.id;
 
   const handleSubmit = async () => {
-    if (!rating) { toast.error('Please select a star rating.'); return; }
+    if (!rating) { toast.error('Please select a star rating first.'); return; }
+    if (!mentorUserId) { toast.error('Could not identify mentor. Please refresh and try again.'); return; }
     setSaving(true);
     try {
-      const mentorUserId = mentor.user?._id || mentor.user?.id;
-      await mentorAPI.submitReview(mentorUserId, { rating, comment });
-      toast.success('Review submitted!');
-      onSubmit();
-      onClose();
+      await mentorAPI.submitReview(mentorUserId, { rating, comment: comment.trim() });
+      setSubmitted(true);
+      onSubmit?.();
+      setTimeout(onClose, 1500); // auto-close after success animation
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Failed to submit review.');
+      const msg = err?.response?.data?.message || 'Failed to submit review. Please try again.';
+      toast.error(msg);
     } finally { setSaving(false); }
   };
+
+  const LABELS = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'];
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
         <div className="flex items-center justify-between px-6 py-5 border-b border-[#efefed]">
           <div>
-            <h3 className="font-bold text-[#0e0e0d] text-base">Rate this Mentor</h3>
-            <p className="text-xs text-[#6b6b66] mt-0.5">with <span className="font-semibold">{mentor.user?.name}</span></p>
+            <h3 className="font-bold text-[#0e0e0d] text-base">Rate your Experience</h3>
+            <p className="text-xs text-[#6b6b66] mt-0.5">Mentored by <span className="font-semibold">{mentor.user?.name}</span></p>
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-full bg-[#f7f7f6] hover:bg-[#efefed] flex items-center justify-center text-[#6b6b66] text-lg">×</button>
         </div>
-        <div className="px-6 py-5 flex flex-col gap-4">
-          <div className="flex justify-center gap-2">
-            {[1,2,3,4,5].map((star) => (
-              <button key={star} type="button"
-                onMouseEnter={() => setHover(star)}
-                onMouseLeave={() => setHover(0)}
-                onClick={() => setRating(star)}
-                className={`text-4xl transition-transform hover:scale-110 ${(hover || rating) >= star ? 'text-amber-400' : 'text-gray-200'}`}>
-                ★
-              </button>
-            ))}
+
+        {submitted ? (
+          <div className="py-10 text-center px-6">
+            <div className="w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center text-3xl mx-auto mb-3">⭐</div>
+            <p className="font-bold text-[#0e0e0d] text-base mb-1">Review Submitted!</p>
+            <p className="text-sm text-[#6b6b66]">Thank you for helping the community.</p>
           </div>
-          <p className="text-center text-sm text-[#6b6b66] h-5">
-            {(hover || rating) === 1 && 'Poor'}{(hover || rating) === 2 && 'Fair'}
-            {(hover || rating) === 3 && 'Good'}{(hover || rating) === 4 && 'Very Good'}{(hover || rating) === 5 && 'Excellent'}
-          </p>
-          <textarea value={comment} onChange={e => setComment(e.target.value)}
-            rows={3} maxLength={500}
-            placeholder="Share your experience with this mentor… (optional)"
-            className="w-full rounded-xl border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm resize-none focus:outline-none focus:border-[#6C63FF] transition" />
-          <p className="text-[11px] text-[#a3a39e] text-right -mt-2">{comment.length}/500</p>
-        </div>
-        <div className="flex gap-3 px-6 pb-6">
-          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-[#e0e0dd] text-sm font-semibold text-[#6b6b66] hover:border-[#0e0e0d] transition">Cancel</button>
-          <button onClick={handleSubmit} disabled={saving || !rating}
-            className="flex-1 py-2.5 rounded-xl bg-[#6C63FF] hover:bg-[#5750D4] text-white text-sm font-semibold transition disabled:opacity-50 flex items-center justify-center gap-2">
-            {saving ? <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Saving…</> : '⭐ Submit Review'}
-          </button>
-        </div>
+        ) : (
+          <>
+            <div className="px-6 py-5 flex flex-col gap-4">
+              <div>
+                <p className="text-xs text-[#6b6b66] text-center mb-3">How was your session?</p>
+                <div className="flex justify-center gap-3">
+                  {[1,2,3,4,5].map((star) => (
+                    <button key={star} type="button"
+                      onMouseEnter={() => setHover(star)}
+                      onMouseLeave={() => setHover(0)}
+                      onClick={() => setRating(star)}
+                      className={`text-4xl transition-transform hover:scale-125 cursor-pointer select-none ${(hover || rating) >= star ? 'text-amber-400' : 'text-gray-200'}`}>
+                      ★
+                    </button>
+                  ))}
+                </div>
+                <p className="text-center text-sm font-semibold text-[#6C63FF] mt-2 h-5">
+                  {LABELS[hover || rating] || ''}
+                </p>
+              </div>
+              <textarea value={comment} onChange={e => setComment(e.target.value)}
+                rows={3} maxLength={500}
+                placeholder="Share your experience — what did you find most helpful? (optional)"
+                className="w-full rounded-xl border border-[#e0e0dd] bg-[#fafaf9] px-4 py-3 text-sm resize-none focus:outline-none focus:border-[#6C63FF] transition" />
+              <p className="text-[11px] text-[#a3a39e] text-right -mt-2">{comment.length}/500</p>
+            </div>
+            <div className="flex gap-3 px-6 pb-6">
+              <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-[#e0e0dd] text-sm font-semibold text-[#6b6b66] hover:border-[#0e0e0d] transition">Cancel</button>
+              <button onClick={handleSubmit} disabled={saving || !rating}
+                className="flex-1 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-500 text-white text-sm font-semibold transition disabled:opacity-40 flex items-center justify-center gap-2">
+                {saving ? <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Saving…</> : '⭐ Submit Review'}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -233,13 +252,18 @@ function BookingModal({ mentor, onClose, onBooked }) {
             <div>
               {/* Duration picker — mentee decides */}
               <div className="mb-4">
-                <p className="text-xs font-semibold text-[#6b6b66] uppercase tracking-wide mb-2">Session Duration</p>
+                <p className="text-xs font-semibold text-[#6b6b66] uppercase tracking-wide mb-2">How long do you need?</p>
                 <div className="flex gap-2">
-                  {[30, 60, 90].filter(d => d <= maxDuration).map(d => (
-                    <button key={d} type="button"
-                      onClick={() => { setDuration(d); setSelectedSlot(null); }}
-                      className={`flex-1 py-2 rounded-xl border text-xs font-semibold transition-all ${duration === d ? 'bg-[#6C63FF] border-[#6C63FF] text-white' : 'border-[#e0e0dd] text-[#6b6b66] hover:border-[#6C63FF] hover:text-[#6C63FF]'}`}>
-                      {d} min
+                  {[
+                    { mins: 30,  label: '30 min' },
+                    { mins: 60,  label: '1 hr'   },
+                    { mins: 90,  label: '1.5 hr' },
+                    { mins: 120, label: '2 hr'   },
+                  ].filter(({ mins }) => mins <= maxDuration).map(({ mins, label }) => (
+                    <button key={mins} type="button"
+                      onClick={() => { setDuration(mins); setSelectedSlot(null); }}
+                      className={`flex-1 py-2 rounded-xl border text-xs font-semibold transition-all ${duration === mins ? 'bg-[#6C63FF] border-[#6C63FF] text-white' : 'border-[#e0e0dd] text-[#6b6b66] hover:border-[#6C63FF] hover:text-[#6C63FF]'}`}>
+                      {label}
                     </button>
                   ))}
                 </div>
@@ -403,8 +427,12 @@ function BookingModal({ mentor, onClose, onBooked }) {
           </div>
         )}
         {step === 3 && (
-          <div className="px-6 py-4 border-t border-[#efefed] flex-shrink-0">
-            <button onClick={onClose} className="w-full py-2.5 rounded-xl bg-[#0e0e0d] text-white text-sm font-semibold hover:bg-[#2a2a28] transition">Done</button>
+          <div className="flex gap-3 px-6 py-4 border-t border-[#efefed] flex-shrink-0">
+            <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-[#e0e0dd] text-sm font-semibold text-[#6b6b66] hover:border-[#0e0e0d] transition">Close</button>
+            <Link href="/mentors/dashboard?tab=sessions" onClick={onClose}
+              className="flex-1 py-2.5 rounded-xl bg-[#6C63FF] text-white text-sm font-semibold hover:bg-[#5750D4] transition text-center">
+              View My Sessions →
+            </Link>
           </div>
         )}
       </div>
@@ -659,8 +687,8 @@ export default function MentorsPage() {
                     </Link>
                     {user && !isOwnProfile && (
                       <button onClick={() => setReviewTarget(mentor)}
-                        className="px-2.5 py-2 rounded-lg border border-[#e0e0dd] text-[#6b6b66] hover:border-amber-400 hover:text-amber-500 transition text-xs font-semibold"
-                        title="Leave a review">⭐</button>
+                        className="px-3 py-2 rounded-lg border border-[#e0e0dd] text-[#6b6b66] hover:border-amber-400 hover:text-amber-500 hover:bg-amber-50 transition text-xs font-semibold whitespace-nowrap"
+                        title="Leave a review">⭐ Rate</button>
                     )}
                     {/* Book Session — shown for all open non-own mentors */}
                     {!isOwnProfile && !isUnavailable && (

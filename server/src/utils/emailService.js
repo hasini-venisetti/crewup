@@ -69,9 +69,10 @@ if (!BREVO_API_KEY && !RESEND_API_KEY) {
   const EMAIL_HOST = process.env.EMAIL_HOST;
   const EMAIL_PORT = process.env.EMAIL_PORT;
   const EMAIL_USER = process.env.EMAIL_USER;
-  const EMAIL_PASS = process.env.EMAIL_PASS;
+  // Gmail app passwords are shown with spaces for readability — strip them before use
+  const EMAIL_PASS = (process.env.EMAIL_PASS || '').replace(/\s+/g, '') || undefined;
   const GMAIL_USER = process.env.GMAIL_USER;
-  const GMAIL_PASS = process.env.GMAIL_PASS;
+  const GMAIL_PASS = (process.env.GMAIL_PASS || '').replace(/\s+/g, '') || undefined;
 
   if (EMAIL_HOST && EMAIL_PORT && EMAIL_USER && EMAIL_PASS) {
     smtpTransporter = nodemailer.createTransport({
@@ -84,7 +85,7 @@ if (!BREVO_API_KEY && !RESEND_API_KEY) {
       socketTimeout:     15000,
     });
     SMTP_FROM = SMTP_FROM || `${SENDER_NAME} <${EMAIL_USER}>`;
-    console.log('[EMAIL SERVICE] Using custom SMTP');
+    console.log(`[EMAIL SERVICE] Using custom SMTP (${EMAIL_HOST}:${EMAIL_PORT}) as ${EMAIL_USER}`);
   } else if (GMAIL_USER && GMAIL_PASS) {
     smtpTransporter = nodemailer.createTransport({
       host:              'smtp.gmail.com',
@@ -97,9 +98,13 @@ if (!BREVO_API_KEY && !RESEND_API_KEY) {
       socketTimeout:     15000,
     });
     SMTP_FROM = SMTP_FROM || `${SENDER_NAME} <${GMAIL_USER}>`;
-    console.log('[EMAIL SERVICE] Using Gmail SMTP (587)');
+    console.log(`[EMAIL SERVICE] Using Gmail SMTP as ${GMAIL_USER}`);
   } else {
-    console.warn('[EMAIL SERVICE] No email provider configured. Set BREVO_API_KEY in Railway. Emails will be skipped.');
+    console.warn('[EMAIL SERVICE] ⚠️  No email provider configured! Set one of:\n' +
+      '  • BREVO_API_KEY (free 300/day) — recommended for Railway\n' +
+      '  • RESEND_API_KEY (free 100/day)\n' +
+      '  • EMAIL_HOST + EMAIL_PORT + EMAIL_USER + EMAIL_PASS (SMTP)\n' +
+      '  Emails will be SKIPPED until one is configured.');
   }
 } else if (BREVO_API_KEY) {
   console.log('[EMAIL SERVICE] Using Brevo HTTP API with plain-text fallback ✓');

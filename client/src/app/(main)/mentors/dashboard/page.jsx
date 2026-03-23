@@ -590,14 +590,20 @@ export default function MentorDashboard() {
                   </select>
                 </div>
 
-                {/* Session Duration */}
+                {/* Session Duration — max duration mentees can pick */}
                 <div className="mb-5">
-                  <label className={labelCls}>Default Session Duration</label>
+                  <label className={labelCls}>Max Session Duration</label>
+                  <p className="text-xs text-[#a3a39e] mb-2">Mentees can book up to this length — they choose their preferred duration.</p>
                   <div className="flex gap-2">
-                    {[30, 60, 90].map(d => (
-                      <button key={d} type="button" onClick={() => setForm(f => ({ ...f, mentorSessionDuration: d }))}
-                        className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold transition-colors ${form.mentorSessionDuration === d ? 'border-[#6C63FF] bg-[#f0eeff] text-[#4740CC]' : 'border-[#efefed] text-[#6b6b66] hover:border-[#6C63FF]/40'}`}>
-                        {d} min
+                    {[
+                      { mins: 30,  label: '30 min' },
+                      { mins: 60,  label: '1 hr'   },
+                      { mins: 90,  label: '1.5 hr' },
+                      { mins: 120, label: '2 hr'   },
+                    ].map(({ mins, label }) => (
+                      <button key={mins} type="button" onClick={() => setForm(f => ({ ...f, mentorSessionDuration: mins }))}
+                        className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold transition-colors ${form.mentorSessionDuration === mins ? 'border-[#6C63FF] bg-[#f0eeff] text-[#4740CC]' : 'border-[#efefed] text-[#6b6b66] hover:border-[#6C63FF]/40'}`}>
+                        {label}
                       </button>
                     ))}
                   </div>
