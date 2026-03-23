@@ -136,7 +136,7 @@ export default function MentorDashboard() {
     }
     setSaving(true);
     try {
-      await profileAPI.update({
+      await mentorAPI.updateSettings({
         isMentor:             form.isMentor,
         mentorBio:            form.mentorBio,
         mentorFields:         form.mentorFields,
