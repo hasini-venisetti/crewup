@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { conversationAPI, searchAPI, messageRequestAPI } from '@/lib/api';
 import Link from 'next/link';
@@ -32,7 +32,10 @@ export default function MessagesPage() {
   const [msgRequests, setMsgRequests] = useState([]);
   const [loadingRequests, setLoadingRequests] = useState(false);
   const [respondingId, setRespondingId] = useState(null);
-  const messagesEndRef = useRef(null);
+  const messagesEndRef   = useRef(null);
+  // Keep a ref to selectedConvId so the socket handler always reads the latest value
+  // without needing to re-subscribe on every conversation switch
+  const selectedConvRef  = useRef(null);
   // Block state: set of convIds blocked by me
   const [blockedConvIds, setBlockedConvIds] = useState(new Set());
   // Header menu for the active chat
@@ -235,30 +238,33 @@ export default function MessagesPage() {
 
   useEffect(() => {
     if (!selectedConvId) return;
+    selectedConvRef.current = selectedConvId; // keep ref in sync
     loadMessages();
   }, [selectedConvId]);
 
   useEffect(() => {
     if (!socket) return;
+
     const handleNewMessage = (msg) => {
       const incomingConvId = msg.conversationId?.toString?.() || msg.conversationId;
+      // Use ref — always has the latest selectedConvId without stale closure
+      const currentConvId  = selectedConvRef.current;
 
       // ── If this message belongs to the open chat, append it ──
       setMessages((prev) => {
-        if (incomingConvId !== selectedConvId) return prev;
+        if (incomingConvId !== currentConvId) return prev;
         const exists = prev.some((m) => (m._id || m.id)?.toString() === (msg._id || msg.id)?.toString());
         if (exists) return prev;
         return [...prev, msg];
       });
 
       // ── Auto-scroll only if the chat is currently open ──
-      if (incomingConvId === selectedConvId) scrollToBottom();
+      if (incomingConvId === currentConvId) scrollToBottom();
 
       // ── Bubble conversation to top + update preview ──
       setConversations((prev) => {
         const idx = prev.findIndex((c) => (c._id || c.id)?.toString() === incomingConvId);
         if (idx === -1) {
-          // Unknown conversation — re-fetch the list so it appears
           loadConversations();
           return prev;
         }
@@ -267,11 +273,13 @@ export default function MessagesPage() {
         return [updated, ...rest];
       });
     };
+
     socket.on('newMessage', handleNewMessage);
-    return () => {
-      socket.off('newMessage', handleNewMessage);
-    };
-  }, [socket, selectedConvId]);
+    return () => socket.off('newMessage', handleNewMessage);
+
+    // Only re-subscribe when the socket instance itself changes (not selectedConvId)
+    // selectedConvId is read via selectedConvRef so no stale closure problem
+  }, [socket]);
 
   if (authLoading) {
     return (
