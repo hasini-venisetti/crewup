@@ -114,10 +114,11 @@ function ReviewModal({ mentor, myReview, onClose, onSubmit }) {
 /* ── Booking Modal ── */
 function BookingModal({ mentor, onClose, onBooked }) {
   const schedule     = mentor.mentorWeeklySchedule || [];
-  const duration     = mentor.mentorSessionDuration || 60;
   const timezone     = mentor.mentorTimezone || 'Asia/Kolkata';
   const sessionTypes = mentor.mentorSessionTypes || [];
   const mentorUserId = mentor.user?._id || mentor.user?.id;
+  // Mentee picks their own duration; mentor's setting is the max cap
+  const maxDuration  = mentor.mentorSessionDuration || 60;
 
   const [step,         setStep]         = useState(0);
   const [currentMonth, setCurrentMonth] = useState(() => new Date());
@@ -125,6 +126,7 @@ function BookingModal({ mentor, onClose, onBooked }) {
   const [bookedSlots,  setBookedSlots]  = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState(null);
+  const [duration,     setDuration]     = useState(maxDuration >= 60 ? 60 : 30);
   const [sessionType,  setSessionType]  = useState(sessionTypes[0] || '');
   const [notes,        setNotes]        = useState('');
   const [booking,      setBooking]      = useState(false);
@@ -226,6 +228,19 @@ function BookingModal({ mentor, onClose, onBooked }) {
           {/* Step 0: Calendar */}
           {step === 0 && (
             <div>
+              {/* Duration picker — mentee decides */}
+              <div className="mb-4">
+                <p className="text-xs font-semibold text-[#6b6b66] uppercase tracking-wide mb-2">Session Duration</p>
+                <div className="flex gap-2">
+                  {[30, 60, 90].filter(d => d <= maxDuration).map(d => (
+                    <button key={d} type="button"
+                      onClick={() => { setDuration(d); setSelectedSlot(null); }}
+                      className={`flex-1 py-2 rounded-xl border text-xs font-semibold transition-all ${duration === d ? 'bg-[#6C63FF] border-[#6C63FF] text-white' : 'border-[#e0e0dd] text-[#6b6b66] hover:border-[#6C63FF] hover:text-[#6C63FF]'}`}>
+                      {d} min
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div className="flex items-center justify-between mb-4">
                 <button onClick={() => setCurrentMonth(new Date(year, month - 1, 1))} className="w-8 h-8 rounded-full bg-[#f7f7f6] hover:bg-[#efefed] flex items-center justify-center text-base leading-none">‹</button>
                 <p className="text-sm font-semibold text-[#0e0e0d]">{MONTHS[month]} {year}</p>

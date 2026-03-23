@@ -22,6 +22,13 @@ const mentorBookingSchema = new mongoose.Schema(
     meetingLink:  { type: String, default: '' },                 // filled by mentor on confirm
     cancelReason: { type: String, default: '' },
     cancelledBy:  { type: String, enum: ['mentor', 'mentee', ''], default: '' },
+
+    // Per-booking negotiation chat (separate from regular DMs)
+    chat: [{
+      sender:    { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+      text:      { type: String, required: true, maxlength: 1000 },
+      createdAt: { type: Date, default: Date.now },
+    }],
   },
   { timestamps: true }
 );

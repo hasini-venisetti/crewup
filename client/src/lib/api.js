@@ -231,6 +231,7 @@ export const mentorAPI = {
   confirmBooking:      (id, data)                    => api.patch(`/mentors/bookings/${id}/confirm`, data),
   cancelBooking:       (id, reason)                  => api.patch(`/mentors/bookings/${id}/cancel`, { reason }),
   completeBooking:     (id)                          => api.patch(`/mentors/bookings/${id}/complete`),
+  sendBookingChat:     (id, text)                    => api.post(`/mentors/bookings/${id}/chat`, { text }),
 };
 
 /* ── Launch Waitlist ── */

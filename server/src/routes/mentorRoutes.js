@@ -281,10 +281,10 @@ router.post('/:mentorUserId/bookings', protect, async (req, res) => {
     const mentorUser = await User.findById(mentorUserId).select('email name').lean();
     await Notification.create({
       recipient: mentorUserId, sender: menteeId,
-      type: 'general',
+      type: 'booking_requested',
       title: `${req.user.name} booked a ${sessionType || 'session'} with you`,
       message: `Date: ${date} at ${startTime}${notes ? ` — "${notes.slice(0, 60)}"` : ''}`,
-      link: `/dashboard#bookings`,
+      link: `/mentors/dashboard`,
     });
 
     // Email notification (fire-and-forget)
@@ -346,10 +346,10 @@ router.patch('/bookings/:id/confirm', protect, async (req, res) => {
     // Notify mentee
     await Notification.create({
       recipient: booking.mentee, sender: req.user._id || req.user.id,
-      type: 'general',
+      type: 'booking_confirmed',
       title: `${req.user.name} confirmed your booking!`,
       message: `${booking.sessionType || 'Session'} on ${booking.date} at ${booking.startTime}${booking.meetingLink ? ` — ${booking.meetingLink}` : ''}`,
-      link: `/dashboard#bookings`,
+      link: `/dashboard`,
     });
 
     res.json({ success: true, data: booking });
@@ -381,10 +381,10 @@ router.patch('/bookings/:id/cancel', protect, async (req, res) => {
     const recipient = isMentor ? booking.mentee : booking.mentor;
     await Notification.create({
       recipient, sender: req.user._id || req.user.id,
-      type: 'general',
-      title: `Booking cancelled by ${isMentor ? 'mentor' : 'you'}`,
+      type: 'booking_cancelled',
+      title: `Booking cancelled by ${isMentor ? 'mentor' : 'mentee'}`,
       message: `${booking.sessionType || 'Session'} on ${booking.date} at ${booking.startTime} was cancelled.`,
-      link: `/dashboard#bookings`,
+      link: `/dashboard`,
     }).catch(() => {});
 
     res.json({ success: true, data: booking });
@@ -407,13 +407,49 @@ router.patch('/bookings/:id/complete', protect, async (req, res) => {
     // Prompt mentee to leave a review
     await Notification.create({
       recipient: booking.mentee, sender: req.user._id || req.user.id,
-      type: 'general',
+      type: 'booking_completed',
       title: `How was your session with ${req.user.name}?`,
       message: 'Your session is complete — leave a review on the Mentors page!',
       link: `/mentors`,
     }).catch(() => {});
 
     res.json({ success: true, data: booking });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// POST /api/mentors/bookings/:id/chat — send a message in the booking chat
+router.post('/bookings/:id/chat', protect, async (req, res) => {
+  try {
+    const booking = await MentorBooking.findById(req.params.id);
+    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found.' });
+    const myId = String(req.user._id || req.user.id);
+    const isMentor = String(booking.mentor) === myId;
+    const isMentee = String(booking.mentee) === myId;
+    if (!isMentor && !isMentee) return res.status(403).json({ success: false, message: 'Not authorized.' });
+
+    const text = req.body.text?.trim();
+    if (!text) return res.status(400).json({ success: false, message: 'Message cannot be empty.' });
+
+    booking.chat.push({ sender: myId, text });
+    await booking.save();
+
+    // Notify the other party
+    const recipient = isMentor ? booking.mentee : booking.mentor;
+    await Notification.create({
+      recipient, sender: myId,
+      type: 'booking_message',
+      title: `${req.user.name} sent a message about your booking`,
+      message: text.slice(0, 100),
+      link: `/mentors/dashboard`,
+    }).catch(() => {});
+
+    // Real-time push via socket
+    const io = global._io;
+    if (io) io.to(`user:${recipient}`).emit('bookingChatMessage', { bookingId: booking._id, sender: myId, text });
+
+    res.json({ success: true, data: booking.chat });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

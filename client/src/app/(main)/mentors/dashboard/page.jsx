@@ -87,6 +87,9 @@ export default function MentorDashboard() {
   const [myBookings,        setMyBookings]        = useState([]);
   const [bookingAction,     setBookingAction]     = useState({});
   const [meetingLinks,      setMeetingLinks]      = useState({});
+  const [chatInputs,        setChatInputs]        = useState({});   // bookingId → text
+  const [sendingChat,       setSendingChat]       = useState({});   // bookingId → bool
+  const [expandedChats,     setExpandedChats]     = useState({});   // bookingId → bool
 
   /* reviews */
   const [reviews, setReviews] = useState([]);
@@ -188,6 +191,24 @@ export default function MentorDashboard() {
       toast.success('Session marked as completed!');
     } catch { toast.error('Could not mark as completed.'); }
     finally { setBookingAction(p => ({ ...p, [id]: null })); }
+  };
+
+  /* ── Booking Chat ── */
+  const sendBookingChat = async (bookingId, isMentorSide) => {
+    const text = (chatInputs[bookingId] || '').trim();
+    if (!text) return;
+    setSendingChat(p => ({ ...p, [bookingId]: true }));
+    try {
+      const res = await mentorAPI.sendBookingChat(bookingId, text);
+      const updatedChat = res.data?.data || [];
+      if (isMentorSide) {
+        setIncomingBookings(p => p.map(b => b._id === bookingId ? { ...b, chat: updatedChat } : b));
+      } else {
+        setMyBookings(p => p.map(b => b._id === bookingId ? { ...b, chat: updatedChat } : b));
+      }
+      setChatInputs(p => ({ ...p, [bookingId]: '' }));
+    } catch { toast.error('Could not send message.'); }
+    finally { setSendingChat(p => ({ ...p, [bookingId]: false })); }
   };
 
   /* ── Derived ── */
@@ -724,6 +745,48 @@ export default function MentorDashboard() {
                           📅 {b.date} &nbsp;·&nbsp; {b.startTime}–{b.endTime} &nbsp;·&nbsp; {b.duration || 60} min &nbsp;·&nbsp; {b.timezone}
                         </p>
                         {b.notes && <p className="text-xs text-[#6b6b66] bg-[#f7f7f6] rounded-lg px-3 py-2 mb-3">💬 {b.notes}</p>}
+
+                        {/* ── Booking Negotiation Chat ── */}
+                        <div className="mb-3 border border-[#efefed] rounded-xl overflow-hidden">
+                          <button type="button"
+                            onClick={() => setExpandedChats(p => ({ ...p, [b._id]: !p[b._id] }))}
+                            className="w-full flex items-center justify-between px-3 py-2 bg-[#f7f7f6] text-xs font-semibold text-[#6b6b66] hover:bg-[#efefed] transition">
+                            <span>💬 Negotiation Chat {(b.chat?.length || 0) > 0 ? `(${b.chat.length})` : ''}</span>
+                            <span>{expandedChats[b._id] ? '▲' : '▼'}</span>
+                          </button>
+                          {expandedChats[b._id] && (
+                            <div className="px-3 pb-3 pt-2 flex flex-col gap-2">
+                              {(b.chat || []).length === 0 && (
+                                <p className="text-xs text-[#a3a39e] text-center py-2">No messages yet. Discuss timing, rate, or details here.</p>
+                              )}
+                              {(b.chat || []).map((msg, idx) => {
+                                const isMe = String(msg.sender) === String(user?._id || user?.id);
+                                return (
+                                  <div key={idx} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                                    <div className={`max-w-[80%] px-3 py-1.5 rounded-xl text-xs ${isMe ? 'bg-[#6C63FF] text-white rounded-br-sm' : 'bg-[#f0f0ee] text-[#111110] rounded-bl-sm'}`}>
+                                      {msg.text}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                              <div className="flex gap-2 mt-1">
+                                <input
+                                  type="text"
+                                  placeholder="Type a message…"
+                                  value={chatInputs[b._id] || ''}
+                                  onChange={e => setChatInputs(p => ({ ...p, [b._id]: e.target.value }))}
+                                  onKeyDown={e => e.key === 'Enter' && sendBookingChat(b._id, true)}
+                                  className="flex-1 rounded-lg border border-[#e0e0dd] px-3 py-1.5 text-xs focus:outline-none focus:border-[#6C63FF] transition"
+                                />
+                                <button onClick={() => sendBookingChat(b._id, true)} disabled={sendingChat[b._id]}
+                                  className="px-3 py-1.5 rounded-lg bg-[#6C63FF] text-white text-xs font-semibold hover:bg-[#5750D4] disabled:opacity-50 transition">
+                                  {sendingChat[b._id] ? '…' : '→'}
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
                         {b.status === 'pending' && (
                           <div className="flex flex-col gap-2">
                             <input type="text" placeholder="Paste meeting link (Google Meet, Zoom…)"
@@ -806,6 +869,48 @@ export default function MentorDashboard() {
                             ⏳ Waiting for mentor to confirm and share a meeting link.
                           </p>
                         )}
+
+                        {/* ── Booking Negotiation Chat ── */}
+                        <div className="my-2 border border-[#efefed] rounded-xl overflow-hidden">
+                          <button type="button"
+                            onClick={() => setExpandedChats(p => ({ ...p, [b._id]: !p[b._id] }))}
+                            className="w-full flex items-center justify-between px-3 py-2 bg-[#f7f7f6] text-xs font-semibold text-[#6b6b66] hover:bg-[#efefed] transition">
+                            <span>💬 Chat with Mentor {(b.chat?.length || 0) > 0 ? `(${b.chat.length})` : ''}</span>
+                            <span>{expandedChats[b._id] ? '▲' : '▼'}</span>
+                          </button>
+                          {expandedChats[b._id] && (
+                            <div className="px-3 pb-3 pt-2 flex flex-col gap-2">
+                              {(b.chat || []).length === 0 && (
+                                <p className="text-xs text-[#a3a39e] text-center py-2">No messages yet. Ask about pricing, timing, or session details here.</p>
+                              )}
+                              {(b.chat || []).map((msg, idx) => {
+                                const isMe = String(msg.sender) === String(user?._id || user?.id);
+                                return (
+                                  <div key={idx} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                                    <div className={`max-w-[80%] px-3 py-1.5 rounded-xl text-xs ${isMe ? 'bg-[#6C63FF] text-white rounded-br-sm' : 'bg-[#f0f0ee] text-[#111110] rounded-bl-sm'}`}>
+                                      {msg.text}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                              <div className="flex gap-2 mt-1">
+                                <input
+                                  type="text"
+                                  placeholder="Type a message…"
+                                  value={chatInputs[b._id] || ''}
+                                  onChange={e => setChatInputs(p => ({ ...p, [b._id]: e.target.value }))}
+                                  onKeyDown={e => e.key === 'Enter' && sendBookingChat(b._id, false)}
+                                  className="flex-1 rounded-lg border border-[#e0e0dd] px-3 py-1.5 text-xs focus:outline-none focus:border-[#6C63FF] transition"
+                                />
+                                <button onClick={() => sendBookingChat(b._id, false)} disabled={sendingChat[b._id]}
+                                  className="px-3 py-1.5 rounded-lg bg-[#6C63FF] text-white text-xs font-semibold hover:bg-[#5750D4] disabled:opacity-50 transition">
+                                  {sendingChat[b._id] ? '…' : '→'}
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
                         <button onClick={() => cancelBooking(b._id, 'mentee')} disabled={!!act}
                           className="text-xs text-[#a3a39e] hover:text-red-500 font-medium transition disabled:opacity-50">
                           {act === 'cancelling' ? 'Cancelling…' : '✕ Cancel booking'}

@@ -643,7 +643,12 @@ function ProjectDetailContent() {
     mentorAPI.getAll({ field: fields[0], availability: 'available' })
       .then(res => {
         const data = res.data?.data || [];
-        setSuggestedMentors(data.slice(0, 3));
+        // Never suggest the logged-in user's own mentor card
+        const myId = user?._id || user?.id;
+        const filtered = myId
+          ? data.filter(m => String(m.user?._id || m.user?.id) !== String(myId))
+          : data;
+        setSuggestedMentors(filtered.slice(0, 3));
       })
       .catch(() => {});
   }, [project?._id]);

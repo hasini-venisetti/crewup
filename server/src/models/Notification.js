@@ -18,6 +18,11 @@ const notificationSchema = new mongoose.Schema(
         'message_request',          // user wants to start a chat
         'message_request_accepted', // message request was accepted
         'mentorship_request',       // user wants mentorship
+        'booking_requested',        // mentor gets this when a session is booked
+        'booking_confirmed',        // mentee gets this when mentor confirms
+        'booking_cancelled',        // either party gets this on cancel
+        'booking_completed',        // mentee gets this when session is marked done
+        'booking_message',          // new chat message on a booking
         'contest_announcement',     // admin announces a contest
         'contest_submission',       // contest submission approved / rejected
         'platform_update',          // admin broadcasts a platform update
