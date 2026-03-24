@@ -313,7 +313,7 @@ const sendLaunchNotification = async (email, name) => {
   const html = transactionalHtml(`
     <p style="margin:0 0 8px;font-size:16px;font-weight:600;color:#111110;">Hi ${displayName},</p>
     <p style="margin:0 0 20px;font-size:15px;color:#444444;line-height:1.6;">
-      CREWUPFILMS is officially live. You signed up early &mdash; now it's your turn to be first on the platform.
+      CREWUPFILMS is officially live. You joined our waitlist early &mdash; now it's your turn to be first on the platform.
     </p>
     <p style="margin:0 0 8px;font-size:14px;font-weight:600;color:#111110;">What you can do right now:</p>
     <p style="margin:0 0 4px;font-size:14px;color:#555555;line-height:1.6;">&#8226; Post a project and find your crew</p>
@@ -323,7 +323,7 @@ const sendLaunchNotification = async (email, name) => {
     <a href="${siteUrl}" style="display:inline-block;background:#111110;color:#ffffff;padding:12px 28px;text-decoration:none;border-radius:6px;font-size:14px;font-weight:600;">Go to CREWUPFILMS</a>
   `);
 
-  const text = `Hi ${displayName},\n\nCREWUPFILMS is officially live.\n\nYou signed up early — now it's your turn to be first on the platform.\n\nWhat you can do:\n- Post a project and find your crew\n- Browse open roles and apply\n- Upload your films\n- Enter the inaugural Short Film Contest (cash prizes in INR)\n\nGet started: ${siteUrl}\n\n— CREWUPFILMS`;
+  const text = `Hi ${displayName},\n\nCREWUPFILMS is officially live.\n\nYou joined our waitlist early — now it's your turn to be first on the platform.\n\nWhat you can do:\n- Post a project and find your crew\n- Browse open roles and apply\n- Upload your films\n- Enter the inaugural Short Film Contest (cash prizes in INR)\n\nGet started: ${siteUrl}\n\n— CREWUPFILMS`;
 
   await sendEmail(email, `CREWUPFILMS is live, ${displayName}`, html, text);
   console.log(`[EMAIL SENT] sendLaunchNotification to ${email}`);
