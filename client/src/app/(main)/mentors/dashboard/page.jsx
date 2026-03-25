@@ -85,6 +85,7 @@ export default function MentorDashboard() {
     mentorSessionTypes: [], mentorLocationType: 'online',
     mentorLanguages: [], mentorTimezone: 'Asia/Kolkata',
     mentorSessionDuration: 60, mentorWeeklySchedule: [],
+    mentorBookingDateFrom: '', mentorBookingDateTo: '', mentorBlockedDates: [],
   });
 
   /* applications */
@@ -125,7 +126,10 @@ export default function MentorDashboard() {
           mentorLanguages:      p.mentorLanguages      || [],
           mentorTimezone:       p.mentorTimezone       || 'Asia/Kolkata',
           mentorSessionDuration: p.mentorSessionDuration ?? 60,
-          mentorWeeklySchedule: p.mentorWeeklySchedule || [],
+          mentorWeeklySchedule:  p.mentorWeeklySchedule  || [],
+          mentorBookingDateFrom: p.mentorBookingDateFrom || '',
+          mentorBookingDateTo:   p.mentorBookingDateTo   || '',
+          mentorBlockedDates:    p.mentorBlockedDates    || [],
         });
         // Load reviews for this mentor
         const uid = p.user?._id || p.user?.id;
@@ -160,8 +164,11 @@ export default function MentorDashboard() {
         mentorLocationType:   form.mentorLocationType,
         mentorLanguages:      form.mentorLanguages,
         mentorTimezone:       form.mentorTimezone,
-        mentorSessionDuration: form.mentorSessionDuration,
-        mentorWeeklySchedule: form.mentorWeeklySchedule,
+        mentorSessionDuration:  form.mentorSessionDuration,
+        mentorWeeklySchedule:   form.mentorWeeklySchedule,
+        mentorBookingDateFrom:  form.mentorBookingDateFrom,
+        mentorBookingDateTo:    form.mentorBookingDateTo,
+        mentorBlockedDates:     form.mentorBlockedDates,
       });
       toast.success('Mentor settings saved!');
     } catch { toast.error('Failed to save.'); }
@@ -658,6 +665,71 @@ export default function MentorDashboard() {
                   </div>
                   <p className="text-xs text-[#a3a39e] mt-3">Times are in your selected timezone ({form.mentorTimezone}).</p>
                 </div>
+
+                {/* Booking Date Range */}
+                <div>
+                  <label className={labelCls}>Booking Date Range</label>
+                  <p className="text-xs text-[#6b6b66] mb-3">Set the dates between which mentees can book you. Leave blank to always be bookable.</p>
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1">
+                      <p className="text-[11px] text-[#6b6b66] mb-1 font-medium">From</p>
+                      <input type="date" value={form.mentorBookingDateFrom}
+                        onChange={e => setForm(f => ({ ...f, mentorBookingDateFrom: e.target.value }))}
+                        className="w-full rounded-xl border border-[#e0e0dd] bg-[#fafaf9] px-3 py-2 text-sm focus:outline-none focus:border-[#6C63FF] transition" />
+                    </div>
+                    <span className="text-[#a3a39e] text-sm mt-5">→</span>
+                    <div className="flex-1">
+                      <p className="text-[11px] text-[#6b6b66] mb-1 font-medium">To</p>
+                      <input type="date" value={form.mentorBookingDateTo}
+                        min={form.mentorBookingDateFrom || undefined}
+                        onChange={e => setForm(f => ({ ...f, mentorBookingDateTo: e.target.value }))}
+                        className="w-full rounded-xl border border-[#e0e0dd] bg-[#fafaf9] px-3 py-2 text-sm focus:outline-none focus:border-[#6C63FF] transition" />
+                    </div>
+                    {(form.mentorBookingDateFrom || form.mentorBookingDateTo) && (
+                      <button type="button" onClick={() => setForm(f => ({ ...f, mentorBookingDateFrom: '', mentorBookingDateTo: '' }))}
+                        className="mt-5 text-xs text-[#e55f5f] hover:underline whitespace-nowrap">Clear</button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Blocked / Skip Dates */}
+                <div>
+                  <label className={labelCls}>Blocked Dates</label>
+                  <p className="text-xs text-[#6b6b66] mb-3">Add specific dates you're unavailable within your booking range.</p>
+                  <div className="flex gap-2 mb-3">
+                    <input type="date" id="blockDateInput"
+                      min={form.mentorBookingDateFrom || undefined}
+                      max={form.mentorBookingDateTo || undefined}
+                      className="flex-1 rounded-xl border border-[#e0e0dd] bg-[#fafaf9] px-3 py-2 text-sm focus:outline-none focus:border-[#6C63FF] transition"
+                      onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} />
+                    <button type="button"
+                      onClick={() => {
+                        const input = document.getElementById('blockDateInput');
+                        const val = input?.value;
+                        if (!val) return;
+                        if (form.mentorBlockedDates.includes(val)) return;
+                        setForm(f => ({ ...f, mentorBlockedDates: [...f.mentorBlockedDates, val].sort() }));
+                        input.value = '';
+                      }}
+                      className="px-4 py-2 rounded-xl bg-[#111110] text-white text-xs font-semibold hover:bg-[#2a2a28] transition">
+                      + Block
+                    </button>
+                  </div>
+                  {form.mentorBlockedDates.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {form.mentorBlockedDates.map(d => (
+                        <span key={d} className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#fff0f0] border border-[#ffd0d0] text-xs text-[#c0392b] font-medium">
+                          🚫 {d}
+                          <button type="button" onClick={() => setForm(f => ({ ...f, mentorBlockedDates: f.mentorBlockedDates.filter(x => x !== d) }))}
+                            className="text-[#c0392b] hover:text-red-700 font-bold leading-none">×</button>
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-[#a3a39e] italic">No dates blocked.</p>
+                  )}
+                </div>
+
               </div>
 
             </>)}

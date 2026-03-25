@@ -54,6 +54,7 @@ router.patch('/settings', protect, async (req, res) => {
       isMentor, mentorStatus, mentorFields, mentorBio, mentorRate, mentorCurrency,
       mentorExperience, mentorSessionTypes, mentorLocationType, mentorLanguages,
       mentorTimezone, mentorSessionDuration, mentorWeeklySchedule,
+      mentorBookingDateFrom, mentorBookingDateTo, mentorBlockedDates,
     } = req.body;
     const updateFields = {
       isMentor:              typeof isMentor === 'boolean' ? isMentor : undefined,
@@ -69,6 +70,9 @@ router.patch('/settings', protect, async (req, res) => {
       mentorTimezone:        mentorTimezone        !== undefined ? mentorTimezone        : undefined,
       mentorSessionDuration: mentorSessionDuration !== undefined ? Number(mentorSessionDuration) : undefined,
       mentorWeeklySchedule:  mentorWeeklySchedule  !== undefined ? mentorWeeklySchedule  : undefined,
+      mentorBookingDateFrom: mentorBookingDateFrom !== undefined ? mentorBookingDateFrom : undefined,
+      mentorBookingDateTo:   mentorBookingDateTo   !== undefined ? mentorBookingDateTo   : undefined,
+      mentorBlockedDates:    mentorBlockedDates    !== undefined ? mentorBlockedDates    : undefined,
     };
     Object.keys(updateFields).forEach((k) => updateFields[k] === undefined && delete updateFields[k]);
 

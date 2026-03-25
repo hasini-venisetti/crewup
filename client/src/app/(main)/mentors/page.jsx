@@ -134,14 +134,16 @@ function ReviewModal({ mentor, myReview, onClose, onSubmit }) {
 
 /* ── Booking Modal ── */
 function BookingModal({ mentor, onClose, onBooked }) {
-  const schedule      = mentor.mentorWeeklySchedule || [];
-  const timezone      = mentor.mentorTimezone || 'Asia/Kolkata';
-  const sessionTypes  = mentor.mentorSessionTypes || [];
-  const mentorUserId  = mentor.user?._id || mentor.user?.id;
-  // Mentor's setting is the max cap (in minutes)
-  const maxDuration   = mentor.mentorSessionDuration || 120;
-  // Is this an in-person or "both" mentor? If so, mentee must share location
-  const isInPerson    = mentor.mentorLocationType === 'offline' || mentor.mentorLocationType === 'both';
+  const schedule       = mentor.mentorWeeklySchedule || [];
+  const timezone       = mentor.mentorTimezone || 'Asia/Kolkata';
+  const sessionTypes   = mentor.mentorSessionTypes || [];
+  const mentorUserId   = mentor.user?._id || mentor.user?.id;
+  const maxDuration    = mentor.mentorSessionDuration || 120;
+  const isInPerson     = mentor.mentorLocationType === 'offline' || mentor.mentorLocationType === 'both';
+  // Date range the mentor has set
+  const bookingFrom    = mentor.mentorBookingDateFrom || '';
+  const bookingTo      = mentor.mentorBookingDateTo   || '';
+  const blockedDates   = mentor.mentorBlockedDates    || [];
 
   const [step,           setStep]           = useState(0);
   const [currentMonth,   setCurrentMonth]   = useState(() => new Date());
@@ -295,21 +297,30 @@ function BookingModal({ mentor, onClose, onBooked }) {
                 {calDays.map((d, i) => {
                   if (!d) return <div key={i} />;
                   const date = new Date(year, month, d);
-                  const isPast = date < today;
-                  const isAvail = availableDays.has(date.getDay()) && !isPast;
+                  const ds = `${year}-${String(month + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                  const isPast    = date < today;
+                  const isBlocked = blockedDates.includes(ds);
+                  const inRange   = (!bookingFrom || ds >= bookingFrom) && (!bookingTo || ds <= bookingTo);
+                  const isAvail   = availableDays.has(date.getDay()) && !isPast && !isBlocked && inRange;
                   return (
                     <button key={i} onClick={() => {
                       if (!isAvail) return;
-                      const ds = `${year}-${String(month + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-                      setSelectedDate(ds); setSelectedSlot(null); setStep(1);
+                      setSelectedDate(ds); setStartTime(null); setEndTime(null); setStep(1);
                     }} disabled={!isAvail}
-                    className={`aspect-square rounded-lg text-xs font-medium transition-all flex items-center justify-center ${isAvail ? 'bg-[#f0eeff] border border-[#c9c4ff] text-[#4740CC] hover:bg-[#6C63FF] hover:text-white hover:border-[#6C63FF] cursor-pointer' : 'text-[#d0d0cc] cursor-not-allowed'}`}>
+                    title={isBlocked ? 'Mentor unavailable' : !inRange ? 'Outside booking range' : undefined}
+                    className={`aspect-square rounded-lg text-xs font-medium transition-all flex items-center justify-center
+                      ${isAvail ? 'bg-[#f0eeff] border border-[#c9c4ff] text-[#4740CC] hover:bg-[#6C63FF] hover:text-white hover:border-[#6C63FF] cursor-pointer'
+                      : isBlocked ? 'bg-[#fff0f0] text-[#e0a0a0] cursor-not-allowed line-through'
+                      : 'text-[#d0d0cc] cursor-not-allowed'}`}>
                       {d}
                     </button>
                   );
                 })}
               </div>
               <p className="text-xs text-[#a3a39e] mt-4 text-center">🌐 All times in {timezone}</p>
+              {bookingFrom && bookingTo && (
+                <p className="text-xs text-[#6b6b66] mt-1 text-center">📅 Bookings open {bookingFrom} → {bookingTo}</p>
+              )}
               {availableDays.size === 0 && (
                 <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-center">
                   <p className="text-xs text-amber-700">This mentor hasn't set their weekly schedule yet.</p>
@@ -321,65 +332,62 @@ function BookingModal({ mentor, onClose, onBooked }) {
           {/* Step 1: Start time → End time */}
           {step === 1 && selectedDate && (
             <div>
-              <div className="flex items-center gap-2 mb-4">
+              <div className="flex items-center gap-2 mb-5">
                 <button onClick={() => { setStep(0); setStartTime(null); setEndTime(null); }} className="text-xs text-[#6C63FF] hover:underline font-medium">← Back</button>
                 <p className="text-sm font-semibold text-[#0e0e0d]">
                   {new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                 </p>
               </div>
-              {loadingSlots ? (
-                <div className="grid grid-cols-3 gap-2">{[...Array(6)].map((_, i) => <div key={i} className="h-10 rounded-lg bg-[#f0f0ee] animate-pulse" />)}</div>
-              ) : (
-                <>
-                  {/* Start time picker */}
-                  <p className="text-xs font-semibold text-[#6b6b66] uppercase tracking-wide mb-2">Select Start Time</p>
-                  {getTimePoints(selectedDate).length === 0 ? (
-                    <p className="text-sm text-center text-[#6b6b66] py-4">No availability for this day.</p>
-                  ) : (
-                    <div className="grid grid-cols-3 gap-2 mb-4">
-                      {getTimePoints(selectedDate).slice(0, -1).map(t => {
-                        const alreadyBooked = bookedSlots.some(b => b.date === selectedDate && b.startTime <= t && b.endTime > t);
-                        return (
-                          <button key={t} disabled={alreadyBooked}
-                            onClick={() => { setStartTime(t); setEndTime(null); }}
-                            className={`py-2.5 rounded-xl border text-xs font-semibold transition-all
-                              ${alreadyBooked ? 'border-[#efefed] text-[#d0d0cc] bg-[#f7f7f6] cursor-not-allowed line-through'
-                              : startTime === t ? 'bg-[#6C63FF] border-[#6C63FF] text-white'
-                              : 'border-[#e0e0dd] text-[#111110] hover:border-[#6C63FF] hover:bg-[#f0eeff] hover:text-[#4740CC] cursor-pointer'}`}>
-                            {fmt12(t)}
-                          </button>
-                        );
-                      })}
+              {(() => {
+                const dayOfWeek = new Date(selectedDate + 'T12:00:00').getDay();
+                const sch = schedule.find(s => s.day === dayOfWeek);
+                if (!sch) return <p className="text-sm text-center text-[#6b6b66] py-4">No availability for this day.</p>;
+                return (
+                  <>
+                    <p className="text-xs text-[#a3a39e] mb-4 text-center">
+                      Mentor available {fmt12(sch.startTime)} – {fmt12(sch.endTime)} · Max {maxDuration} min · {timezone}
+                    </p>
+                    {/* Time range inputs */}
+                    <div className="flex items-end gap-3 mb-4">
+                      <div className="flex-1">
+                        <label className="block text-xs font-semibold text-[#6b6b66] uppercase tracking-wide mb-1.5">From</label>
+                        <input type="time" value={startTime || ''} min={sch.startTime} max={sch.endTime}
+                          onChange={e => { setStartTime(e.target.value); setEndTime(null); }}
+                          className="w-full rounded-xl border border-[#e0e0dd] bg-[#fafaf9] px-3 py-2.5 text-sm focus:outline-none focus:border-[#6C63FF] transition" />
+                      </div>
+                      <span className="text-[#a3a39e] pb-2.5 text-lg">→</span>
+                      <div className="flex-1">
+                        <label className="block text-xs font-semibold text-[#6b6b66] uppercase tracking-wide mb-1.5">To</label>
+                        <input type="time" value={endTime || ''} min={startTime || sch.startTime} max={sch.endTime}
+                          disabled={!startTime}
+                          onChange={e => setEndTime(e.target.value)}
+                          className="w-full rounded-xl border border-[#e0e0dd] bg-[#fafaf9] px-3 py-2.5 text-sm focus:outline-none focus:border-[#6C63FF] transition disabled:opacity-40" />
+                      </div>
                     </div>
-                  )}
-
-                  {/* End time picker — shown once start is chosen */}
-                  {startTime && (
-                    <>
-                      <p className="text-xs font-semibold text-[#6b6b66] uppercase tracking-wide mb-2">Select End Time</p>
-                      {getEndTimes(selectedDate, startTime).length === 0 ? (
-                        <p className="text-xs text-amber-600 py-2">No available end times from {fmt12(startTime)}. Try a different start.</p>
-                      ) : (
-                        <div className="grid grid-cols-3 gap-2">
-                          {getEndTimes(selectedDate, startTime).map(t => {
-                            const mins = (() => { const [sh,sm]=startTime.split(':').map(Number); const [eh,em]=t.split(':').map(Number); return (eh*60+em)-(sh*60+sm); })();
-                            return (
-                              <button key={t}
-                                onClick={() => { setEndTime(t); setStep(2); }}
-                                className={`py-2.5 rounded-xl border text-xs font-semibold transition-all
-                                  ${endTime === t ? 'bg-[#6C63FF] border-[#6C63FF] text-white'
-                                  : 'border-[#e0e0dd] text-[#111110] hover:border-[#6C63FF] hover:bg-[#f0eeff] hover:text-[#4740CC] cursor-pointer'}`}>
-                                {fmt12(t)}<span className="block text-[10px] font-normal opacity-70">{mins} min</span>
-                              </button>
-                            );
-                          })}
+                    {/* Validation feedback */}
+                    {startTime && endTime && (() => {
+                      const [sh,sm] = startTime.split(':').map(Number);
+                      const [eh,em] = endTime.split(':').map(Number);
+                      const mins = (eh*60+em) - (sh*60+sm);
+                      if (mins <= 0) return <p className="text-xs text-red-500 mb-3">End time must be after start time.</p>;
+                      if (mins > maxDuration) return <p className="text-xs text-amber-600 mb-3">Session too long — max is {maxDuration} min. Please shorten.</p>;
+                      const overlaps = bookedSlots.some(b => b.date === selectedDate && b.startTime < endTime && b.endTime > startTime);
+                      if (overlaps) return <p className="text-xs text-red-500 mb-3">This time overlaps with an existing booking. Choose a different range.</p>;
+                      return (
+                        <div className="flex items-center justify-between mb-3">
+                          <p className="text-xs text-green-600 font-medium">✓ {mins} min session selected</p>
+                          <button onClick={() => setStep(2)}
+                            className="px-4 py-2 rounded-xl bg-[#6C63FF] text-white text-xs font-bold hover:bg-[#5750D4] transition">
+                            Next →
+                          </button>
                         </div>
-                      )}
-                      <p className="text-xs text-[#a3a39e] mt-3">Max session: {maxDuration} min · Times in {timezone}</p>
-                    </>
-                  )}
-                </>
-              )}
+                      );
+                    })()}
+                    {!startTime && <p className="text-xs text-[#a3a39e]">Pick a start time to continue.</p>}
+                    {startTime && !endTime && <p className="text-xs text-[#a3a39e]">Now pick an end time.</p>}
+                  </>
+                );
+              })()}
             </div>
           )}
 

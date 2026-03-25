@@ -65,6 +65,11 @@ const profileSchema = new mongoose.Schema(
       startTime: { type: String, default: '09:00' },
       endTime:   { type: String, default: '17:00' },
     }],
+    // Date range within which mentees can book (YYYY-MM-DD strings)
+    mentorBookingDateFrom: { type: String, default: '' },
+    mentorBookingDateTo:   { type: String, default: '' },
+    // Specific dates the mentor wants to skip/block (YYYY-MM-DD strings)
+    mentorBlockedDates:    { type: [String], default: [] },
     socialLinks: {
       instagram: { type: String, default: '' },
       youtube: { type: String, default: '' },
