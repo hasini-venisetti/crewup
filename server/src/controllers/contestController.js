@@ -29,8 +29,8 @@ const getContest = async (req, res, next) => {
 // POST /api/contests  (admin)
 const createContest = async (req, res, next) => {
   try {
-    const { title, description, prizeAmount, prizeDescription, submissionDeadline } = req.body;
-    const contest = await Contest.create({ title, description, prizeAmount, prizeDescription, submissionDeadline, createdBy: req.user._id });
+    const { title, description, prizeAmount, prizeDescription, submissionDeadline, theme, maxDuration, allowedLanguages, rules, teamFormedAfter } = req.body;
+    const contest = await Contest.create({ title, description, prizeAmount, prizeDescription, submissionDeadline, theme, maxDuration, allowedLanguages, rules, teamFormedAfter, createdBy: req.user._id });
 
     // Notify all users
     const users = await User.find({ isSuspended: false }).select('_id').lean();
