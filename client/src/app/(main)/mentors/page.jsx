@@ -246,10 +246,10 @@ function BookingModal({ mentor, onClose, onBooked }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#efefed] flex-shrink-0">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-[#efefed] flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#e4e1ff] to-[#f0eeff] flex items-center justify-center text-[#3730A3] font-bold text-sm overflow-hidden flex-shrink-0">
               {mentor.user?.profileImage ? <img src={mentor.user.profileImage} alt="" className="w-9 h-9 object-cover" /> : mentor.user?.name?.charAt(0).toUpperCase()}
@@ -264,7 +264,7 @@ function BookingModal({ mentor, onClose, onBooked }) {
 
         {/* Step indicator */}
         {step < 3 && (
-          <div className="flex items-center gap-1 px-6 pt-3 pb-1 flex-shrink-0">
+          <div className="flex items-center gap-1 px-4 sm:px-6 pt-3 pb-1 flex-shrink-0">
             {['Date','Time','Details'].map((s, i) => (
               <div key={s} className="flex items-center gap-1">
                 <div className={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center transition-colors ${step >= i ? 'bg-[#6C63FF] text-white' : 'bg-[#f0f0ee] text-[#a3a39e]'}`}>
@@ -278,7 +278,7 @@ function BookingModal({ mentor, onClose, onBooked }) {
         )}
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
 
           {/* Step 0: Calendar */}
           {step === 0 && (
@@ -473,7 +473,7 @@ function BookingModal({ mentor, onClose, onBooked }) {
 
         {/* Footer */}
         {step === 2 && (
-          <div className="flex gap-3 px-6 py-4 border-t border-[#efefed] flex-shrink-0">
+          <div className="flex gap-3 px-4 sm:px-6 py-4 border-t border-[#efefed] flex-shrink-0">
             <button onClick={() => setStep(1)} className="flex-1 py-2.5 rounded-xl border border-[#e0e0dd] text-sm font-semibold text-[#6b6b66] hover:border-[#0e0e0d] transition">Back</button>
             <button onClick={handleBook} disabled={booking || (isInPerson && !meetingAddress.trim())}
               className="flex-1 py-2.5 rounded-xl bg-[#6C63FF] hover:bg-[#5750D4] text-white text-sm font-semibold transition disabled:opacity-50 flex items-center justify-center gap-2">
@@ -482,7 +482,7 @@ function BookingModal({ mentor, onClose, onBooked }) {
           </div>
         )}
         {step === 3 && (
-          <div className="flex gap-3 px-6 py-4 border-t border-[#efefed] flex-shrink-0">
+          <div className="flex gap-3 px-4 sm:px-6 py-4 border-t border-[#efefed] flex-shrink-0">
             <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-[#e0e0dd] text-sm font-semibold text-[#6b6b66] hover:border-[#0e0e0d] transition">Close</button>
             <Link href="/mentors/dashboard?tab=sessions" onClick={onClose}
               className="flex-1 py-2.5 rounded-xl bg-[#6C63FF] text-white text-sm font-semibold hover:bg-[#5750D4] transition text-center">
