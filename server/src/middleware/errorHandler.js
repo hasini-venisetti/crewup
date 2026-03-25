@@ -2,6 +2,11 @@ const errorHandler = (err, req, res, next) => {
   let statusCode = err.statusCode || 500;
   let message = err.message || 'Internal Server Error';
 
+  // Always log 500s so they appear in Railway logs
+  if (statusCode >= 500) {
+    console.error(`[SERVER ERROR] ${req.method} ${req.originalUrl} →`, err.stack || err.message);
+  }
+
   // Mongoose duplicate key
   if (err.code === 11000) {
     const field = Object.keys(err.keyValue)[0];

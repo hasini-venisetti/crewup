@@ -194,9 +194,30 @@ const gracefulShutdown = (signal) => {
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT',  () => gracefulShutdown('SIGINT'));
 
-// Log unhandled rejections (don't crash, but surface them)
+// Log unhandled rejections + email alert in production
 process.on('unhandledRejection', (reason) => {
   console.error('⚠️  Unhandled Rejection:', reason);
+  if (process.env.NODE_ENV === 'production') {
+    const { sendEmail } = require('./utils/emailService');
+    const adminEmail = process.env.ADMIN_ALERT_EMAIL || process.env.SENDER_EMAIL;
+    if (adminEmail) {
+      sendEmail(adminEmail, '⚠️ CREWUP Server Error', `<pre>${String(reason?.stack || reason)}</pre>`)
+        .catch(() => {});
+    }
+  }
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('💥 Uncaught Exception:', err);
+  if (process.env.NODE_ENV === 'production') {
+    const { sendEmail } = require('./utils/emailService');
+    const adminEmail = process.env.ADMIN_ALERT_EMAIL || process.env.SENDER_EMAIL;
+    if (adminEmail) {
+      sendEmail(adminEmail, '💥 CREWUP Crashed', `<pre>${err.stack}</pre>`)
+        .catch(() => {});
+    }
+  }
+  process.exit(1);
 });
 
 module.exports = { app, server, io };
