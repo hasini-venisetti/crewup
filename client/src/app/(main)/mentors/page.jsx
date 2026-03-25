@@ -138,8 +138,8 @@ function BookingModal({ mentor, onClose, onBooked }) {
   const timezone      = mentor.mentorTimezone || 'Asia/Kolkata';
   const sessionTypes  = mentor.mentorSessionTypes || [];
   const mentorUserId  = mentor.user?._id || mentor.user?.id;
-  // Mentee picks their own duration; mentor's setting is the max cap
-  const maxDuration   = mentor.mentorSessionDuration || 60;
+  // Mentor's setting is the max cap (in minutes)
+  const maxDuration   = mentor.mentorSessionDuration || 120;
   // Is this an in-person or "both" mentor? If so, mentee must share location
   const isInPerson    = mentor.mentorLocationType === 'offline' || mentor.mentorLocationType === 'both';
 
@@ -148,12 +148,20 @@ function BookingModal({ mentor, onClose, onBooked }) {
   const [selectedDate,   setSelectedDate]   = useState(null);
   const [bookedSlots,    setBookedSlots]    = useState([]);
   const [loadingSlots,   setLoadingSlots]   = useState(false);
-  const [selectedSlot,   setSelectedSlot]   = useState(null);
-  const [duration,       setDuration]       = useState(maxDuration >= 60 ? 60 : 30);
+  const [startTime,      setStartTime]      = useState(null);   // 'HH:MM'
+  const [endTime,        setEndTime]        = useState(null);   // 'HH:MM'
   const [sessionType,    setSessionType]    = useState(sessionTypes[0] || '');
   const [notes,          setNotes]          = useState('');
   const [meetingAddress, setMeetingAddress] = useState('');
   const [booking,        setBooking]        = useState(false);
+
+  // derive duration in minutes from start/end
+  const duration = (startTime && endTime)
+    ? (() => { const [sh,sm]=startTime.split(':').map(Number); const [eh,em]=endTime.split(':').map(Number); return (eh*60+em)-(sh*60+sm); })()
+    : 0;
+
+  // selectedSlot shape kept for summary display
+  const selectedSlot = (startTime && endTime) ? { startTime, endTime } : null;
 
   const year  = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
@@ -175,23 +183,44 @@ function BookingModal({ mentor, onClose, onBooked }) {
   for (let i = 0; i < firstDay; i++) calDays.push(null);
   for (let d = 1; d <= daysInMonth; d++) calDays.push(d);
 
-  const generateSlots = (dateStr) => {
+  // Generate all 30-min time points within mentor's available window for a date
+  const getTimePoints = (dateStr) => {
     const dayOfWeek = new Date(dateStr + 'T12:00:00').getDay();
     const sch = schedule.find(s => s.day === dayOfWeek);
     if (!sch) return [];
-    const slots = [];
+    const points = [];
     const [sh, sm] = sch.startTime.split(':').map(Number);
     const [eh, em] = sch.endTime.split(':').map(Number);
     let cur = sh * 60 + sm;
     const end = eh * 60 + em;
-    while (cur + duration <= end) {
-      const s = `${String(Math.floor(cur / 60)).padStart(2,'0')}:${String(cur % 60).padStart(2,'0')}`;
-      const e = `${String(Math.floor((cur + duration) / 60)).padStart(2,'0')}:${String((cur + duration) % 60).padStart(2,'0')}`;
-      const isBooked = bookedSlots.some(b => b.date === dateStr && b.startTime === s);
-      slots.push({ startTime: s, endTime: e, isBooked });
-      cur += duration;
+    while (cur <= end) {
+      points.push(`${String(Math.floor(cur / 60)).padStart(2,'0')}:${String(cur % 60).padStart(2,'0')}`);
+      cur += 30;
     }
-    return slots;
+    return points;
+  };
+
+  // Valid end times given a chosen start: at least 30 min, at most maxDuration, within window, not overlapping a booked slot
+  const getEndTimes = (dateStr, start) => {
+    if (!start) return [];
+    const dayOfWeek = new Date(dateStr + 'T12:00:00').getDay();
+    const sch = schedule.find(s => s.day === dayOfWeek);
+    if (!sch) return [];
+    const [sh2, sm2] = start.split(':').map(Number);
+    const startMins = sh2 * 60 + sm2;
+    const [eh, em] = sch.endTime.split(':').map(Number);
+    const windowEnd = eh * 60 + em;
+    const maxEnd = Math.min(startMins + maxDuration, windowEnd);
+    const ends = [];
+    let cur = startMins + 30;
+    while (cur <= maxEnd) {
+      const t = `${String(Math.floor(cur / 60)).padStart(2,'0')}:${String(cur % 60).padStart(2,'0')}`;
+      // check no booked slot overlaps [start, t)
+      const overlaps = bookedSlots.some(b => b.date === dateStr && b.startTime < t && b.endTime > start);
+      if (!overlaps) ends.push(t);
+      cur += 30;
+    }
+    return ends;
   };
 
   const fmt12 = (t) => {
@@ -206,7 +235,7 @@ function BookingModal({ mentor, onClose, onBooked }) {
   const handleBook = async () => {
     setBooking(true);
     try {
-      await mentorAPI.requestBooking(mentorUserId, { date: selectedDate, startTime: selectedSlot.startTime, endTime: selectedSlot.endTime, sessionType, notes, meetingAddress, timezone, duration });
+      await mentorAPI.requestBooking(mentorUserId, { date: selectedDate, startTime, endTime, sessionType, notes, meetingAddress, timezone, duration });
       setStep(3);
       onBooked?.();
     } catch (err) {
@@ -252,24 +281,6 @@ function BookingModal({ mentor, onClose, onBooked }) {
           {/* Step 0: Calendar */}
           {step === 0 && (
             <div>
-              {/* Duration picker — mentee decides */}
-              <div className="mb-4">
-                <p className="text-xs font-semibold text-[#6b6b66] uppercase tracking-wide mb-2">How long do you need?</p>
-                <div className="flex gap-2">
-                  {[
-                    { mins: 30,  label: '30 min' },
-                    { mins: 60,  label: '1 hr'   },
-                    { mins: 90,  label: '1.5 hr' },
-                    { mins: 120, label: '2 hr'   },
-                  ].filter(({ mins }) => mins <= maxDuration).map(({ mins, label }) => (
-                    <button key={mins} type="button"
-                      onClick={() => { setDuration(mins); setSelectedSlot(null); }}
-                      className={`flex-1 py-2 rounded-xl border text-xs font-semibold transition-all ${duration === mins ? 'bg-[#6C63FF] border-[#6C63FF] text-white' : 'border-[#e0e0dd] text-[#6b6b66] hover:border-[#6C63FF] hover:text-[#6C63FF]'}`}>
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
               <div className="flex items-center justify-between mb-4">
                 <button onClick={() => setCurrentMonth(new Date(year, month - 1, 1))} className="w-8 h-8 rounded-full bg-[#f7f7f6] hover:bg-[#efefed] flex items-center justify-center text-base leading-none">‹</button>
                 <p className="text-sm font-semibold text-[#0e0e0d]">{MONTHS[month]} {year}</p>
@@ -307,32 +318,66 @@ function BookingModal({ mentor, onClose, onBooked }) {
             </div>
           )}
 
-          {/* Step 1: Time slots */}
+          {/* Step 1: Start time → End time */}
           {step === 1 && selectedDate && (
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <button onClick={() => setStep(0)} className="text-xs text-[#6C63FF] hover:underline font-medium">← Back</button>
+                <button onClick={() => { setStep(0); setStartTime(null); setEndTime(null); }} className="text-xs text-[#6C63FF] hover:underline font-medium">← Back</button>
                 <p className="text-sm font-semibold text-[#0e0e0d]">
                   {new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                 </p>
               </div>
               {loadingSlots ? (
-                <div className="grid grid-cols-3 gap-2">{[...Array(9)].map((_, i) => <div key={i} className="h-10 rounded-lg bg-[#f0f0ee] animate-pulse" />)}</div>
+                <div className="grid grid-cols-3 gap-2">{[...Array(6)].map((_, i) => <div key={i} className="h-10 rounded-lg bg-[#f0f0ee] animate-pulse" />)}</div>
               ) : (
                 <>
-                  <div className="grid grid-cols-3 gap-2">
-                    {generateSlots(selectedDate).map(slot => (
-                      <button key={slot.startTime} disabled={slot.isBooked}
-                        onClick={() => { setSelectedSlot(slot); setStep(2); }}
-                        className={`py-2.5 rounded-xl border text-xs font-semibold transition-all ${slot.isBooked ? 'border-[#efefed] text-[#d0d0cc] bg-[#f7f7f6] cursor-not-allowed line-through' : 'border-[#e0e0dd] text-[#111110] hover:border-[#6C63FF] hover:bg-[#f0eeff] hover:text-[#4740CC] cursor-pointer'}`}>
-                        {fmt12(slot.startTime)}
-                      </button>
-                    ))}
-                    {generateSlots(selectedDate).length === 0 && (
-                      <p className="col-span-3 text-sm text-center text-[#6b6b66] py-4">No slots available for this day.</p>
-                    )}
-                  </div>
-                  <p className="text-xs text-[#a3a39e] mt-3">{duration}-min sessions · Times in {timezone}</p>
+                  {/* Start time picker */}
+                  <p className="text-xs font-semibold text-[#6b6b66] uppercase tracking-wide mb-2">Select Start Time</p>
+                  {getTimePoints(selectedDate).length === 0 ? (
+                    <p className="text-sm text-center text-[#6b6b66] py-4">No availability for this day.</p>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-2 mb-4">
+                      {getTimePoints(selectedDate).slice(0, -1).map(t => {
+                        const alreadyBooked = bookedSlots.some(b => b.date === selectedDate && b.startTime <= t && b.endTime > t);
+                        return (
+                          <button key={t} disabled={alreadyBooked}
+                            onClick={() => { setStartTime(t); setEndTime(null); }}
+                            className={`py-2.5 rounded-xl border text-xs font-semibold transition-all
+                              ${alreadyBooked ? 'border-[#efefed] text-[#d0d0cc] bg-[#f7f7f6] cursor-not-allowed line-through'
+                              : startTime === t ? 'bg-[#6C63FF] border-[#6C63FF] text-white'
+                              : 'border-[#e0e0dd] text-[#111110] hover:border-[#6C63FF] hover:bg-[#f0eeff] hover:text-[#4740CC] cursor-pointer'}`}>
+                            {fmt12(t)}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* End time picker — shown once start is chosen */}
+                  {startTime && (
+                    <>
+                      <p className="text-xs font-semibold text-[#6b6b66] uppercase tracking-wide mb-2">Select End Time</p>
+                      {getEndTimes(selectedDate, startTime).length === 0 ? (
+                        <p className="text-xs text-amber-600 py-2">No available end times from {fmt12(startTime)}. Try a different start.</p>
+                      ) : (
+                        <div className="grid grid-cols-3 gap-2">
+                          {getEndTimes(selectedDate, startTime).map(t => {
+                            const mins = (() => { const [sh,sm]=startTime.split(':').map(Number); const [eh,em]=t.split(':').map(Number); return (eh*60+em)-(sh*60+sm); })();
+                            return (
+                              <button key={t}
+                                onClick={() => { setEndTime(t); setStep(2); }}
+                                className={`py-2.5 rounded-xl border text-xs font-semibold transition-all
+                                  ${endTime === t ? 'bg-[#6C63FF] border-[#6C63FF] text-white'
+                                  : 'border-[#e0e0dd] text-[#111110] hover:border-[#6C63FF] hover:bg-[#f0eeff] hover:text-[#4740CC] cursor-pointer'}`}>
+                                {fmt12(t)}<span className="block text-[10px] font-normal opacity-70">{mins} min</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                      <p className="text-xs text-[#a3a39e] mt-3">Max session: {maxDuration} min · Times in {timezone}</p>
+                    </>
+                  )}
                 </>
               )}
             </div>
@@ -695,7 +740,11 @@ export default function MentorsPage() {
                     {/* Book Session — shown for all open non-own mentors */}
                     {!isOwnProfile && !isUnavailable && (
                       <button
-                        onClick={() => { if (!user) { router.push('/login'); return; } setBookTarget(mentor); }}
+                        onClick={() => {
+                          if (!user) { router.push('/login'); return; }
+                          if (!user.isEmailVerified) { toast.error('Please verify your email before booking a session.'); router.push('/verify-email'); return; }
+                          setBookTarget(mentor);
+                        }}
                         className="flex-1 text-center text-xs font-semibold px-3 py-2 rounded-lg bg-[#6C63FF] text-white hover:bg-[#5750D4] shadow-sm shadow-[#6C63FF]/20 transition">
                         📅 Book Session
                       </button>

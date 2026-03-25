@@ -46,6 +46,10 @@ router.get('/', async (req, res) => {
 // PATCH /api/mentors/settings — update mentor profile fields
 router.patch('/settings', protect, async (req, res) => {
   try {
+    // Only verified users can become mentors
+    if (req.body.isMentor === true && !req.user.isEmailVerified) {
+      return res.status(403).json({ success: false, message: 'Please verify your email before becoming a mentor.' });
+    }
     const {
       isMentor, mentorStatus, mentorFields, mentorBio, mentorRate, mentorCurrency,
       mentorExperience, mentorSessionTypes, mentorLocationType, mentorLanguages,
@@ -247,6 +251,9 @@ router.post('/:mentorUserId/bookings', protect, async (req, res) => {
     const mentorUserId = req.params.mentorUserId;
     const menteeId     = req.user._id || req.user.id;
 
+    if (!req.user.isEmailVerified) {
+      return res.status(403).json({ success: false, message: 'Please verify your email before booking a session.' });
+    }
     if (String(menteeId) === String(mentorUserId)) {
       return res.status(400).json({ success: false, message: 'You cannot book yourself.' });
     }
@@ -371,7 +378,8 @@ router.patch('/bookings/:id/confirm', protect, async (req, res) => {
         endTime:      booking.endTime,
         duration:     booking.duration || 60,
         timezone:     booking.timezone || 'Asia/Kolkata',
-        meetingLink:  booking.meetingLink || '',
+        meetingLink:    booking.meetingLink || '',
+        meetingAddress: booking.meetingAddress || '',
       }).catch((e) => console.error('[EMAIL ERROR]', e.message));
     }
 

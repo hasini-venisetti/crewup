@@ -440,10 +440,20 @@ export default function MentorDashboard() {
                 <p className="font-medium text-[#111110]">Open to Mentoring</p>
                 <p className="text-sm text-[#6b6b66]">Show up in the Mentor Directory</p>
               </div>
-              <button onClick={() => setForm(f => ({ ...f, isMentor: !f.isMentor }))}
+              <button onClick={() => {
+                if (!form.isMentor && !user?.isEmailVerified) {
+                  toast.error('Please verify your email before becoming a mentor.');
+                  router.push('/verify-email');
+                  return;
+                }
+                setForm(f => ({ ...f, isMentor: !f.isMentor }));
+              }}
                 className={`w-12 h-6 rounded-full transition-colors relative ${form.isMentor ? 'bg-[#6C63FF]' : 'bg-[#efefed]'}`}>
                 <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${form.isMentor ? 'translate-x-6' : 'translate-x-0.5'}`} />
               </button>
+              {!user?.isEmailVerified && !form.isMentor && (
+                <p className="text-xs text-amber-600 mt-1 w-full">⚠️ <a href="/verify-email" className="underline">Verify your email</a> to enable mentoring.</p>
+              )}
             </div>
 
             {form.isMentor && (<>
@@ -759,7 +769,12 @@ export default function MentorDashboard() {
                         <p className="text-xs text-[#6b6b66] mb-3">
                           📅 {b.date} &nbsp;·&nbsp; {b.startTime}–{b.endTime} &nbsp;·&nbsp; {b.duration || 60} min &nbsp;·&nbsp; {b.timezone}
                         </p>
-                        {b.meetingAddress && (
+                        {b.meetingAddress && b.status === 'pending' && (
+                          <p className="text-xs text-[#a3a39e] bg-[#f7f7f6] border border-[#efefed] rounded-lg px-3 py-2 mb-2">
+                            📍 In-person session — mentee&apos;s location revealed after you confirm.
+                          </p>
+                        )}
+                        {b.meetingAddress && b.status !== 'pending' && (
                           <p className="text-xs text-[#4740CC] bg-[#f0eeff] border border-[#c9c4ff] rounded-lg px-3 py-2 mb-2 font-medium">
                             📍 Mentee&apos;s Location: {b.meetingAddress}
                           </p>
