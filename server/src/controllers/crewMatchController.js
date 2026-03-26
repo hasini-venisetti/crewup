@@ -73,6 +73,22 @@ function mapRoleToUserRole(requiredRole) {
 }
 
 /**
+ * Detect gender requirement from a role string.
+ * e.g. "Female Actor" → 'female', "Male Lead" → 'male', "Actor" → null (any)
+ * Returns 'male' | 'female' | 'non-binary' | null
+ */
+function parseGenderFromRole(requiredRole) {
+  const lower = requiredRole.toLowerCase();
+  if (/\bfemale\b|\bwoman\b|\bgirl\b|\blady\b|\bactress\b/.test(lower)) return 'female';
+  if (/\bmale\b|\bman\b|\bguy\b|\bboy\b|\bactor\b/.test(lower) && !/\bfemale\b/.test(lower)) {
+    // "Actor" alone means any gender — only return 'male' if explicitly stated
+    if (/\bmale\b|\bman\b|\bguy\b|\bboy\b/.test(lower)) return 'male';
+  }
+  if (/\bnon.?binary\b/.test(lower)) return 'non-binary';
+  return null; // no gender restriction
+}
+
+/**
  * Skill overlap: check how many role keywords appear in user's skill list.
  * Returns 0-20 pts.
  */
@@ -151,13 +167,13 @@ const getCrewSuggestions = async (req, res, next) => {
       ...(project.teamMembers || []).map((m) => m.user),
     ];
 
-    // Fetch candidate users matching needed roles
+    // Fetch candidate users matching needed roles (include gender for filtering)
     const candidates = await User.find({
       role:     { $in: neededUserRoles },
       _id:      { $nin: excludeIds },
       isActive: true,
     })
-      .select('_id name username role profileImage')
+      .select('_id name username role gender profileImage')
       .lean();
 
     if (candidates.length === 0) {
@@ -197,7 +213,16 @@ const getCrewSuggestions = async (req, res, next) => {
       const targetUserRole = mapRoleToUserRole(requiredRole);
       if (!targetUserRole) continue;
 
-      const roleCandidates = candidates.filter((u) => u.role === targetUserRole);
+      const requiredGender = parseGenderFromRole(requiredRole);
+      const roleCandidates = candidates.filter((u) => {
+        if (u.role !== targetUserRole) return false;
+        // If the role specifies a gender, only include users who match
+        // (users who selected 'prefer-not-to-say' or left gender blank are excluded from gendered roles)
+        if (requiredGender) {
+          return u.gender === requiredGender;
+        }
+        return true;
+      });
 
       const scored = roleCandidates.map((user) => {
         const uid     = user._id.toString();
