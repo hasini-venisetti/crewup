@@ -18,6 +18,7 @@ const createProject = async (req, res, next) => {
       title, description, projectType, requiredRoles, isPaid, budget, location, deadline,
       experienceLevel, projectTags,
       productionType, auditionFormat, shootingLocationType, compensationDetails,
+      roleDescriptions, rolePositions,
     } = req.body;
 
     // Safety guard: compensationDetails required when isPaid
@@ -74,6 +75,8 @@ const createProject = async (req, res, next) => {
       auditionFormat:       auditionFormat       || 'not-applicable',
       shootingLocationType: shootingLocationType || 'not-specified',
       compensationDetails:  compensationDetails  || '',
+      roleDescriptions:     roleDescriptions     || {},
+      rolePositions:        rolePositions        || {},
       moderationStatus: 'approved',
       riskScore: isDraft ? 0 : score,
       riskLevel: isDraft ? 'low' : level,
