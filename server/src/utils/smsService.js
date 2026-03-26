@@ -39,11 +39,21 @@ if (TWILIO_SID) console.log('[SMS SERVICE] Using Twilio ✓');
 else            console.warn('[SMS SERVICE] No provider configured — OTPs will be logged only. Set TWILIO_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE in Railway.');
 
 // ── Send OTP via SMS ──────────────────────────────────────────────────────────
+const normalisePhone = (phone) => {
+  const digits = phone.replace(/\D/g, '');
+  // Indian numbers: 10 digits starting with 6-9 → add +91
+  if (digits.length === 10 && /^[6-9]/.test(digits)) return `+91${digits}`;
+  // Already has country code (12 digits for India: 91XXXXXXXXXX)
+  if (digits.length === 12 && digits.startsWith('91')) return `+${digits}`;
+  // Already in E.164 format or unknown — send as-is
+  return phone.startsWith('+') ? phone : `+${digits}`;
+};
+
 const sendPhoneOTPSMS = async (phone, otp) => {
   const message = `${otp} is your CrewUpFilms verification code. Valid for 10 minutes. Do not share this code with anyone.`;
 
   if (TWILIO_SID && TWILIO_AUTH_TOKEN && TWILIO_PHONE) {
-    await sendViaTwilio(phone, message);
+    await sendViaTwilio(normalisePhone(phone), message);
     console.log(`[SMS SENT] OTP via Twilio to ${phone}`);
     return;
   }
