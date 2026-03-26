@@ -8,7 +8,7 @@ const getProfile = async (req, res, next) => {
   try {
     const profile = await Profile.findOne({ user: req.params.id }).populate(
       'user',
-      'name username role profileImage createdAt'
+      'name username role roles profileImage createdAt'
     );
 
     if (!profile) {
@@ -50,7 +50,7 @@ const updateProfile = async (req, res, next) => {
       { user: req.user._id },
       updateData,
       { new: true, runValidators: true }
-    ).populate('user', 'name username role profileImage');
+    ).populate('user', 'name username role roles profileImage');
 
     if (!profile) {
       return res.status(404).json({ success: false, message: 'Profile not found' });
@@ -113,7 +113,7 @@ const addPortfolioItem = async (req, res, next) => {
       { user: req.user._id },
       { $push: { portfolio: { title, description, type, link, tags, issuer, issueDate, expiryDate, credentialId, certificateFileUrl } } },
       { new: true, runValidators: true }
-    ).populate('user', 'name username role profileImage');
+    ).populate('user', 'name username role roles profileImage');
 
     res.status(201).json({ success: true, message: 'Portfolio item added', data: profile });
   } catch (error) {
