@@ -325,29 +325,7 @@ const sendLaunchNotification = async (email, name) => {
 
   const text = `Hi ${displayName},\n\nCREWUPFILMS is officially live.\n\nYou joined our waitlist early — now it's your turn to be first on the platform.\n\nWhat you can do:\n- Post a project and find your crew\n- Browse open roles and apply\n- Upload your films\n- Enter the inaugural Short Film Contest (cash prizes in INR)\n\nGet started: ${siteUrl}\n\n— CREWUPFILMS`;
 
-  // Launch emails use Gmail SMTP directly — better deliverability for bulk sends
-  // (Resend is used for all other transactional emails)
-  const GMAIL_USER = process.env.GMAIL_USER;
-  const GMAIL_PASS = (process.env.GMAIL_PASS || '').replace(/\s+/g, '') || undefined;
-  if (GMAIL_USER && GMAIL_PASS) {
-    const nodemailer = require('nodemailer');
-    const gmailTransport = nodemailer.createTransport({
-      host: 'smtp.gmail.com', port: 587, secure: false, requireTLS: true,
-      auth: { user: GMAIL_USER, pass: GMAIL_PASS },
-      connectionTimeout: 10000, greetingTimeout: 10000, socketTimeout: 15000,
-    });
-    await gmailTransport.sendMail({
-      from: `CREWUPFILMS <${GMAIL_USER}>`,
-      to: email,
-      subject: `CREWUPFILMS is live, ${displayName}`,
-      html,
-      text,
-    });
-    console.log(`[GMAIL LAUNCH] ✓ Sent to ${email}`);
-  } else {
-    // Fallback to normal email chain if Gmail not configured
-    await sendEmail(email, `CREWUPFILMS is live, ${displayName}`, html, text);
-  }
+  await sendEmail(email, `CREWUPFILMS is live, ${displayName}`, html, text);
   console.log(`[EMAIL SENT] sendLaunchNotification to ${email}`);
 };
 
