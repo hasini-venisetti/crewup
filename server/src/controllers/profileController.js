@@ -82,7 +82,7 @@ const getMyProfile = async (req, res, next) => {
   try {
     const profile = await Profile.findOne({ user: req.user._id }).populate(
       'user',
-      'name username role profileImage email createdAt'
+      'name username role roles profileImage email createdAt isEmailVerified phone'
     );
 
     if (!profile) {
