@@ -26,6 +26,8 @@ const notificationSchema = new mongoose.Schema(
         'contest_announcement',     // admin announces a contest
         'contest_submission',       // contest submission approved / rejected
         'platform_update',          // admin broadcasts a platform update
+        'general',                  // generic project notifications (member removed, member left)
+        'report_submitted',         // confirmation back to the reporter
       ],
       required: true,
     },
