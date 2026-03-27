@@ -11,7 +11,9 @@ const getCreators = async (req, res, next) => {
     const limit = 12;
     const skip = (pageNum - 1) * limit;
 
-    const userFilter = {};
+    const userFilter = { isActive: true, isSuspended: false };
+    // Exclude the logged-in user so pagination counts are accurate
+    if (req.user?._id) userFilter._id = { $ne: req.user._id };
     if (role) userFilter.role = role;
     // Name / username text search
     if (q) {

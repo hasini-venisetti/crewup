@@ -39,6 +39,19 @@ const protect = async (req, res, next) => {
   }
 };
 
+// Like protect but doesn't block unauthenticated requests — just sets req.user if token present
+const optionalProtect = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer')) return next();
+    const token = authHeader.split(' ')[1];
+    if (!token) return next();
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = await User.findById(decoded.id).select('-password');
+  } catch (_) { /* invalid/expired token — treat as guest */ }
+  next();
+};
+
 // Must be used AFTER protect — checks req.user.isAdmin
 const adminOnly = (req, res, next) => {
   if (!req.user?.isAdmin) {
@@ -47,4 +60,4 @@ const adminOnly = (req, res, next) => {
   next();
 };
 
-module.exports = { protect, adminOnly };
+module.exports = { protect, adminOnly, optionalProtect };
