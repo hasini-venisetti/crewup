@@ -37,6 +37,12 @@ router.get('/', async (req, res) => {
       );
     }
 
+    // Shuffle so different mentors surface on each refresh
+    for (let i = profiles.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [profiles[i], profiles[j]] = [profiles[j], profiles[i]];
+    }
+
     res.json({ success: true, data: profiles });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

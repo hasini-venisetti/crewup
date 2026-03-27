@@ -159,11 +159,18 @@ const getProjects = async (req, res, next) => {
 
     const skip = (Number(page) - 1) * Number(limit);
     const total = await Project.countDocuments(filter);
-    const projects = await Project.find(filter)
+
+    // Fetch all matching projects then shuffle so every refresh shows a different order
+    const allProjects = await Project.find(filter)
       .populate('createdBy', 'name username role profileImage')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(Number(limit));
+      .lean();
+
+    for (let i = allProjects.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [allProjects[i], allProjects[j]] = [allProjects[j], allProjects[i]];
+    }
+
+    const projects = allProjects.slice(skip, skip + Number(limit));
 
     res.status(200).json({
       success: true,
