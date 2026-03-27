@@ -73,11 +73,24 @@ const getFollowStatus = async (req, res) => {
 
     if (!me || !them) return res.status(400).json({ success: false, message: 'Invalid user ID' });
 
-    const [doc, followers, following] = await Promise.all([
+    const [doc, followersRes, followingRes] = await Promise.all([
       Follow.findOne({ follower: me, following: them }).select('_id').lean(),
-      Follow.countDocuments({ following: them }),
-      Follow.countDocuments({ follower: them }),
+      Follow.aggregate([
+        { $match: { following: them } },
+        { $lookup: { from: 'users', localField: 'follower', foreignField: '_id', as: 'u' } },
+        { $match: { 'u.0': { $exists: true } } },
+        { $count: 'total' },
+      ]),
+      Follow.aggregate([
+        { $match: { follower: them } },
+        { $lookup: { from: 'users', localField: 'following', foreignField: '_id', as: 'u' } },
+        { $match: { 'u.0': { $exists: true } } },
+        { $count: 'total' },
+      ]),
     ]);
+
+    const followers = followersRes[0]?.total || 0;
+    const following = followingRes[0]?.total || 0;
 
     return res.json({ success: true, data: { isFollowing: !!doc, followers, following } });
   } catch (err) {
@@ -97,10 +110,23 @@ const getCounts = async (req, res) => {
     const them = toOid(req.params.userId);
     if (!them) return res.status(400).json({ success: false, message: 'Invalid user ID' });
 
-    const [followers, following] = await Promise.all([
-      Follow.countDocuments({ following: them }),
-      Follow.countDocuments({ follower: them }),
+    const [followersRes, followingRes] = await Promise.all([
+      Follow.aggregate([
+        { $match: { following: them } },
+        { $lookup: { from: 'users', localField: 'follower', foreignField: '_id', as: 'u' } },
+        { $match: { 'u.0': { $exists: true } } },
+        { $count: 'total' },
+      ]),
+      Follow.aggregate([
+        { $match: { follower: them } },
+        { $lookup: { from: 'users', localField: 'following', foreignField: '_id', as: 'u' } },
+        { $match: { 'u.0': { $exists: true } } },
+        { $count: 'total' },
+      ]),
     ]);
+
+    const followers = followersRes[0]?.total || 0;
+    const following = followingRes[0]?.total || 0;
 
     return res.json({ success: true, data: { followers, following } });
   } catch (err) {
