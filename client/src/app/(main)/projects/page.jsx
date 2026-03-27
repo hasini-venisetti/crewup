@@ -36,6 +36,8 @@ export default function ProjectsPage() {
   const [showRoles,     setShowRoles]     = useState(false);
   const [appliedIds,    setAppliedIds]    = useState(new Set());
   const [bookmarkedIds, setBookmarkedIds] = useState(new Set());
+  const [page,          setPage]          = useState(1);
+  const [totalPages,    setTotalPages]    = useState(1);
 
   // Fetch user's applied + bookmarked project IDs once on mount (logged-in only)
   useEffect(() => {
@@ -52,7 +54,7 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     setIsLoading(true);
-    const params = {};
+    const params = { page };
     if (activeTab !== 'All') params.projectType = activeTab.toLowerCase().replace(' ', '-');
     if (isPaid)      params.isPaid   = true;
     if (isRemote)    params.isRemote = true;
@@ -65,10 +67,11 @@ export default function ProjectsPage() {
       .then((res) => {
         const raw = res.data?.data ?? res.data?.projects ?? [];
         setProjects(Array.isArray(raw) ? raw : []);
+        if (res.data?.pagination) setTotalPages(res.data.pagination.pages || 1);
       })
       .catch(() => { setLoadError(true); setProjects([]); })
       .finally(() => setIsLoading(false));
-  }, [activeTab, isPaid, isRemote, roleFilter, search]);
+  }, [activeTab, isPaid, isRemote, roleFilter, search, page]);
 
   const clearAll = () => {
     setActiveTab('All');
@@ -76,6 +79,7 @@ export default function ProjectsPage() {
     setIsRemote(false);
     setRoleFilter('');
     setSearch('');
+    setPage(1);
   };
 
   const handleToggleBookmark = async (projectId) => {
@@ -320,17 +324,32 @@ export default function ProjectsPage() {
             </button>
           </div>
         ) : projects.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {projects.map((project) => (
-              <ProjectCard
-                key={project._id || project.id}
-                project={project}
-                isApplied={appliedIds.has(project._id)}
-                isBookmarked={bookmarkedIds.has(project._id)}
-                onToggleBookmark={user ? handleToggleBookmark : undefined}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {projects.map((project) => (
+                <ProjectCard
+                  key={project._id || project.id}
+                  project={project}
+                  isApplied={appliedIds.has(project._id)}
+                  isBookmarked={bookmarkedIds.has(project._id)}
+                  onToggleBookmark={user ? handleToggleBookmark : undefined}
+                />
+              ))}
+            </div>
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-3 pt-6 pb-2">
+                <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}
+                  className="flex items-center gap-1.5 bg-white border border-[#e0e0dd] text-[#0e0e0d] font-semibold text-sm px-5 py-2.5 rounded-xl hover:border-[#0e0e0d] hover:shadow-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+                  ← Previous
+                </button>
+                <span className="text-sm text-[#6b6b66] font-medium">Page {page} of {totalPages}</span>
+                <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}
+                  className="flex items-center gap-1.5 bg-white border border-[#e0e0dd] text-[#0e0e0d] font-semibold text-sm px-5 py-2.5 rounded-xl hover:border-[#0e0e0d] hover:shadow-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+                  Next →
+                </button>
+              </div>
+            )}
+          </>
         ) : (
           <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[#e0e0dd] bg-white py-20 text-center">
             <p className="text-4xl mb-4">🔍</p>

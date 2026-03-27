@@ -122,7 +122,7 @@ const getFollowers = async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    return res.json({ success: true, data: docs.map((d) => d.follower) });
+    return res.json({ success: true, data: docs.map((d) => d.follower).filter(Boolean) });
   } catch (err) {
     console.error('[getFollowers]', err.message);
     return res.status(500).json({ success: false, message: 'Server error' });
@@ -142,7 +142,7 @@ const getFollowing = async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    return res.json({ success: true, data: docs.map((d) => d.following) });
+    return res.json({ success: true, data: docs.map((d) => d.following).filter(Boolean) });
   } catch (err) {
     console.error('[getFollowing]', err.message);
     return res.status(500).json({ success: false, message: 'Server error' });

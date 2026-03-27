@@ -499,6 +499,8 @@ export default function MentorsPage() {
   const { user } = useAuth();
   const router   = useRouter();
 
+  const MENTORS_PER_PAGE = 12;
+
   const [mentors,      setMentors]      = useState([]);
   const [loading,      setLoading]      = useState(true);
   const [search,       setSearch]       = useState('');
@@ -506,6 +508,7 @@ export default function MentorsPage() {
   const [sessionType,  setSessionType]  = useState('');
   const [locationType, setLocationType] = useState('');
   const [availability, setAvailability] = useState('');
+  const [page,         setPage]         = useState(1);
 
   const [applyTarget,  setApplyTarget]  = useState(null);
   const [applyMsg,     setApplyMsg]     = useState('');
@@ -518,6 +521,7 @@ export default function MentorsPage() {
   const fetchMentors = useCallback(async () => {
     try {
       setLoading(true);
+      setPage(1);
       const res = await mentorAPI.getAll({ field, availability, sessionType, locationType, search });
       const data = res.data?.data || res.data?.mentors || [];
       setMentors(Array.isArray(data) ? data : []);
@@ -622,8 +626,9 @@ export default function MentorsPage() {
             ))}
           </div>
         ) : mentors.length > 0 ? (
+          <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {mentors.map((mentor) => {
+            {mentors.slice((page - 1) * MENTORS_PER_PAGE, page * MENTORS_PER_PAGE).map((mentor) => {
               const creator      = mentor.user;
               const name         = creator?.name || 'Mentor';
               const userId       = creator?._id || creator?.id;
@@ -775,6 +780,27 @@ export default function MentorsPage() {
               );
             })}
           </div>
+          {/* Pagination */}
+          {mentors.length > MENTORS_PER_PAGE && (
+            <div className="flex items-center justify-center gap-4 mt-8">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-4 py-2 rounded-xl border border-[#e0e0dd] text-sm font-medium text-[#6b6b66] hover:bg-[#f7f7f6] disabled:opacity-40 disabled:cursor-not-allowed transition">
+                ← Previous
+              </button>
+              <span className="text-sm text-[#6b6b66]">
+                Page {page} of {Math.ceil(mentors.length / MENTORS_PER_PAGE)}
+              </span>
+              <button
+                onClick={() => setPage((p) => Math.min(Math.ceil(mentors.length / MENTORS_PER_PAGE), p + 1))}
+                disabled={page === Math.ceil(mentors.length / MENTORS_PER_PAGE)}
+                className="px-4 py-2 rounded-xl border border-[#e0e0dd] text-sm font-medium text-[#6b6b66] hover:bg-[#f7f7f6] disabled:opacity-40 disabled:cursor-not-allowed transition">
+                Next →
+              </button>
+            </div>
+          )}
+          </>
         ) : (
           <div className="rounded-2xl border-2 border-dashed border-[#e0e0dd] p-14 text-center">
             <p className="text-3xl mb-3">🎓</p>

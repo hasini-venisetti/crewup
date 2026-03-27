@@ -1500,7 +1500,7 @@ export default function ProfilePage() {
                 </div>
               ) : followersList.length > 0 ? (
                 <div className="space-y-2">
-                  {followersList.map((follower) => (
+                  {followersList.filter(Boolean).map((follower) => (
                     <Link key={follower._id} href={`/profile/${follower._id}`} onClick={() => setShowFollowersModal(false)}
                       className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
                       <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center text-sm font-semibold">
@@ -1540,7 +1540,7 @@ export default function ProfilePage() {
                 </div>
               ) : followingList.length > 0 ? (
                 <div className="space-y-2">
-                  {followingList.map((following) => (
+                  {followingList.filter(Boolean).map((following) => (
                     <Link key={following._id} href={`/profile/${following._id}`} onClick={() => setShowFollowingModal(false)}
                       className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
                       <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center text-sm font-semibold">
