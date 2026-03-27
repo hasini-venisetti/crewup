@@ -67,6 +67,12 @@ const getCreators = async (req, res, next) => {
       });
     }
 
+    // Shuffle so different creators appear on each refresh
+    for (let i = filtered.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [filtered[i], filtered[j]] = [filtered[j], filtered[i]];
+    }
+
     const total = filtered.length;
     const paginated = filtered.slice(skip, skip + limit);
 
