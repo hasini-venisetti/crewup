@@ -139,11 +139,11 @@ function SkeletonCard() {
 
 export default function ExplorePage() {
   const { user } = useAuth();
-  const [creators, setCreators]   = useState([]);
-  const [loading, setLoading]     = useState(false);
-  const [total, setTotal]         = useState(null);
-  const [filters, setFilters]     = useState({ q: '', role: 'all', skill: '', location: '', availability: 'all', page: 1 });
-  const [hasMore, setHasMore]     = useState(true);
+  const [creators, setCreators]     = useState([]);
+  const [loading, setLoading]       = useState(false);
+  const [total, setTotal]           = useState(null);
+  const [totalPages, setTotalPages] = useState(1);
+  const [filters, setFilters]       = useState({ q: '', role: 'all', skill: '', location: '', availability: 'all', page: 1 });
 
   const debouncedFetch = useCallback(
     debounce(async (newFilters, myId) => {
@@ -161,13 +161,11 @@ export default function ExplorePage() {
         const filtered = myId
           ? (data.data || []).filter((c) => c._id !== myId && c._id?.toString() !== myId)
           : (data.data || []);
-        if (newFilters.page === 1) {
-          setCreators(filtered);
-          if (data.total != null) setTotal(data.total);
-        } else {
-          setCreators((prev) => [...prev, ...filtered]);
+        setCreators(filtered);
+        if (data.pagination) {
+          setTotal(data.pagination.total);
+          setTotalPages(data.pagination.pages || 1);
         }
-        setHasMore((data.data?.length ?? 0) === 10);
       } catch {
         toast.error('Failed to load creators');
       } finally {
@@ -185,8 +183,11 @@ export default function ExplorePage() {
   const handleFilterChange = (key, value) =>
     setFilters((prev) => ({ ...prev, [key]: value, page: 1 }));
 
-  const handleLoadMore = () =>
-    setFilters((prev) => ({ ...prev, page: prev.page + 1 }));
+  const handlePrev = () =>
+    setFilters((prev) => ({ ...prev, page: Math.max(1, prev.page - 1) }));
+
+  const handleNext = () =>
+    setFilters((prev) => ({ ...prev, page: Math.min(totalPages, prev.page + 1) }));
 
   const activeFilters = [
     filters.role !== 'all' && { key: 'role', label: filters.role.replace(/-/g, ' '), clear: () => handleFilterChange('role', 'all') },
@@ -357,14 +358,25 @@ export default function ExplorePage() {
           </div>
         )}
 
-        {/* Load More */}
-        {creators.length > 0 && hasMore && !loading && (
-          <div className="text-center pb-4">
+        {/* Pagination — Previous / Next */}
+        {totalPages > 1 && !loading && (
+          <div className="flex items-center justify-center gap-3 pb-6 pt-2">
             <button
-              onClick={handleLoadMore}
-              className="bg-white border border-[#e0e0dd] text-[#0e0e0d] font-semibold text-sm px-8 py-3 rounded-xl hover:border-[#0e0e0d] hover:shadow-sm transition-all"
+              onClick={handlePrev}
+              disabled={filters.page <= 1}
+              className="flex items-center gap-1.5 bg-white border border-[#e0e0dd] text-[#0e0e0d] font-semibold text-sm px-5 py-2.5 rounded-xl hover:border-[#0e0e0d] hover:shadow-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              Load more creators
+              ← Previous
+            </button>
+            <span className="text-sm text-[#6b6b66] font-medium">
+              Page {filters.page} of {totalPages}
+            </span>
+            <button
+              onClick={handleNext}
+              disabled={filters.page >= totalPages}
+              className="flex items-center gap-1.5 bg-white border border-[#e0e0dd] text-[#0e0e0d] font-semibold text-sm px-5 py-2.5 rounded-xl hover:border-[#0e0e0d] hover:shadow-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Next →
             </button>
           </div>
         )}
