@@ -220,7 +220,7 @@ export default function Home() {
               href="/contests"
               className="inline-flex items-center justify-center gap-2 text-[#a78bfa] hover:text-white text-xs font-semibold px-5 py-2 rounded-full border border-[#6055de]/30 hover:border-[#6055de]/70 hover:bg-[#6055de]/10 transition-all duration-250"
             >
-              🏆 Join the Short Film Contest — ₹50,000 in prizes
+              🏆 Join the Short Film Contest
             </Link>
           </div>
 
