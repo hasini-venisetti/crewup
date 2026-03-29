@@ -199,20 +199,28 @@ export default function Home() {
 
           {/* CTAs */}
           <div
-            className="hero-fade flex flex-col sm:flex-row gap-3 justify-center mb-14"
+            className="hero-fade flex flex-col items-center gap-3 justify-center mb-14"
             style={{ animationDelay: '1.6s' }}
           >
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Link
+                href={user ? '/create-project' : '/signup'}
+                className="inline-flex items-center justify-center gap-2 bg-[#6055de] hover:bg-[#5048cc] text-white text-sm font-bold px-8 py-3.5 rounded-xl transition-all duration-250 shadow-lg shadow-[#6055de]/30 hover:shadow-[#6055de]/50 hover:-translate-y-px active:translate-y-0"
+              >
+                {user ? 'Post a Project' : 'Start a Project'} →
+              </Link>
+              <Link
+                href="/projects"
+                className="inline-flex items-center justify-center gap-2 border border-white/12 text-white/60 hover:border-[#6055de]/50 hover:text-white hover:bg-[#6055de]/08 text-sm font-semibold px-8 py-3.5 rounded-xl transition-all duration-250"
+              >
+                Browse Projects
+              </Link>
+            </div>
             <Link
-              href={user ? '/create-project' : '/signup'}
-              className="inline-flex items-center justify-center gap-2 bg-[#6055de] hover:bg-[#5048cc] text-white text-sm font-bold px-8 py-3.5 rounded-xl transition-all duration-250 shadow-lg shadow-[#6055de]/30 hover:shadow-[#6055de]/50 hover:-translate-y-px active:translate-y-0"
+              href="/contests"
+              className="inline-flex items-center justify-center gap-2 text-[#a78bfa] hover:text-white text-xs font-semibold px-5 py-2 rounded-full border border-[#6055de]/30 hover:border-[#6055de]/70 hover:bg-[#6055de]/10 transition-all duration-250"
             >
-              {user ? 'Post a Project' : 'Start a Project'} →
-            </Link>
-            <Link
-              href="/projects"
-              className="inline-flex items-center justify-center gap-2 border border-white/12 text-white/60 hover:border-[#6055de]/50 hover:text-white hover:bg-[#6055de]/08 text-sm font-semibold px-8 py-3.5 rounded-xl transition-all duration-250"
-            >
-              Browse Projects
+              🏆 Join the Short Film Contest — ₹50,000 in prizes
             </Link>
           </div>
 
