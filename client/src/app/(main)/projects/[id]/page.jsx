@@ -38,7 +38,8 @@ const STAGE_LABELS = {
   released:          { label: 'Released',        icon: '🚀' },
 };
 
-function ApplyModal({ project, onClose, onSuccess, appliedRoles = [], preselectedRole = '' }) {
+function ApplyModal({ project, onClose, onSuccess, appliedRoles = [], rejectedRoles = [], preselectedRole = '' }) {
+  // Active (pending/accepted) roles are blocked from the dropdown; rejected roles can be reapplied
   const availableRoles = (project.requiredRoles || []).filter((r) => !appliedRoles.includes(r));
   const [form, setForm]     = useState({ roleApplyingFor: preselectedRole || availableRoles[0] || '', message: '' });
   const [loading, setLoading] = useState(false);
@@ -65,14 +66,21 @@ function ApplyModal({ project, onClose, onSuccess, appliedRoles = [], preselecte
           </svg>
         </button>
         <h2 className="text-xl font-[Playfair_Display] text-[#0e0e0d] mb-1">Apply to "{project.title}"</h2>
-        {appliedRoles.length > 0 && (
+        {(appliedRoles.length > 0 || rejectedRoles.length > 0) && (
           <p className="text-xs text-[#a3a39e] mb-5">
-            Already applied for: {appliedRoles.map((r) => (
-              <span key={r} className="inline-block bg-[#f0eeff] text-[#5750D4] px-2 py-0.5 rounded-full mr-1 font-semibold">{r}</span>
-            ))}
+            {appliedRoles.length > 0 && (
+              <>Already applied for: {appliedRoles.map((r) => (
+                <span key={r} className="inline-block bg-[#f0eeff] text-[#5750D4] px-2 py-0.5 rounded-full mr-1 font-semibold">{r}</span>
+              ))}</>
+            )}
+            {rejectedRoles.length > 0 && (
+              <span className="ml-1">Not selected: {rejectedRoles.map((r) => (
+                <span key={r} className="inline-block bg-[#fef2f2] text-[#b91c1c] px-2 py-0.5 rounded-full mr-1 font-semibold">{r}</span>
+              ))}</span>
+            )}
           </p>
         )}
-        {!appliedRoles.length && <div className="mb-6" />}
+        {!appliedRoles.length && !rejectedRoles.length && <div className="mb-6" />}
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-lg mb-5">{error}</div>
         )}
@@ -786,7 +794,8 @@ function ProjectDetailContent() {
         <ApplyModal
           project={project}
           onClose={() => setShowModal(false)}
-          appliedRoles={myApplications.map((a) => a.roleApplyingFor)}
+          appliedRoles={myApplications.filter((a) => ['pending','accepted'].includes(a.status)).map((a) => a.roleApplyingFor)}
+          rejectedRoles={myApplications.filter((a) => ['rejected','left','removed'].includes(a.status)).map((a) => a.roleApplyingFor)}
           onSuccess={(role) => {
             // Optimistically add the new application so UI updates immediately
             setMyApplications((prev) => [

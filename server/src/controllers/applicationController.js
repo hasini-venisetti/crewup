@@ -25,10 +25,25 @@ const applyToProject = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'You cannot apply to your own project' });
     }
 
-    const existing = await Application.findOne({ project: projectId, applicant: req.user._id, roleApplyingFor });
+    // Block reapply only if there is an active (pending or accepted) application for this role
+    const existing = await Application.findOne({
+      project: projectId,
+      applicant: req.user._id,
+      roleApplyingFor,
+      status: { $in: ['pending', 'accepted'] },
+    });
     if (existing) {
-      return res.status(409).json({ success: false, message: `You have already applied for the "${roleApplyingFor}" role on this project` });
+      const label = existing.status === 'accepted' ? 'accepted' : 'pending';
+      return res.status(409).json({ success: false, message: `Your ${label} application for "${roleApplyingFor}" is already active on this project` });
     }
+
+    // If a rejected/withdrawn application exists, delete it so a fresh one can be created
+    await Application.deleteOne({
+      project: projectId,
+      applicant: req.user._id,
+      roleApplyingFor,
+      status: { $in: ['rejected', 'left', 'removed'] },
+    });
 
     const application = await Application.create({
       project: projectId,
