@@ -9,8 +9,14 @@ const errorHandler = (err, req, res, next) => {
 
   // Mongoose duplicate key
   if (err.code === 11000) {
-    const field = Object.keys(err.keyValue)[0];
-    message = `${field.charAt(0).toUpperCase() + field.slice(1)} already exists`;
+    const fields = Object.keys(err.keyValue || {});
+    // Application unique index: { project, applicant, roleApplyingFor }
+    if (fields.includes('project') && fields.includes('applicant')) {
+      message = 'You have already applied for this role on this project';
+    } else {
+      const field = fields[0] || 'Field';
+      message = `${field.charAt(0).toUpperCase() + field.slice(1)} already exists`;
+    }
     statusCode = 409;
   }
 
