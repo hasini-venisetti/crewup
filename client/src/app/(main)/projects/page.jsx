@@ -38,6 +38,8 @@ export default function ProjectsPage() {
   const [bookmarkedIds, setBookmarkedIds] = useState(new Set());
   const [page,          setPage]          = useState(1);
   const [totalPages,    setTotalPages]    = useState(1);
+  const [totalCount,    setTotalCount]    = useState(0);
+  const [roleAnchor,    setRoleAnchor]    = useState(null); // { top, left } for fixed dropdown
 
   // Fetch user's applied + bookmarked project IDs once on mount (logged-in only)
   useEffect(() => {
@@ -51,6 +53,9 @@ export default function ProjectsPage() {
       setBookmarkedIds(new Set(bms.map((b) => b._id ?? b)));
     }).catch(() => {});
   }, [user]);
+
+  // Reset to page 1 whenever any filter changes (but NOT when page itself changes)
+  useEffect(() => { setPage(1); }, [activeTab, isPaid, isRemote, roleFilter, search]);
 
   useEffect(() => {
     setIsLoading(true);
@@ -67,7 +72,10 @@ export default function ProjectsPage() {
       .then((res) => {
         const raw = res.data?.data ?? res.data?.projects ?? [];
         setProjects(Array.isArray(raw) ? raw : []);
-        if (res.data?.pagination) setTotalPages(res.data.pagination.pages || 1);
+        if (res.data?.pagination) {
+          setTotalPages(res.data.pagination.pages || 1);
+          setTotalCount(res.data.pagination.total || 0);
+        }
       })
       .catch(() => { setLoadError(true); setProjects([]); })
       .finally(() => setIsLoading(false));
@@ -196,10 +204,15 @@ export default function ProjectsPage() {
               🌐 Remote {isRemote && <span className="ml-0.5 text-blue-500">✓</span>}
             </button>
 
-            {/* Role dropdown — uses fixed overlay so overflow-x-auto doesn't clip it */}
+            {/* Role dropdown — fixed position so overflow-x-auto never clips it */}
             <div className="relative flex-shrink-0">
               <button
-                onClick={() => setShowRoles((v) => !v)}
+                onClick={(e) => {
+                  if (showRoles) { setShowRoles(false); setRoleAnchor(null); return; }
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  setRoleAnchor({ top: rect.bottom + 6, left: rect.left });
+                  setShowRoles(true);
+                }}
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium whitespace-nowrap border transition-all min-h-[38px] ${
                   roleFilter
                     ? 'bg-[#6C63FF]/10 border-[#6C63FF]/30 text-[#4740CC]'
@@ -209,13 +222,16 @@ export default function ProjectsPage() {
                 🎭 {roleFilter || 'Role'} <span className="opacity-40 text-[10px] ml-0.5">{showRoles ? '▲' : '▼'}</span>
               </button>
 
-              {showRoles && (
+              {showRoles && roleAnchor && (
                 <>
-                  <div className="fixed inset-0 z-40" onClick={() => setShowRoles(false)} />
-                  <div className="absolute top-full left-0 mt-1.5 w-48 bg-white border border-[#efefed] rounded-2xl shadow-xl py-1.5 z-50">
+                  <div className="fixed inset-0 z-40" onClick={() => { setShowRoles(false); setRoleAnchor(null); }} />
+                  <div
+                    className="fixed w-48 bg-white border border-[#efefed] rounded-2xl shadow-xl py-1.5 z-50"
+                    style={{ top: roleAnchor.top, left: roleAnchor.left }}
+                  >
                     {roleFilter && (
                       <button
-                        onClick={() => { setRoleFilter(''); setShowRoles(false); }}
+                        onClick={() => { setRoleFilter(''); setShowRoles(false); setRoleAnchor(null); setPage(1); }}
                         className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
                       >
                         ✕ Clear role
@@ -224,7 +240,7 @@ export default function ProjectsPage() {
                     {TOP_ROLES.map((r) => (
                       <button
                         key={r.label}
-                        onClick={() => { setRoleFilter(r.label); setShowRoles(false); }}
+                        onClick={() => { setRoleFilter(r.label); setShowRoles(false); setRoleAnchor(null); setPage(1); }}
                         className={`flex items-center gap-2.5 w-full px-4 py-2.5 text-sm transition-colors ${
                           roleFilter === r.label
                             ? 'bg-[#6C63FF]/10 text-[#4740CC] font-semibold'
@@ -286,8 +302,8 @@ export default function ProjectsPage() {
               </span>
             ) : (
               <span>
-                <strong className="text-[#111110]">{projects.length}</strong>{' '}
-                project{projects.length !== 1 ? 's' : ''}
+                <strong className="text-[#111110]">{totalCount}</strong>{' '}
+                project{totalCount !== 1 ? 's' : ''}
                 {activeTab !== 'All' && <span> in {activeTab}</span>}
                 {roleFilter && <span> · {roleFilter}</span>}
               </span>
