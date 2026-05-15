@@ -181,7 +181,8 @@ const sendAnnouncement = async (req, res, next) => {
     let emailsFailed = 0;
     if (sendEmail) {
       const emailService = require('../utils/emailService');
-      const BATCH = 10; // send 10 at a time to avoid rate-limiting
+      const BATCH = 4;           // Resend allows 5 req/sec — stay safely under
+      const DELAY = 1200;        // 1.2s between batches → ~3.3 emails/sec
       for (let i = 0; i < users.length; i += BATCH) {
         const batch = users.slice(i, i + BATCH);
         await Promise.all(
@@ -196,6 +197,10 @@ const sendAnnouncement = async (req, res, next) => {
             }
           })
         );
+        // Pause between batches to respect Resend rate limit
+        if (i + BATCH < users.length) {
+          await new Promise((resolve) => setTimeout(resolve, DELAY));
+        }
       }
     }
 
