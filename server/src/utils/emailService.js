@@ -703,8 +703,37 @@ const sendBookingRequested = async ({
   } catch (e) { console.error('[EMAIL ERROR] sendBookingRequested:', e.message); }
 };
 
+// ─── Admin Announcement Email ─────────────────────────────────────────────────
+const sendAnnouncementEmail = async (toEmail, toName, subject, body, link = '') => {
+  try {
+    const siteUrl = process.env.CLIENT_URL || 'https://crewupfilms.com';
+    const ctaBtn  = link
+      ? `<a href="${link.startsWith('http') ? link : siteUrl + link}" style="display:inline-block;margin-top:20px;padding:11px 26px;background:#6C63FF;color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:700;">View on CREWUPFILMS →</a>`
+      : '';
+
+    // Convert line-breaks in body to <br> for HTML
+    const htmlBody = body.replace(/\n/g, '<br>');
+
+    const html = transactionalHtml(`
+      <p style="margin:0 0 8px;font-size:16px;font-weight:600;color:#111110;">Hi ${toName || 'Creator'},</p>
+      <div style="margin:0 0 24px;font-size:15px;color:#444444;line-height:1.7;">${htmlBody}</div>
+      ${ctaBtn}
+      <p style="margin:28px 0 0;font-size:12px;color:#a3a39e;">You're receiving this because you have an account on CREWUPFILMS.</p>
+    `);
+
+    const text = `Hi ${toName || 'Creator'},\n\n${body}${link ? '\n\n' + (link.startsWith('http') ? link : siteUrl + link) : ''}\n\n— CREWUPFILMS Team`;
+
+    await sendEmail(toEmail, subject, html, text);
+    console.log(`[EMAIL SENT] sendAnnouncementEmail to ${toEmail}`);
+  } catch (error) {
+    console.error('[EMAIL ERROR] sendAnnouncementEmail:', error.message);
+    throw error; // re-throw so caller can count failures
+  }
+};
+
 module.exports = {
   sendEmail,
+  sendAnnouncementEmail,
   sendApplicationReceived,
   sendApplicationAccepted,
   sendApplicationDeclined,

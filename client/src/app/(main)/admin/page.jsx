@@ -974,40 +974,133 @@ function ContestSubmissionsTab() {
 /* ══════════════════════════════════════════════════════════════════════
    TAB: Announcements
 ══════════════════════════════════════════════════════════════════════ */
-function AnnouncementsTab() {
-  const [form, setForm]       = useState({ title: '', message: '', link: '' });
-  const [sending, setSending] = useState(false);
-  const [sent, setSent]       = useState('');
-  const [error, setError]     = useState('');
+const ANNOUNCE_ROLES = [
+  'filmmaker','director','cinematographer','editor','actor','writer',
+  'composer','sound-designer','producer','vfx-artist','colorist','other',
+];
 
-  const TEMPLATES = [
-    { label: '🎬 New Contest',    title: '🎬 New Short Film Contest is now open!',  message: 'A new contest has just launched on CREWUPFILMS. Submit your short film for a chance to win prizes and get featured.' },
-    { label: '🔔 Platform Update', title: '📢 Platform Update',                   message: 'We\'ve just rolled out new features to improve your collaboration experience. Check out what\'s new!' },
-    { label: '🏆 Contest Winner',  title: '🏆 Contest Winners Announced',          message: 'The results are in! Check the Films page to see who won this month\'s contest.' },
-  ];
+const ANNOUNCE_TEMPLATES = [
+  {
+    label: '🎬 New Contest',
+    title: '🎬 New Short Film Contest is now open!',
+    message: 'A new contest has just launched on CREWUPFILMS.\n\nSubmit your short film for a chance to win prizes and get featured on our platform. Don\'t miss out — entries close soon!',
+    link: '/contests',
+  },
+  {
+    label: '🔔 Platform Update',
+    title: '📢 CREWUPFILMS Platform Update',
+    message: 'We\'ve just rolled out new features to improve your collaboration experience.\n\nLog in to explore what\'s new and make the most of your creative journey.',
+    link: '/dashboard',
+  },
+  {
+    label: '🏆 Contest Winners',
+    title: '🏆 Contest Winners Announced!',
+    message: 'The results are in! The judges have reviewed all submissions and the winners have been selected.\n\nCongratulations to everyone who participated — check the Films page to see who won.',
+    link: '/films',
+  },
+  {
+    label: '👋 Welcome Back',
+    title: '👋 Welcome back to CREWUPFILMS',
+    message: 'We\'re glad to have you here. Whether you\'re looking to join a project or build your team — your next collaboration is just a click away.',
+    link: '/projects',
+  },
+];
+
+function AnnouncementsTab() {
+  const [target,    setTarget]    = useState('all');   // 'all' | 'role' | 'user'
+  const [roleVal,   setRoleVal]   = useState('');
+  const [userSearch, setUserSearch] = useState('');
+  const [userResults, setUserResults] = useState([]);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [userSearchLoading, setUserSearchLoading] = useState(false);
+  const [form,      setForm]      = useState({ title: '', message: '', link: '' });
+  const [sendEmail, setSendEmail] = useState(true);
+  const [preview,   setPreview]   = useState(false);
+  const [sending,   setSending]   = useState(false);
+  const [result,    setResult]    = useState(null);  // { success, message, count, emailsSent, emailsFailed }
+  const [error,     setError]     = useState('');
+
+  // Search users when typing in single-user mode
+  useEffect(() => {
+    if (target !== 'user' || userSearch.length < 2) { setUserResults([]); return; }
+    const t = setTimeout(async () => {
+      setUserSearchLoading(true);
+      try {
+        const { data } = await adminAPI.getUsers({ search: userSearch, limit: 8 });
+        setUserResults(data.data || []);
+      } catch { /* silent */ }
+      finally { setUserSearchLoading(false); }
+    }, 350);
+    return () => clearTimeout(t);
+  }, [userSearch, target]);
+
+  const applyTemplate = (t) => {
+    setForm({ title: t.title, message: t.message, link: t.link || '' });
+    setResult(null); setError('');
+  };
 
   const handleSend = async (e) => {
     e.preventDefault();
-    if (!form.title || !form.message) { setError('Title and message are required.'); return; }
-    setSending(true); setError(''); setSent('');
+    if (!form.title || !form.message) { setError('Subject and message body are required.'); return; }
+    if (target === 'role' && !roleVal) { setError('Please select a role.'); return; }
+    if (target === 'user' && !selectedUser) { setError('Please select a user.'); return; }
+
+    const confirmed = window.confirm(
+      target === 'all'
+        ? `Send this announcement to ALL users? ${sendEmail ? 'This will also send real emails.' : '(in-app only)'}`
+        : target === 'role'
+          ? `Send to all "${roleVal}" users?`
+          : `Send to ${selectedUser.name} (${selectedUser.email})?`
+    );
+    if (!confirmed) return;
+
+    setSending(true); setError(''); setResult(null);
     try {
-      const { data } = await adminAPI.announce(form);
-      setSent(data.message || 'Announcement sent!');
+      const payload = {
+        title:     form.title,
+        message:   form.message,
+        link:      form.link,
+        target,
+        sendEmail,
+        ...(target === 'role' ? { role: roleVal } : {}),
+        ...(target === 'user' ? { userId: selectedUser._id } : {}),
+      };
+      const { data } = await adminAPI.announce(payload);
+      setResult(data);
       setForm({ title: '', message: '', link: '' });
+      setSelectedUser(null); setUserSearch('');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to send announcement.');
+    } finally {
+      setSending(false);
     }
-    finally { setSending(false); }
   };
 
+  const targetLabel = target === 'all' ? 'All Users'
+    : target === 'role' ? (roleVal ? `All "${roleVal}" users` : 'Select a role…')
+    : selectedUser ? selectedUser.name : 'Pick a user…';
+
   return (
-    <div className="max-w-2xl space-y-6">
-      {/* Templates */}
+    <div className="max-w-2xl space-y-5">
+
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-bold text-[#111110]">📢 Announcements</h2>
+          <p className="text-xs text-[#6b6b66] mt-0.5">Send in-app notifications and/or emails to users.</p>
+        </div>
+        <button onClick={() => setPreview(!preview)}
+          className={`text-xs font-semibold px-3.5 py-2 rounded-lg border transition-colors ${preview ? 'bg-[#6C63FF] text-white border-[#6C63FF]' : 'border-[#e0e0dd] text-[#6b6b66] hover:border-[#6C63FF] hover:text-[#6C63FF]'}`}>
+          {preview ? '✏️ Edit' : '👁 Preview'}
+        </button>
+      </div>
+
+      {/* Quick templates */}
       <div>
-        <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#a3a39e] mb-3">Quick Templates</p>
+        <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#a3a39e] mb-2">Quick Templates</p>
         <div className="flex flex-wrap gap-2">
-          {TEMPLATES.map((t) => (
-            <button key={t.label} onClick={() => setForm({ ...form, title: t.title, message: t.message })}
+          {ANNOUNCE_TEMPLATES.map((t) => (
+            <button key={t.label} onClick={() => applyTemplate(t)}
               className="text-xs px-3 py-1.5 rounded-full border border-[#e0e0dd] text-[#6b6b66] hover:border-[#6C63FF] hover:text-[#6C63FF] transition-colors font-medium">
               {t.label}
             </button>
@@ -1015,39 +1108,171 @@ function AnnouncementsTab() {
         </div>
       </div>
 
-      {/* Form */}
-      <form onSubmit={handleSend} className="bg-white border border-[#efefed] rounded-2xl p-6 space-y-4">
-        <h3 className="font-semibold text-[#111110]">Send Platform Announcement</h3>
+      {/* Result banner */}
+      {result && (
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+          <p className="text-green-700 font-semibold text-sm">✅ {result.message}</p>
+          <div className="flex gap-4 mt-2 text-xs text-green-600">
+            <span>👥 {result.count} notified</span>
+            {result.emailsSent > 0 && <span>📧 {result.emailsSent} emails sent</span>}
+            {result.emailsFailed > 0 && <span className="text-amber-600">⚠️ {result.emailsFailed} failed</span>}
+          </div>
+        </div>
+      )}
+      {error && <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl">{error}</div>}
 
-        {sent && <div className="bg-green-50 border border-green-200 text-green-700 text-sm px-4 py-3 rounded-xl">{sent}</div>}
-        {error && <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl">{error}</div>}
+      {preview ? (
+        /* ── Preview pane ── */
+        <div className="bg-white border border-[#efefed] rounded-2xl overflow-hidden">
+          <div className="bg-[#0e0e0d] px-6 py-4 flex items-center gap-3">
+            <div className="w-3 h-3 rounded-full bg-red-500/60" />
+            <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
+            <div className="w-3 h-3 rounded-full bg-green-500/60" />
+            <span className="ml-2 text-white/40 text-xs">Email Preview</span>
+          </div>
+          <div className="p-6 space-y-3">
+            <div className="border-b border-[#efefed] pb-3">
+              <p className="text-xs text-[#a3a39e]">From: <span className="text-[#6b6b66]">CREWUPFILMS &lt;noreply@crewupfilms.com&gt;</span></p>
+              <p className="text-xs text-[#a3a39e] mt-1">To: <span className="text-[#6b6b66]">{targetLabel}</span></p>
+              <p className="text-xs text-[#a3a39e] mt-1">Subject: <span className="font-semibold text-[#111110]">{form.title || '(no subject)'}</span></p>
+            </div>
+            <div className="text-sm text-[#444] whitespace-pre-line leading-relaxed">
+              {form.message || <span className="text-[#a3a39e] italic">(no message body)</span>}
+            </div>
+            {form.link && (
+              <div className="pt-2">
+                <span className="inline-block bg-[#6C63FF] text-white text-xs font-bold px-4 py-2 rounded-lg">
+                  View on CREWUPFILMS →
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        /* ── Compose form ── */
+        <form onSubmit={handleSend} className="bg-white border border-[#efefed] rounded-2xl p-6 space-y-4">
 
-        <div>
-          <label className="block text-xs font-semibold text-[#6b6b66] uppercase tracking-[0.1em] mb-1.5">Title</label>
-          <input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })}
-            placeholder="e.g. 🎬 New Short Film Contest is now open."
-            className="w-full rounded-xl border border-[#e0e0dd] bg-[#fafaf9] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF]" />
-        </div>
-        <div>
-          <label className="block text-xs font-semibold text-[#6b6b66] uppercase tracking-[0.1em] mb-1.5">Message</label>
-          <textarea required rows={4} value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })}
-            placeholder="Write the announcement body…"
-            className="w-full rounded-xl border border-[#e0e0dd] bg-[#fafaf9] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] resize-none" />
-        </div>
-        <div>
-          <label className="block text-xs font-semibold text-[#6b6b66] uppercase tracking-[0.1em] mb-1.5">Link <span className="text-[#a3a39e] normal-case font-normal">(optional)</span></label>
-          <input value={form.link} onChange={(e) => setForm({ ...form, link: e.target.value })}
-            placeholder="/films or /contests"
-            className="w-full rounded-xl border border-[#e0e0dd] bg-[#fafaf9] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF]" />
-        </div>
-        <div className="flex items-center justify-between pt-2">
-          <p className="text-xs text-[#a3a39e]">This will be sent to all active users as a notification.</p>
-          <button type="submit" disabled={sending}
-            className="px-6 py-2.5 rounded-xl bg-[#6C63FF] hover:bg-[#5750D4] text-white text-sm font-semibold shadow-md shadow-[#6C63FF]/20 transition-all disabled:opacity-50">
-            {sending ? 'Sending…' : '📢 Send to All'}
-          </button>
-        </div>
-      </form>
+          {/* Target selector */}
+          <div>
+            <label className="block text-xs font-semibold text-[#6b6b66] uppercase tracking-[0.1em] mb-2">Send To</label>
+            <div className="flex gap-2 flex-wrap">
+              {[['all','🌍 All Users'],['role','👤 By Role'],['user','🔍 Single User']].map(([val, lbl]) => (
+                <button key={val} type="button" onClick={() => { setTarget(val); setResult(null); setError(''); }}
+                  className={`text-xs font-semibold px-3.5 py-2 rounded-lg border transition-all ${target === val ? 'bg-[#6C63FF] text-white border-[#6C63FF]' : 'border-[#e0e0dd] text-[#6b6b66] hover:border-[#6C63FF] hover:text-[#6C63FF]'}`}>
+                  {lbl}
+                </button>
+              ))}
+            </div>
+
+            {/* Role picker */}
+            {target === 'role' && (
+              <select value={roleVal} onChange={(e) => setRoleVal(e.target.value)} required
+                className="mt-3 w-full rounded-xl border border-[#e0e0dd] bg-[#fafaf9] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF]">
+                <option value="">Select a role…</option>
+                {ANNOUNCE_ROLES.map((r) => <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1).replace('-',' ')}</option>)}
+              </select>
+            )}
+
+            {/* User search */}
+            {target === 'user' && (
+              <div className="mt-3 relative">
+                {selectedUser ? (
+                  <div className="flex items-center gap-3 p-3 bg-[#f0eeff] border border-[#c9c4ff] rounded-xl">
+                    <div className="w-8 h-8 rounded-full bg-[#6C63FF] text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
+                      {selectedUser.name?.[0]?.toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-[#111110] truncate">{selectedUser.name}</p>
+                      <p className="text-xs text-[#6b6b66] truncate">{selectedUser.email}</p>
+                    </div>
+                    <button type="button" onClick={() => { setSelectedUser(null); setUserSearch(''); }}
+                      className="text-[#6b6b66] hover:text-red-500 text-lg leading-none flex-shrink-0">×</button>
+                  </div>
+                ) : (
+                  <>
+                    <input value={userSearch} onChange={(e) => setUserSearch(e.target.value)}
+                      placeholder="Search by name, username or email…"
+                      className="w-full rounded-xl border border-[#e0e0dd] bg-[#fafaf9] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF]" />
+                    {userSearchLoading && <p className="text-xs text-[#a3a39e] mt-1 px-1">Searching…</p>}
+                    {userResults.length > 0 && (
+                      <div className="absolute z-10 top-full mt-1 left-0 right-0 bg-white border border-[#e0e0dd] rounded-xl shadow-lg overflow-hidden max-h-52 overflow-y-auto">
+                        {userResults.map((u) => (
+                          <button key={u._id} type="button"
+                            onClick={() => { setSelectedUser(u); setUserSearch(''); setUserResults([]); }}
+                            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#f5f5f3] transition-colors text-left">
+                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#c9c4ff] to-[#6C63FF] text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
+                              {u.name?.[0]?.toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-[#111110] truncate">{u.name}</p>
+                              <p className="text-xs text-[#a3a39e] truncate">{u.email} · {u.role}</p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Subject */}
+          <div>
+            <label className="block text-xs font-semibold text-[#6b6b66] uppercase tracking-[0.1em] mb-1.5">Subject / Title</label>
+            <input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })}
+              placeholder="e.g. 🎬 New Short Film Contest is now open!"
+              className="w-full rounded-xl border border-[#e0e0dd] bg-[#fafaf9] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF]" />
+          </div>
+
+          {/* Body */}
+          <div>
+            <label className="block text-xs font-semibold text-[#6b6b66] uppercase tracking-[0.1em] mb-1.5">Message Body</label>
+            <textarea required rows={6} value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })}
+              placeholder="Write your announcement here. Line breaks are preserved in the email."
+              className="w-full rounded-xl border border-[#e0e0dd] bg-[#fafaf9] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF] resize-none" />
+            <p className="text-xs text-[#a3a39e] mt-1 text-right">{form.message.length} chars</p>
+          </div>
+
+          {/* CTA link */}
+          <div>
+            <label className="block text-xs font-semibold text-[#6b6b66] uppercase tracking-[0.1em] mb-1.5">
+              CTA Link <span className="text-[#a3a39e] normal-case font-normal">(optional — shown as button in email)</span>
+            </label>
+            <input value={form.link} onChange={(e) => setForm({ ...form, link: e.target.value })}
+              placeholder="/contests  or  https://crewupfilms.com/films"
+              className="w-full rounded-xl border border-[#e0e0dd] bg-[#fafaf9] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C63FF]/20 focus:border-[#6C63FF]" />
+          </div>
+
+          {/* Send email toggle */}
+          <div className="flex items-center justify-between py-3 px-4 bg-[#fafaf9] border border-[#efefed] rounded-xl">
+            <div>
+              <p className="text-sm font-semibold text-[#111110]">Also send real emails via Resend</p>
+              <p className="text-xs text-[#a3a39e] mt-0.5">In addition to in-app notifications, deliver to each user's inbox.</p>
+            </div>
+            <button type="button" onClick={() => setSendEmail(!sendEmail)}
+              className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${sendEmail ? 'bg-[#6C63FF]' : 'bg-[#d0d0ce]'}`}>
+              <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${sendEmail ? 'translate-x-5' : 'translate-x-0'}`} />
+            </button>
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-between pt-1">
+            <p className="text-xs text-[#a3a39e]">
+              {target === 'all' && 'Sending to all active users'}
+              {target === 'role' && (roleVal ? `Sending to all "${roleVal}" users` : 'Select a role above')}
+              {target === 'user' && (selectedUser ? `Sending to ${selectedUser.name}` : 'Search for a user above')}
+              {sendEmail ? ' · 📧 + email' : ' · 🔔 notification only'}
+            </p>
+            <button type="submit" disabled={sending}
+              className="px-6 py-2.5 rounded-xl bg-[#6C63FF] hover:bg-[#5750D4] text-white text-sm font-semibold shadow-md shadow-[#6C63FF]/20 transition-all disabled:opacity-50 flex items-center gap-2">
+              {sending
+                ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Sending…</>
+                : '📢 Send Announcement'}
+            </button>
+          </div>
+        </form>
+      )}
     </div>
   );
 }

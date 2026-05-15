@@ -142,12 +142,30 @@ function extractYtId(url) {
 
 /* ── Platform Announcements ─────────────────────────────────────────── */
 // POST /api/admin/announce
+// body: { title, message, link?, target: 'all'|'role'|'user', role?, userId?, sendEmail? }
 const sendAnnouncement = async (req, res, next) => {
   try {
-    const { title, message, link = '' } = req.body;
+    const {
+      title,
+      message,
+      link       = '',
+      target     = 'all',   // 'all' | 'role' | 'user'
+      role,                  // used when target === 'role'
+      userId,                // used when target === 'user'
+      sendEmail  = false,    // whether to also send real emails via Resend
+    } = req.body;
+
     if (!title || !message) return res.status(400).json({ success: false, message: 'title and message are required' });
 
-    const users = await User.find({ isSuspended: { $ne: true } }).select('_id').lean();
+    // ── Build user filter ──────────────────────────────────────────────────
+    let filter = { isSuspended: { $ne: true } };
+    if (target === 'role' && role) filter.role = role;
+    if (target === 'user' && userId) filter._id = userId;
+
+    const users = await User.find(filter).select('_id name email').lean();
+    if (!users.length) return res.status(404).json({ success: false, message: 'No matching users found' });
+
+    // ── In-app notifications ───────────────────────────────────────────────
     const notifications = users.map((u) => ({
       recipient: u._id,
       sender:    req.user._id,
@@ -156,9 +174,36 @@ const sendAnnouncement = async (req, res, next) => {
       message,
       link,
     }));
-
     await Notification.insertMany(notifications, { ordered: false });
-    res.json({ success: true, message: `Announcement sent to ${notifications.length} users` });
+
+    // ── Emails via Resend (fire-and-forget in batches) ─────────────────────
+    let emailsSent = 0;
+    let emailsFailed = 0;
+    if (sendEmail) {
+      const emailService = require('../utils/emailService');
+      const BATCH = 10; // send 10 at a time to avoid rate-limiting
+      for (let i = 0; i < users.length; i += BATCH) {
+        const batch = users.slice(i, i + BATCH);
+        await Promise.all(
+          batch.map(async (u) => {
+            if (!u.email) return;
+            try {
+              await emailService.sendAnnouncementEmail(u.email, u.name, title, message, link);
+              emailsSent++;
+            } catch (e) {
+              emailsFailed++;
+              console.error(`[ANNOUNCE EMAIL FAIL] ${u.email}:`, e.message);
+            }
+          })
+        );
+      }
+    }
+
+    const summary = sendEmail
+      ? `Notified ${notifications.length} users. Emails: ${emailsSent} sent, ${emailsFailed} failed.`
+      : `Announcement sent to ${notifications.length} users (in-app only).`;
+
+    res.json({ success: true, message: summary, count: notifications.length, emailsSent, emailsFailed });
   } catch (e) { next(e); }
 };
 
