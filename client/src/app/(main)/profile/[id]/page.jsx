@@ -934,7 +934,7 @@ export default function ProfilePage() {
                           Work Samples
                         </p>
                       )}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {works.map((item) => {
                           const typeColor = TYPE_COLOR[item.type] || TYPE_COLOR.other;
                           const typeIcon  = TYPE_ICON[item.type] || '📁';
@@ -943,51 +943,56 @@ export default function ProfilePage() {
                           const ytThumb = ytMatch ? `https://img.youtube.com/vi/${ytMatch[1]}/mqdefault.jpg` : null;
 
                           return (
-                            <div key={item._id} className="group relative overflow-hidden rounded-xl border border-[#efefed] hover:border-[#c9c4ff] hover:shadow-lg bg-white transition-all duration-200">
-                              <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-[#6C63FF] to-[#c9c4ff] opacity-0 group-hover:opacity-100 transition-opacity" />
-                              {/* YouTube thumbnail */}
-                              {ytThumb && (
-                                <div className="relative w-full aspect-video overflow-hidden bg-[#111110]">
-                                  <img src={ytThumb} alt={item.title} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                            <div key={item._id} className="group relative flex flex-col overflow-hidden rounded-2xl border border-[#efefed] hover:border-[#c9c4ff] hover:shadow-md bg-white transition-all duration-200">
+                              {/* Thumbnail or icon header */}
+                              {ytThumb ? (
+                                <div className="relative w-full aspect-video overflow-hidden bg-[#111110] flex-shrink-0">
+                                  <img src={ytThumb} alt={item.title} className="w-full h-full object-cover opacity-85 group-hover:opacity-100 transition-opacity" />
                                   <div className="absolute inset-0 flex items-center justify-center">
-                                    <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center shadow-lg">
-                                      <span className="text-white text-sm">▶</span>
+                                    <div className="w-11 h-11 rounded-full bg-red-600 flex items-center justify-center shadow-lg">
+                                      <span className="text-white text-sm ml-0.5">▶</span>
                                     </div>
                                   </div>
+                                </div>
+                              ) : (
+                                <div className={`w-full h-20 flex items-center justify-center flex-shrink-0 ${typeColor} border-b border-[#efefed]`}>
+                                  <span className="text-3xl">{typeIcon}</span>
                                 </div>
                               )}
-                              <div className="p-4">
-                                <div className="flex items-start gap-3">
-                                  {!ytThumb && (
-                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border text-lg ${typeColor}`}>
-                                      {typeIcon}
-                                    </div>
-                                  )}
-                                  <div className="min-w-0 flex-1">
-                                    <div className="flex items-start justify-between gap-2 mb-1">
-                                      <p className="font-bold text-sm text-[#111110] leading-snug">{item.title}</p>
-                                      {ytThumb ? null : (
-                                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border capitalize flex-shrink-0 ${typeColor}`}>
-                                          {item.type}
-                                        </span>
-                                      )}
-                                    </div>
-                                    {item.description && <p className="text-xs text-[#6b6b66] line-clamp-2 leading-relaxed">{item.description}</p>}
-                                    {item.tags?.length > 0 && (
-                                      <div className="flex flex-wrap gap-1 mt-2">
-                                        {item.tags.map((t) => (
-                                          <span key={t} className="text-[10px] bg-[#f7f7f6] text-[#6b6b66] px-2 py-0.5 rounded-full border border-[#efefed] font-medium">{t}</span>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
+
+                              {/* Content */}
+                              <div className="flex flex-col flex-1 p-4 gap-2">
+                                {/* Title + badge row */}
+                                <div className="flex items-start justify-between gap-2">
+                                  <p className="font-bold text-sm text-[#111110] leading-snug">{item.title}</p>
+                                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border capitalize flex-shrink-0 mt-0.5 ${typeColor}`}>
+                                    {item.type}
+                                  </span>
                                 </div>
+
+                                {/* Description */}
+                                {item.description && (
+                                  <p className="text-xs text-[#6b6b66] line-clamp-3 leading-relaxed">{item.description}</p>
+                                )}
+
+                                {/* Tags */}
+                                {item.tags?.length > 0 && (
+                                  <div className="flex flex-wrap gap-1">
+                                    {item.tags.map((t) => (
+                                      <span key={t} className="text-[10px] bg-[#f7f7f6] text-[#6b6b66] px-2 py-0.5 rounded-full border border-[#efefed] font-medium">{t}</span>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {/* CTA link */}
                                 {item.link && (
-                                  <a href={item.link.startsWith('http') ? item.link : `https://${item.link}`} target="_blank" rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1.5 text-xs text-[#6C63FF] hover:text-[#4740CC] mt-3 font-semibold transition-colors group/link border border-[#e0e0dd] hover:border-[#c9c4ff] px-3 py-1.5 rounded-lg bg-[#fafaf9] hover:bg-[#f0eeff]">
-                                    {item.type === 'video' ? 'Watch' : item.type === 'audio' ? 'Listen' : 'View Work'}
-                                    <span className="transition-transform group-hover/link:translate-x-0.5">→</span>
-                                  </a>
+                                  <div className="mt-auto pt-2">
+                                    <a href={item.link.startsWith('http') ? item.link : `https://${item.link}`} target="_blank" rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1.5 text-xs text-[#6C63FF] hover:text-[#4740CC] font-semibold transition-colors group/link border border-[#e0e0dd] hover:border-[#c9c4ff] px-3 py-1.5 rounded-lg bg-[#fafaf9] hover:bg-[#f0eeff]">
+                                      {item.type === 'video' ? 'Watch' : item.type === 'audio' ? 'Listen' : 'View Work'}
+                                      <span className="transition-transform group-hover/link:translate-x-0.5">→</span>
+                                    </a>
+                                  </div>
                                 )}
                               </div>
                             </div>
